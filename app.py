@@ -218,20 +218,40 @@ def _normalize_columns(raw: pd.DataFrame) -> pd.DataFrame:
     data: dict[str, Any] = {
         "Player Name": raw[resolved["player_name"]].astype(str).str.strip(),
     }
+    non_numeric: list[str] = []
+    usable_metrics: list[str] = []
+
     for key in metric_keys:
         label = DISPLAY_COLUMNS[key]
-        if key in resolved:
-            data[label] = pd.to_numeric(raw[resolved[key]], errors="coerce")
-        else:
+        if key not in resolved:
             data[label] = np.nan
+            continue
 
-    frame = pd.DataFrame(data)
-    present = [c for c in METRIC_COLUMNS if frame[c].notna().any()]
-    if frame[present].isna().any().any():
+        numeric = pd.to_numeric(raw[resolved[key]], errors="coerce")
+        data[label] = numeric
+
+        # Header was mapped — require real numeric values, not silent NaNs.
+        if len(numeric) == 0 or numeric.isna().all():
+            non_numeric.append(label)
+        elif numeric.isna().any():
+            bad_rows = int(numeric.isna().sum())
+            non_numeric.append(f"{label} ({bad_rows} non-numeric row(s))")
+        else:
+            usable_metrics.append(label)
+
+    if non_numeric:
         raise ValueError(
-            "Present metric columns must be numeric for every player."
+            "Mapped metric columns must contain numeric values for every player: "
+            + ", ".join(non_numeric)
         )
-    return frame
+
+    if not usable_metrics:
+        raise ValueError(
+            "CSV has no usable numeric performance metrics after parsing. "
+            "Check that metric columns contain numbers, not text or blanks."
+        )
+
+    return pd.DataFrame(data)
 
 
 def _normalize_series(series: pd.Series, *, invert: bool) -> pd.Series:
