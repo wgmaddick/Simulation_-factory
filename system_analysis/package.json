@@ -1,0 +1,16 @@
+{
+  "name": "system-analysis-api",
+  "version": "1.0.0",
+  "description": "Video + Talk + Send system analysis engine with Twin-Track output and Passive Anomaly Sentinel",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

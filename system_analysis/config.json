@@ -1,0 +1,30 @@
+{
+  "product_name": "AAT Phoenix System Analysis",
+  "initial_credits": 100,
+  "research_nodes": [
+    {
+      "id": "gait-vector",
+      "label": "Gait Vector Tracking",
+      "credit_cost": 12,
+      "description": "Spatial lower-limb vector isolation against vocal query parameters."
+    },
+    {
+      "id": "ankle-stabilizer",
+      "label": "Ankle Stabilizer Scan",
+      "credit_cost": 18,
+      "description": "Lateral ankle eversion / inversion drift and stabilizer load mapping."
+    },
+    {
+      "id": "kinetic-chain",
+      "label": "Kinetic Chain Audit",
+      "credit_cost": 22,
+      "description": "Full-chain force transfer with sub-clinical pathway drift detection."
+    },
+    {
+      "id": "vocal-metric-sync",
+      "label": "Vocal–Metric Sync",
+      "credit_cost": 10,
+      "description": "Align spoken intent with live tracking metrics for twin-track reporting."
+    }
+  ]
+}
