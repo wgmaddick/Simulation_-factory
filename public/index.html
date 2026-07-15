@@ -69,6 +69,14 @@
             <p id="tenant-subheader" class="text-sm text-slate-400 font-semibold"></p>
         </div>
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+            <label class="bg-slate-950 border border-slate-700/80 px-3 py-2.5 rounded-lg min-w-[200px] sm:min-w-[240px] shadow-inner shadow-black/40 flex flex-col gap-1.5 focus-within:border-emerald-500/50 transition-colors">
+                <span class="text-[10px] font-extrabold tracking-widest text-slate-400 uppercase">Sovereign Sector Gateway</span>
+                <select id="sector-select" class="w-full bg-slate-900 border border-slate-800 rounded-md px-2.5 py-1.5 text-xs sm:text-sm font-semibold text-slate-100 focus:outline-none focus:border-emerald-500 cursor-pointer appearance-none" aria-label="Sovereign Sector Gateway">
+                    <option value="university_sports">University Sports</option>
+                    <option value="clinical_dental">Clinical Dental Vault</option>
+                    <option value="asset_infrastructure">Asset Infrastructure</option>
+                </select>
+            </label>
             <div id="resilience-shell" class="is-stable bg-slate-950 border border-emerald-500/30 px-4 py-2.5 rounded-lg min-w-[220px] sm:min-w-[280px] shadow-inner shadow-black/40">
                 <div class="flex items-center justify-between gap-3 mb-1.5">
                     <span class="text-[10px] font-extrabold tracking-widest text-slate-300 uppercase">Total Team Resilience Index</span>
@@ -127,24 +135,24 @@
                     <div class="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-amber-400 via-amber-300 to-transparent" aria-hidden="true"></div>
                     <div class="flex items-center gap-2 mb-2">
                         <span class="text-base leading-none" aria-hidden="true">📋</span>
-                        <h4 class="text-[11px] sm:text-xs font-extrabold tracking-widest text-amber-300 uppercase">Actionable Coach Speak</h4>
+                        <h4 id="actionable-speak-title" class="text-[11px] sm:text-xs font-extrabold tracking-widest text-amber-300 uppercase">Actionable Coach Speak</h4>
                     </div>
                     <p id="coach-speak-display" class="text-base sm:text-lg font-semibold text-slate-50 leading-snug tracking-tight">
-                        Tap Execute — coach-ready call appears here.
+                        Tap Execute — actionable call appears here.
                     </p>
                     <p class="mt-2 text-[10px] font-mono uppercase tracking-wider text-amber-500/70">Field-ready · 2-second read</p>
                 </article>
 
-                <!-- Biomechanical metrics for medical staff -->
+                <!-- Metrics for medical / clinical / engineering staff -->
                 <article class="rounded-xl border border-slate-800 bg-slate-950 p-4">
                     <div class="flex items-center gap-2 mb-2">
                         <span class="text-sm leading-none" aria-hidden="true">🔬</span>
-                        <h4 class="text-[10px] font-bold tracking-widest text-slate-400 uppercase">Biomechanical Metrics</h4>
+                        <h4 id="metrics-title" class="text-[10px] font-bold tracking-widest text-slate-400 uppercase">Biomechanical Metrics</h4>
                     </div>
                     <p id="verdict-display" class="text-xs sm:text-sm text-slate-400 leading-relaxed">
                         Awaiting structural intake visualization…
                     </p>
-                    <p class="mt-2 text-[10px] font-mono uppercase tracking-wider text-slate-600">Medical staff layer</p>
+                    <p id="metrics-subtitle" class="mt-2 text-[10px] font-mono uppercase tracking-wider text-slate-600">Medical staff layer</p>
                 </article>
             </div>
 
@@ -235,6 +243,74 @@
         let currentConfig = null;
         let audioCtx = null;
         let currentResilience = 88;
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function applySectorConfig(config, { resetOutputs = false } = {}) {
+            currentConfig = config;
+
+            document.getElementById('domain-header').innerText = config.target_domain;
+            document.getElementById('tenant-subheader').innerText = config.tenant_identity;
+            document.getElementById('credit-display').innerText = config.initial_credits;
+            document.title = `${config.sectorLabel || 'Vault'} · Sovereign Decision Engine`;
+
+            const speakTitle = config.actionableSpeakTitle || 'Actionable Coach Speak';
+            document.getElementById('actionable-speak-title').innerText = speakTitle;
+            document.getElementById('metrics-title').innerText =
+                config.metricsTitle || 'Biomechanical Metrics';
+            document.getElementById('metrics-subtitle').innerText =
+                config.metricsSubtitle || 'Medical staff layer';
+
+            const speechInput = document.getElementById('speech-input');
+            speechInput.placeholder = config.speechPlaceholder || 'Or tap microphone to speak…';
+            if (resetOutputs) {
+                speechInput.value = '';
+                document.getElementById('coach-speak-display').innerText =
+                    `Tap Execute — ${speakTitle.toLowerCase()} appears here.`;
+                document.getElementById('verdict-display').innerText =
+                    'Awaiting structural intake visualization…';
+                document.getElementById('sentinel-card').classList.add('hidden');
+                document.getElementById('heal-confirmation').classList.add('hidden');
+                document.getElementById('media-status').innerText = 'System Intake status: Standby';
+            }
+
+            const sectorSelect = document.getElementById('sector-select');
+            if (Array.isArray(config.sectors) && config.sectors.length) {
+                sectorSelect.innerHTML = config.sectors
+                    .map(
+                        (s) =>
+                            `<option value="${escapeHtml(s.id)}">${escapeHtml(s.label)}</option>`
+                    )
+                    .join('');
+            }
+            if (config.sectorId) {
+                sectorSelect.value = config.sectorId;
+            }
+
+            const container = document.getElementById('nodes-container');
+            container.innerHTML = '';
+            (config.research_nodes || []).forEach((node, idx) => {
+                container.innerHTML += `
+                    <label class="flex items-center justify-between p-3 border border-slate-800 rounded-lg bg-slate-950/50 cursor-pointer hover:border-slate-700 transition-all">
+                        <div class="flex items-center space-x-3 min-w-0">
+                            <input type="radio" name="node-selection" value="${escapeHtml(node.id)}" ${idx === 0 ? 'checked' : ''} class="accent-emerald-500 shrink-0">
+                            <span class="text-xs text-slate-300 font-medium leading-snug">${escapeHtml(node.label)}</span>
+                        </div>
+                        <span class="text-[10px] font-mono font-bold bg-slate-800 text-slate-400 px-2 py-0.5 rounded shrink-0 ml-2">${node.credit_cost} Cr</span>
+                    </label>
+                `;
+            });
+
+            if (typeof config.teamResilience === 'number') {
+                updateResilienceBar(config.teamResilience, config);
+            }
+        }
 
         function updateResilienceBar(score, meta = {}) {
             if (typeof score !== 'number' || Number.isNaN(score)) return;
@@ -337,32 +413,27 @@
 
         async function initApp() {
             const res = await fetch('/api/config');
-            currentConfig = await res.json();
-
-            document.getElementById('domain-header').innerText = currentConfig.target_domain;
-            document.getElementById('tenant-subheader').innerText = currentConfig.tenant_identity;
-            document.getElementById('credit-display').innerText = currentConfig.initial_credits;
-            updateResilienceBar(
-                typeof currentConfig.teamResilience === 'number'
-                    ? currentConfig.teamResilience
-                    : 88,
-                { resilienceReason: 'Baseline network scan' }
-            );
-
-            const container = document.getElementById('nodes-container');
-            container.innerHTML = '';
-            currentConfig.research_nodes.forEach((node, idx) => {
-                container.innerHTML += `
-                    <label class="flex items-center justify-between p-3 border border-slate-800 rounded-lg bg-slate-950/50 cursor-pointer hover:border-slate-700 transition-all">
-                        <div class="flex items-center space-x-3">
-                            <input type="radio" name="node-selection" value="${node.id}" ${idx === 0 ? 'checked' : ''} class="accent-emerald-500">
-                            <span class="text-xs text-slate-300 font-medium">${node.label}</span>
-                        </div>
-                        <span class="text-[10px] font-mono font-bold bg-slate-800 text-slate-400 px-2 py-0.5 rounded">${node.credit_cost} Cr</span>
-                    </label>
-                `;
-            });
+            const config = await res.json();
+            applySectorConfig(config, { resetOutputs: true });
         }
+
+        async function switchSector(sectorId) {
+            const res = await fetch('/api/sector', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sectorId }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || 'Sector switch failed.');
+                return;
+            }
+            applySectorConfig(data, { resetOutputs: true });
+        }
+
+        document.getElementById('sector-select').addEventListener('change', (e) => {
+            switchSector(e.target.value);
+        });
 
         const dropZone = document.getElementById('drop-zone');
         dropZone.addEventListener('click', () => document.getElementById('file-input').click());
@@ -394,12 +465,15 @@
             playMicFeedback();
             voiceBtn.classList.add('mic-live');
 
-            const mockPhrases = [
-                "Check his hamstring tension on that final deceleration cut.",
-                "Verify load orientation across the primary joint plane.",
-                "Audit torque asymmetry during high-impact braking loops."
-            ];
-            document.getElementById('speech-input').value = mockPhrases[Math.floor(Math.random() * mockPhrases.length)];
+            const phrases =
+                (currentConfig && currentConfig.voicePhrases) ||
+                [
+                    'Check his hamstring tension on that final deceleration cut.',
+                    'Verify load orientation across the primary joint plane.',
+                    'Audit torque asymmetry during high-impact braking loops.',
+                ];
+            document.getElementById('speech-input').value =
+                phrases[Math.floor(Math.random() * phrases.length)];
 
             setTimeout(() => voiceBtn.classList.remove('mic-live'), 900);
         });
@@ -506,7 +580,13 @@
                 document.getElementById('verdict-display').innerText =
                     data.biomechanicalMetrics || data.expertVerdict;
                 document.getElementById('coach-speak-display').innerText =
-                    data.coachSpeak || data.laymanSummary || 'No coach speak returned.';
+                    data.coachSpeak || data.actionableSpeak || data.laymanSummary || 'No actionable speak returned.';
+                if (data.actionableSpeakTitle) {
+                    document.getElementById('actionable-speak-title').innerText = data.actionableSpeakTitle;
+                }
+                if (data.metricsTitle) {
+                    document.getElementById('metrics-title').innerText = data.metricsTitle;
+                }
                 document.getElementById('coach-speak-card').classList.add('ring-1', 'ring-amber-400/50');
                 setTimeout(() => {
                     document.getElementById('coach-speak-card').classList.remove('ring-1', 'ring-amber-400/50');
