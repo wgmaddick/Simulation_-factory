@@ -243,6 +243,7 @@
         let currentConfig = null;
         let audioCtx = null;
         let currentResilience = 88;
+        let sectorSwitchInFlight = false;
 
         function escapeHtml(str) {
             return String(str)
@@ -418,17 +419,27 @@
         }
 
         async function switchSector(sectorId) {
-            const res = await fetch('/api/sector', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sectorId }),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                alert(data.error || 'Sector switch failed.');
-                return;
+            if (sectorSwitchInFlight) return;
+
+            const sectorSelect = document.getElementById('sector-select');
+            sectorSwitchInFlight = true;
+            sectorSelect.disabled = true;
+            try {
+                const res = await fetch('/api/sector', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sectorId }),
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    alert(data.error || 'Sector switch failed.');
+                    return;
+                }
+                applySectorConfig(data, { resetOutputs: true });
+            } finally {
+                sectorSwitchInFlight = false;
+                sectorSelect.disabled = false;
             }
-            applySectorConfig(data, { resetOutputs: true });
         }
 
         document.getElementById('sector-select').addEventListener('change', (e) => {
@@ -558,6 +569,7 @@
             if (!activeRadio) return alert('Select a research heading node.');
             if (!speechInput) return alert('Please present an interface query or voice parameter.');
 
+            const analysisConfig = currentConfig;
             document.getElementById('execute-btn').innerText = 'CALCULATING SIMULATION...';
             document.getElementById('execute-btn').disabled = true;
             hideHealConfirmation();
@@ -573,6 +585,13 @@
 
                 if (!response.ok) {
                     alert(data.error || 'Analysis failed.');
+                    return;
+                }
+                if (
+                    !currentConfig ||
+                    currentConfig !== analysisConfig ||
+                    data.sectorId !== currentConfig.sectorId
+                ) {
                     return;
                 }
 
