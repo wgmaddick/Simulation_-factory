@@ -77,15 +77,15 @@
                     <option value="asset_infrastructure">Asset Infrastructure</option>
                 </select>
             </label>
-            <div id="resilience-shell" class="is-stable bg-slate-950 border border-emerald-500/30 px-4 py-2.5 rounded-lg min-w-[220px] sm:min-w-[280px] shadow-inner shadow-black/40">
+            <div id="resilience-shell" class="is-stable bg-slate-950 border border-emerald-500/30 px-4 py-2.5 rounded-lg min-w-[220px] sm:min-w-[320px] max-w-md shadow-inner shadow-black/40">
                 <div class="flex items-center justify-between gap-3 mb-1.5">
-                    <span class="text-[10px] font-extrabold tracking-widest text-slate-300 uppercase">Total Team Resilience Index</span>
-                    <span id="resilience-value" class="text-sm font-mono font-bold text-emerald-400 tabular-nums">88%</span>
+                    <span id="resilience-title" class="text-[10px] font-extrabold tracking-widest text-slate-300 uppercase transition-opacity duration-300">Total Team Resilience Index</span>
+                    <span id="resilience-value" class="text-sm font-mono font-bold text-emerald-400 tabular-nums transition-colors duration-300">88%</span>
                 </div>
                 <div class="h-2.5 w-full rounded-full bg-slate-900 border border-slate-800 overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="88" id="resilience-track" aria-label="Total Team Resilience Index">
                     <div id="resilience-fill" class="is-stable h-full rounded-full w-[88%]"></div>
                 </div>
-                <p id="resilience-status" class="mt-1.5 text-[10px] font-medium tracking-wide text-emerald-500/80 uppercase">Network stable</p>
+                <p id="resilience-status" class="mt-1.5 text-[10px] font-medium tracking-wide text-emerald-500/80 uppercase leading-snug transition-all duration-300">Network stable</p>
             </div>
             <div class="bg-slate-950 border border-slate-800 px-4 py-2 rounded-lg text-sm flex items-center">
                 Available Allocation: <span id="credit-display" class="font-mono text-emerald-400 font-bold ml-1">---</span>&nbsp;Credits
@@ -310,6 +310,42 @@
             if (typeof config.teamResilience === 'number') {
                 updateResilienceBar(config.teamResilience, config);
             }
+            updateIndexLabels(config);
+        }
+
+        function updateIndexLabels(config = {}) {
+            const titleEl = document.getElementById('resilience-title');
+            const statusEl = document.getElementById('resilience-status');
+            const track = document.getElementById('resilience-track');
+            const title =
+                config.indexTitle ||
+                (currentConfig && currentConfig.indexTitle) ||
+                'TOTAL TEAM RESILIENCE INDEX';
+            const description =
+                config.indexDescription ||
+                config.resilienceReason ||
+                (currentConfig && currentConfig.indexDescription) ||
+                '';
+
+            // Smooth cross-fade without full refresh
+            titleEl.style.opacity = '0.35';
+            statusEl.style.opacity = '0.35';
+            requestAnimationFrame(() => {
+                titleEl.textContent = title;
+                track.setAttribute('aria-label', title);
+                if (description) {
+                    statusEl.textContent = description;
+                }
+                titleEl.style.opacity = '1';
+                statusEl.style.opacity = '1';
+            });
+
+            if (currentConfig) {
+                if (config.indexTitle) currentConfig.indexTitle = config.indexTitle;
+                if (config.indexDescription) {
+                    currentConfig.indexDescription = config.indexDescription;
+                }
+            }
         }
 
         function updateResilienceBar(score, meta = {}) {
@@ -335,15 +371,22 @@
             valueEl.classList.toggle('text-emerald-400', !vulnerable);
             valueEl.classList.toggle('text-amber-400', vulnerable);
 
-            if (meta.resilienceReason) {
-                statusEl.textContent = meta.resilienceReason;
-            } else if (vulnerable) {
-                statusEl.textContent = 'Systemic network vulnerability';
-            } else {
-                statusEl.textContent = 'Network stable';
-            }
+            // Prefer sector-native index copy; fall back to payload reason / status.
+            const description =
+                meta.resilienceReason ||
+                meta.indexDescription ||
+                (vulnerable
+                    ? (currentConfig && currentConfig.indexDescription) ||
+                      'Systemic network vulnerability'
+                    : 'Network stable');
+            statusEl.textContent = description;
             statusEl.classList.toggle('text-emerald-500/80', !vulnerable);
             statusEl.classList.toggle('text-amber-400/90', vulnerable);
+
+            if (meta.indexTitle) {
+                document.getElementById('resilience-title').textContent = meta.indexTitle;
+                track.setAttribute('aria-label', meta.indexTitle);
+            }
         }
 
         function ensureAudioContext() {

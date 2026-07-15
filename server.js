@@ -25,6 +25,9 @@ const SECTORS = {
     metricsSubtitle: 'Medical staff layer',
     speechPlaceholder: 'Or tap microphone to speak…',
     speechFallbackKeyword: 'hamstring',
+    indexTitle: 'TOTAL TEAM RESILIENCE INDEX',
+    indexDescription:
+      'PASSIVE ANOMALY SENTINEL: HIDDEN STRUCTURAL FATIGUE — ADJACENT ASSETS ABSORBING OVERCOMPENSATION STRAIN (-15%).',
     voicePhrases: [
       'Check his hamstring tension on that final deceleration cut.',
       'Verify load orientation across the primary joint plane.',
@@ -126,6 +129,9 @@ const SECTORS = {
     metricsSubtitle: 'Surgical staff layer',
     speechPlaceholder: 'Describe implant seating, torque, or tissue load…',
     speechFallbackKeyword: 'implant',
+    indexTitle: 'SURGICAL NETWORK STABILITY INDEX',
+    indexDescription:
+      'BIOMECHANICAL ERROR CAPTURED: LOCALIZED STRUCTURAL DEFICIT DETECTED — IMPLANT CLEARANCE COMPROMISED (-15%).',
     voicePhrases: [
       'Check implant seating against bone density on the posterior maxilla.',
       'Map screw torque against cortical thickness before final seating.',
@@ -204,6 +210,9 @@ const SECTORS = {
     metricsSubtitle: 'Operations engineering layer',
     speechPlaceholder: 'Describe pump, thermal, or vibration signatures…',
     speechFallbackKeyword: 'pump',
+    indexTitle: 'SYSTEMIC OPERATIONAL INTEGRITY INDEX',
+    indexDescription:
+      'CRITICAL COMPONENT ALERT: MECHANICAL CAVITATION TRACE DETECTED — HYDRAULIC ANOMALY OVERLOAD ACTIVE (-15%).',
     voicePhrases: [
       'Inspect pump A bearing output for micro-cavitation signatures.',
       'Run thermal stress vector analysis across the primary manifold.',
@@ -302,6 +311,8 @@ function publicSectorConfig(sector = activeSector()) {
     speechPlaceholder: sector.speechPlaceholder,
     speechFallbackKeyword: sector.speechFallbackKeyword,
     voicePhrases: sector.voicePhrases,
+    indexTitle: sector.indexTitle,
+    indexDescription: sector.indexDescription,
     sectors: SECTOR_LIST,
   };
 }
@@ -323,13 +334,15 @@ function clampResilience(value) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
-function resiliencePayload(delta = 0, reason = null) {
+function resiliencePayload(delta = 0, reason = null, sector = activeSector()) {
   return {
     teamResilience,
     teamResiliencePercent: teamResilience,
     resilienceDelta: delta,
     resilienceReason: reason,
     resilienceStatus: teamResilience >= 75 ? 'stable' : 'vulnerable',
+    indexTitle: sector.indexTitle,
+    indexDescription: sector.indexDescription,
   };
 }
 
@@ -454,7 +467,7 @@ app.post('/api/sector', (req, res) => {
     success: true,
     switched: true,
     ...publicSectorConfig(sector),
-    ...resiliencePayload(0, `Sector gateway locked: ${sector.label}`),
+    ...resiliencePayload(0, sector.indexDescription, sector),
   });
 });
 
@@ -500,8 +513,7 @@ app.post('/api/analyze', (req, res) => {
   if (sentinelOverride) {
     resilienceDelta = -15;
     teamResilience = clampResilience(teamResilience + resilienceDelta);
-    resilienceReason =
-      'Passive Anomaly Sentinel: hidden structural fatigue — adjacent assets absorbing overcompensation strain (−15%).';
+    resilienceReason = sector.indexDescription;
   }
 
   const anomaly =
