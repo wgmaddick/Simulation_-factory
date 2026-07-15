@@ -30,7 +30,9 @@ app.post('/api/reset-credits', (req, res) => {
 // Route 2: Process the "Video + Talk + Send" execution loop
 app.post('/api/analyze', (req, res) => {
   const { nodeId, userSpeech } = req.body;
-  const selectedNode = systemState.research_nodes.find((n) => n.id === nodeId);
+  const selectedNode = Array.isArray(systemState.research_nodes)
+    ? systemState.research_nodes.find((n) => n.id === nodeId)
+    : null;
 
   if (!selectedNode) {
     return res.status(400).json({ error: 'Invalid Node' });
