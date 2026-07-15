@@ -58,9 +58,9 @@ def api_analyze():
     try:
         result = vault.analyze(str(node_id), str(user_speech))
     except KeyError as exc:
-        return jsonify({"error": str(exc)}), 400
+        return jsonify({"error": exc.args[0] if exc.args else "Unknown research node"}), 400
     except ValueError as exc:
-        return jsonify({"error": str(exc)}), 402
+        return jsonify({"error": exc.args[0] if exc.args else "Analysis rejected"}), 402
 
     _persist_vault(vault)
     return jsonify(result)
