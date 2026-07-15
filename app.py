@@ -1,440 +1,277 @@
-"""Opponent-Specific Selection Engine — weight and highlight metrics by target opponent."""
+"""University Operations Vault — Kinetic sector research-node unlock console."""
 
 from __future__ import annotations
 
-from typing import Any
-
-import numpy as np
-import pandas as pd
 import streamlit as st
 
-# ---------------------------------------------------------------------------
-# Metric catalogue
-# ---------------------------------------------------------------------------
-
-# Lower-is-better metrics are inverted when scoring.
-LOWER_IS_BETTER = frozenset({"Reload Latency (s)"})
-
-COLUMN_ALIASES: dict[str, list[str]] = {
-    "player_name": [
-        "player_name",
-        "name",
-        "player",
-        "athlete",
-        "athlete_name",
-    ],
-    "sprint_speed_m_s": [
-        "sprint_speed_m_s",
-        "sprint_speed",
-        "sprint_speed_ms",
-        "max_sprint_speed",
-        "sprint_speed_mps",
-    ],
-    "reload_latency_s": [
-        "reload_latency_s",
-        "reload_latency",
-        "reload_latency_seconds",
-        "reload_speed",
-        "floor_to_feet_reload",
-        "floor_to_feet_reload_s",
-    ],
-    "post_contact_meters": [
-        "post_contact_meters",
-        "post_contact_m",
-        "pcm",
-        "metres_after_contact",
-        "meters_after_contact",
-    ],
-    "scrum_axis": [
-        "scrum_axis",
-        "scrum_axis_score",
-        "scrum_force",
-        "set_piece_axis",
-        "scrum_dominance",
-    ],
-    "kick_contest_wins_pct": [
-        "kick_contest_wins_pct",
-        "kick_contest_wins",
-        "kick_pressure",
-        "kick_contest",
-        "aerial_kick_wins",
-    ],
-    "aerial_win_rate_pct": [
-        "aerial_win_rate_pct",
-        "aerial_win_rate",
-        "aerial_wins",
-        "contest_aerial_pct",
-    ],
-    "tackle_completion_pct": [
-        "tackle_completion_pct",
-        "tackle_completion",
-        "tackle_success",
-        "tackle_pct",
-    ],
-}
-
-DISPLAY_COLUMNS: dict[str, str] = {
-    "player_name": "Player Name",
-    "sprint_speed_m_s": "Sprint Speed (m/s)",
-    "reload_latency_s": "Reload Latency (s)",
-    "post_contact_meters": "Post-Contact Meters",
-    "scrum_axis": "Scrum Axis",
-    "kick_contest_wins_pct": "Kick Contest Wins (%)",
-    "aerial_win_rate_pct": "Aerial Win Rate (%)",
-    "tackle_completion_pct": "Tackle Completion (%)",
-}
-
-METRIC_COLUMNS = [
-    "Sprint Speed (m/s)",
-    "Reload Latency (s)",
-    "Post-Contact Meters",
-    "Scrum Axis",
-    "Kick Contest Wins (%)",
-    "Aerial Win Rate (%)",
-    "Tackle Completion (%)",
-]
-
-# ---------------------------------------------------------------------------
-# Opponent profiles — weights sum to 1.0; highlight drives table styling
-# ---------------------------------------------------------------------------
-
-OPPONENT_PROFILES: dict[str, dict[str, Any]] = {
-    "General Baseline": {
-        "label": "General Baseline",
-        "tagline": "Balanced athletic standards across the squad.",
-        "focus": "Even weighting of speed, reload tempo, and contact fundamentals.",
-        "highlight": [
-            "Sprint Speed (m/s)",
-            "Reload Latency (s)",
-        ],
-        "weights": {
-            "Sprint Speed (m/s)": 0.22,
-            "Reload Latency (s)": 0.22,
-            "Post-Contact Meters": 0.14,
-            "Scrum Axis": 0.14,
-            "Kick Contest Wins (%)": 0.10,
-            "Aerial Win Rate (%)": 0.10,
-            "Tackle Completion (%)": 0.08,
-        },
-    },
-    "France (Tactical/Kick Pressure)": {
-        "label": "France (Tactical/Kick Pressure)",
-        "tagline": "Contest the air, win the kick exchange, reload into shape fast.",
-        "focus": "Kick contests, aerial wins, and reload latency under tactical pressure.",
-        "highlight": [
-            "Kick Contest Wins (%)",
-            "Aerial Win Rate (%)",
-            "Reload Latency (s)",
-        ],
-        "weights": {
-            "Kick Contest Wins (%)": 0.28,
-            "Aerial Win Rate (%)": 0.24,
-            "Reload Latency (s)": 0.18,
-            "Sprint Speed (m/s)": 0.12,
-            "Tackle Completion (%)": 0.10,
-            "Post-Contact Meters": 0.05,
-            "Scrum Axis": 0.03,
-        },
-    },
-    "South Africa (Physical/Set-Piece Collision)": {
-        "label": "South Africa (Physical/Set-Piece Collision)",
-        "tagline": "Win the collision zone and hold the scrum axis.",
-        "focus": "Post-contact meters and scrum axis dominate selection weighting.",
-        "highlight": [
-            "Post-Contact Meters",
-            "Scrum Axis",
-            "Tackle Completion (%)",
-        ],
-        "weights": {
-            "Post-Contact Meters": 0.32,
-            "Scrum Axis": 0.28,
-            "Tackle Completion (%)": 0.14,
-            "Sprint Speed (m/s)": 0.10,
-            "Reload Latency (s)": 0.08,
-            "Aerial Win Rate (%)": 0.05,
-            "Kick Contest Wins (%)": 0.03,
-        },
-    },
-}
-
-HIGHLIGHT_BG = "#fff3bf"
-HIGHLIGHT_HEADER_BG = "#f59f00"
-
-
-def _demo_squad() -> pd.DataFrame:
-    """Built-in squad so the selection engine is usable without a CSV."""
-    rows = [
-        ("J. Williams", 9.4, 2.0, 4.2, 72, 58, 61, 88),
-        ("T. Okonkwo", 8.7, 2.4, 6.8, 91, 41, 44, 92),
-        ("M. Dupont", 9.1, 1.9, 3.1, 55, 78, 82, 85),
-        ("S. Botha", 8.5, 2.5, 7.4, 94, 38, 40, 90),
-        ("A. Chen", 9.6, 1.8, 3.8, 60, 71, 75, 87),
-        ("R. Ndlovu", 8.9, 2.2, 6.1, 88, 45, 48, 93),
-        ("L. Moreau", 9.0, 1.7, 2.9, 52, 84, 88, 84),
-        ("K. Singh", 9.3, 2.1, 5.0, 70, 62, 66, 89),
-        ("P. van der Berg", 8.6, 2.6, 7.1, 96, 35, 37, 91),
-        ("C. O'Sullivan", 9.2, 2.0, 4.5, 68, 66, 70, 86),
-    ]
-    return pd.DataFrame(
-        rows,
-        columns=[
-            "Player Name",
-            "Sprint Speed (m/s)",
-            "Reload Latency (s)",
-            "Post-Contact Meters",
-            "Scrum Axis",
-            "Kick Contest Wins (%)",
-            "Aerial Win Rate (%)",
-            "Tackle Completion (%)",
-        ],
-    )
-
-
-def _normalize_columns(raw: pd.DataFrame) -> pd.DataFrame:
-    lowered = {col: col.strip().lower().replace(" ", "_") for col in raw.columns}
-    raw = raw.rename(columns=lowered)
-
-    resolved: dict[str, str] = {}
-    for canonical, aliases in COLUMN_ALIASES.items():
-        for alias in aliases:
-            if alias in raw.columns:
-                resolved[canonical] = alias
-                break
-
-    if "player_name" not in resolved:
-        raise ValueError(
-            "CSV is missing a player name column. "
-            f"Found columns: {', '.join(raw.columns)}"
-        )
-
-    metric_keys = [k for k in COLUMN_ALIASES if k != "player_name"]
-    missing_metrics = [k for k in metric_keys if k not in resolved]
-    if len(missing_metrics) == len(metric_keys):
-        raise ValueError(
-            "CSV must include at least one performance metric. "
-            f"Found columns: {', '.join(raw.columns)}"
-        )
-
-    data: dict[str, Any] = {
-        "Player Name": raw[resolved["player_name"]].astype(str).str.strip(),
-    }
-    non_numeric: list[str] = []
-    usable_metrics: list[str] = []
-
-    for key in metric_keys:
-        label = DISPLAY_COLUMNS[key]
-        if key not in resolved:
-            data[label] = np.nan
-            continue
-
-        numeric = pd.to_numeric(raw[resolved[key]], errors="coerce")
-        data[label] = numeric
-
-        # Header was mapped — require real numeric values, not silent NaNs.
-        if len(numeric) == 0 or numeric.isna().all():
-            non_numeric.append(label)
-        elif numeric.isna().any():
-            bad_rows = int(numeric.isna().sum())
-            non_numeric.append(f"{label} ({bad_rows} non-numeric row(s))")
-        else:
-            usable_metrics.append(label)
-
-    if non_numeric:
-        raise ValueError(
-            "Mapped metric columns must contain numeric values for every player: "
-            + ", ".join(non_numeric)
-        )
-
-    if not usable_metrics:
-        raise ValueError(
-            "CSV has no usable numeric performance metrics after parsing. "
-            "Check that metric columns contain numbers, not text or blanks."
-        )
-
-    return pd.DataFrame(data)
-
-
-def _normalize_series(series: pd.Series, *, invert: bool) -> pd.Series:
-    """Min-max normalize a metric to 0–1; invert when lower values are better."""
-    values = series.astype(float)
-    if values.isna().all():
-        return pd.Series(0.0, index=series.index)
-    lo, hi = float(values.min()), float(values.max())
-    if hi == lo:
-        scaled = pd.Series(0.5, index=series.index)
-    else:
-        scaled = (values - lo) / (hi - lo)
-    return 1.0 - scaled if invert else scaled
-
-
-def _selection_scores(report: pd.DataFrame, profile: dict[str, Any]) -> pd.Series:
-    """Weighted opponent-fit score (0–100) from the active profile."""
-    weights: dict[str, float] = profile["weights"]
-    score = pd.Series(0.0, index=report.index)
-    weight_used = 0.0
-
-    for metric, weight in weights.items():
-        if metric not in report.columns or report[metric].isna().all():
-            continue
-        normalized = _normalize_series(
-            report[metric],
-            invert=metric in LOWER_IS_BETTER,
-        )
-        score = score + normalized * weight
-        weight_used += weight
-
-    if weight_used <= 0:
-        return pd.Series(0.0, index=report.index)
-    return (score / weight_used * 100).round(1)
-
-
-def _load_match_report(uploaded_file) -> pd.DataFrame:
-    raw = pd.read_csv(uploaded_file)
-    return _normalize_columns(raw)
-
-
-def _style_opponent_table(
-    display: pd.DataFrame,
-    highlight_cols: list[str],
-) -> "pd.io.formats.style.Styler":
-    """Highlight opponent-critical metric columns in the player table."""
-
-    def _highlight_columns(col: pd.Series) -> list[str]:
-        if col.name in highlight_cols:
-            return [f"background-color: {HIGHLIGHT_BG}; font-weight: 600"] * len(col)
-        return [""] * len(col)
-
-    styler = display.style.apply(_highlight_columns, axis=0)
-    styler = styler.set_table_styles(
-        [
-            {
-                "selector": f"th.col_heading.level0.col{display.columns.get_loc(col)}",
-                "props": [
-                    ("background-color", HIGHLIGHT_HEADER_BG),
-                    ("color", "#1a1a1a"),
-                    ("font-weight", "700"),
-                ],
-            }
-            for col in highlight_cols
-            if col in display.columns
-        ],
-        overwrite=False,
-    )
-    return styler
-
-
-def _format_display(report: pd.DataFrame) -> pd.DataFrame:
-    display = report.copy()
-    formats = {
-        "Sprint Speed (m/s)": "{:.2f}",
-        "Reload Latency (s)": "{:.2f}",
-        "Post-Contact Meters": "{:.1f}",
-        "Scrum Axis": "{:.0f}",
-        "Kick Contest Wins (%)": "{:.0f}",
-        "Aerial Win Rate (%)": "{:.0f}",
-        "Tackle Completion (%)": "{:.0f}",
-        "Opponent Fit Score": "{:.1f}",
-    }
-    for col, fmt in formats.items():
-        if col in display.columns:
-            display[col] = display[col].map(
-                lambda value, f=fmt: f.format(value) if pd.notna(value) else "—"
-            )
-    return display
-
-
-# ---------------------------------------------------------------------------
-# UI
-# ---------------------------------------------------------------------------
+from config import TENANT_CONFIG, THEME, research_nodes, total_unlock_cost
 
 st.set_page_config(
-    page_title="Opponent-Specific Selection Engine",
-    page_icon="🏉",
+    page_title="University Operations Vault",
+    page_icon="⬡",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
+
+
+def _inject_theme() -> None:
+    st.markdown(
+        f"""
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+        .stApp {{
+            background: radial-gradient(1200px 600px at 10% -10%, #064e3b 0%, transparent 55%),
+                        radial-gradient(900px 500px at 100% 0%, #0f172a 0%, transparent 50%),
+                        {THEME["bg"]};
+            color: {THEME["text"]};
+            font-family: "IBM Plex Sans", sans-serif;
+        }}
+        [data-testid="stSidebar"] {{
+            background: {THEME["card"]};
+            border-right: 1px solid {THEME["border"]};
+        }}
+        [data-testid="stSidebar"] * {{
+            color: {THEME["text"]};
+        }}
+        h1, h2, h3, h4 {{
+            font-family: "IBM Plex Sans", sans-serif !important;
+            letter-spacing: -0.02em;
+        }}
+        .vault-brand {{
+            font-size: clamp(1.8rem, 3vw, 2.6rem);
+            font-weight: 700;
+            color: {THEME["text"]};
+            margin: 0 0 0.25rem 0;
+            line-height: 1.15;
+        }}
+        .vault-brand span {{
+            color: {THEME["accent"]};
+        }}
+        .vault-sub {{
+            color: {THEME["muted"]};
+            font-size: 0.95rem;
+            margin-bottom: 1.25rem;
+        }}
+        .sector-chip {{
+            display: inline-block;
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.75rem;
+            letter-spacing: 0.08em;
+            color: {THEME["accent"]};
+            border: 1px solid {THEME["accent"]};
+            background: {THEME["accent_soft"]};
+            padding: 0.35rem 0.7rem;
+            margin-bottom: 0.75rem;
+        }}
+        .node-card {{
+            border: 1px solid {THEME["border"]};
+            background: {THEME["card"]};
+            padding: 1.1rem 1.2rem;
+            margin-bottom: 0.85rem;
+            border-left: 4px solid {THEME["border"]};
+        }}
+        .node-card.unlocked {{
+            border-left-color: {THEME["accent"]};
+            box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.25);
+        }}
+        .node-card.locked {{
+            opacity: 0.92;
+        }}
+        .node-meta {{
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.78rem;
+            color: {THEME["muted"]};
+            margin-bottom: 0.35rem;
+        }}
+        .node-title {{
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-bottom: 0.45rem;
+            color: {THEME["text"]};
+        }}
+        .node-body {{
+            font-size: 0.9rem;
+            color: {THEME["muted"]};
+            line-height: 1.45;
+        }}
+        .yield-line {{
+            margin-top: 0.65rem;
+            font-size: 0.85rem;
+            color: {THEME["accent"]};
+        }}
+        .credit-panel {{
+            border: 1px solid {THEME["border"]};
+            background: linear-gradient(160deg, {THEME["card"]} 0%, #022c22 140%);
+            padding: 1rem 1.15rem;
+            margin-bottom: 1rem;
+        }}
+        .credit-value {{
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 2rem;
+            font-weight: 500;
+            color: {THEME["accent"]};
+            line-height: 1;
+        }}
+        div[data-testid="stMetricValue"] {{
+            color: {THEME["accent"]} !important;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _init_session() -> None:
+    if "credits" not in st.session_state:
+        st.session_state.credits = int(TENANT_CONFIG["initial_credits"])
+    if "unlocked_nodes" not in st.session_state:
+        st.session_state.unlocked_nodes = set()
+    if "unlock_log" not in st.session_state:
+        st.session_state.unlock_log = []
+
+
+def unlock_node(node_id: str, cost: int, label: str) -> tuple[bool, str]:
+    if node_id in st.session_state.unlocked_nodes:
+        return False, "Already unlocked."
+    if st.session_state.credits < cost:
+        return False, f"Insufficient credits ({st.session_state.credits} < {cost})."
+    st.session_state.credits -= cost
+    st.session_state.unlocked_nodes.add(node_id)
+    st.session_state.unlock_log.append(
+        f"Unlocked {label} (−{cost} credits). Balance: {st.session_state.credits}."
+    )
+    return True, f"Unlocked. {cost} credits spent."
+
+
+_inject_theme()
+_init_session()
+
+domain = TENANT_CONFIG["target_domain"]
+tenant = TENANT_CONFIG["tenant_identity"]
+sector = TENANT_CONFIG["active_sector_code"]
+nodes = research_nodes()
+unlocked = st.session_state.unlocked_nodes
+credits = st.session_state.credits
 
 with st.sidebar:
-    st.header("Selection Controls")
-    target_opponent = st.selectbox(
-        "Target Opponent",
-        options=list(OPPONENT_PROFILES.keys()),
-        index=0,
-        help="Reweights and highlights the metrics that matter most for this opponent.",
-    )
-    profile = OPPONENT_PROFILES[target_opponent]
-    st.caption(profile["tagline"])
-    st.markdown(f"**Focus:** {profile['focus']}")
-
-    st.divider()
-    st.markdown("**Metric weights for this opponent**")
-    weight_rows = sorted(
-        profile["weights"].items(),
-        key=lambda item: item[1],
-        reverse=True,
-    )
-    for metric, weight in weight_rows:
-        marker = "◆" if metric in profile["highlight"] else "◇"
-        st.text(f"{marker} {metric}: {weight:.0%}")
-
-st.title("Opponent-Specific Selection Engine")
-st.caption(
-    "Shift from a flat pass/fail standard to opponent-weighted selection. "
-    "Critical metrics for the chosen opponent are highlighted and drive the fit score."
-)
-
-uploaded_csv = st.file_uploader(
-    "Upload Raw Match Report CSV (optional — demo squad loads by default)",
-    type=["csv"],
-)
-
-if uploaded_csv is None:
-    report = _demo_squad()
-    st.info("Using built-in demo squad. Upload a CSV to replace it.")
-else:
-    try:
-        report = _load_match_report(uploaded_csv)
-    except (ValueError, pd.errors.ParserError) as exc:
-        st.error(str(exc))
-        st.stop()
-
-report = report.copy()
-report["Opponent Fit Score"] = _selection_scores(report, profile)
-report = report.sort_values("Opponent Fit Score", ascending=False).reset_index(drop=True)
-
-highlight_cols = [c for c in profile["highlight"] if c in report.columns]
-
-top_fit = report.iloc[0]
-summary_col1, summary_col2, summary_col3 = st.columns(3)
-summary_col1.metric("Players Assessed", len(report))
-summary_col2.metric("Target Opponent", target_opponent.split(" (")[0])
-summary_col3.metric(
-    "Top Fit",
-    f"{top_fit['Player Name']} ({top_fit['Opponent Fit Score']:.1f})",
-)
-
-st.subheader("Player Selection Table")
-st.caption(
-    "Highlighted columns are weighted most heavily for "
-    f"**{target_opponent}**: {', '.join(highlight_cols)}."
-)
-
-display = _format_display(report)
-# Put fit score after name for readability
-ordered = ["Player Name", "Opponent Fit Score"] + [
-    c for c in METRIC_COLUMNS if c in display.columns
-]
-display = display[ordered]
-
-st.dataframe(
-    _style_opponent_table(display, highlight_cols + ["Opponent Fit Score"]),
-    width="stretch",
-    hide_index=True,
-)
-
-with st.expander("Expected CSV columns"):
+    st.markdown(f"**{tenant}**")
+    st.caption(domain.title())
     st.markdown(
-        "Provide `player_name` plus any of: "
-        "`sprint_speed_m_s`, `reload_latency_s`, `post_contact_meters`, "
-        "`scrum_axis`, `kick_contest_wins_pct`, `aerial_win_rate_pct`, "
-        "`tackle_completion_pct` (aliases accepted)."
+        f'<div class="sector-chip">{sector}</div>',
+        unsafe_allow_html=True,
+    )
+    st.divider()
+    st.markdown("**Research budget**")
+    st.metric("Credits remaining", f"{credits:,}")
+    st.progress(
+        min(1.0, len(unlocked) / max(len(nodes), 1)),
+        text=f"{len(unlocked)} / {len(nodes)} nodes online",
+    )
+    st.caption(f"Full sector unlock cost: {total_unlock_cost()} credits")
+    if st.button("Reset vault session", use_container_width=True):
+        st.session_state.credits = int(TENANT_CONFIG["initial_credits"])
+        st.session_state.unlocked_nodes = set()
+        st.session_state.unlock_log = ["Session reset to initial credit grant."]
+        st.rerun()
+    st.divider()
+    st.caption("Open **Kinetic Lab** in the sidebar pages to run live acquisition on unlocked nodes.")
+
+st.markdown(
+    f'<div class="sector-chip">{sector} · KINETIC</div>',
+    unsafe_allow_html=True,
+)
+st.markdown(
+    f'<p class="vault-brand">{tenant.split(" ", 1)[0]} '
+    f'<span>{tenant.split(" ", 1)[1] if " " in tenant else ""}</span></p>',
+    unsafe_allow_html=True,
+)
+st.markdown(
+    f'<p class="vault-sub">Sector research tree for {domain.lower()}. '
+    "Spend operations credits to bring kinetic analysis nodes online.</p>",
+    unsafe_allow_html=True,
+)
+
+top1, top2, top3, top4 = st.columns(4)
+top1.metric("Credits", f"{credits:,}")
+top2.metric("Nodes online", f"{len(unlocked)}/{len(nodes)}")
+top3.metric("Sector", "KINETIC")
+top4.metric("Domain", "Athletics")
+
+st.markdown(
+    f"""
+    <div class="credit-panel">
+      <div style="color:{THEME["muted"]};font-size:0.8rem;letter-spacing:0.06em;text-transform:uppercase;">
+        Operations credit ledger
+      </div>
+      <div class="credit-value">{credits:,}</div>
+      <div style="color:{THEME["muted"]};font-size:0.85rem;margin-top:0.35rem;">
+        Initial grant {TENANT_CONFIG["initial_credits"]:,} · spent
+        {TENANT_CONFIG["initial_credits"] - credits:,}
+      </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.subheader("Research nodes")
+st.caption("Unlock in any order. Each node permanently enables its Kinetic Lab channels for this session.")
+
+for node in nodes:
+    is_open = node["id"] in unlocked
+    status = "ONLINE" if is_open else "LOCKED"
+    card_class = "unlocked" if is_open else "locked"
+    st.markdown(
+        f"""
+        <div class="node-card {card_class}">
+          <div class="node-meta">{node["id"].upper()} · {status} · COST {node["credit_cost"]} CR</div>
+          <div class="node-title">{node["label"]}</div>
+          <div class="node-body">{node["summary"]}</div>
+          {"<div class='yield-line'>Yield: " + node["unlock_yield"] + "</div>" if is_open else ""}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    cols = st.columns([1, 1, 4])
+    with cols[0]:
+        if is_open:
+            st.success("Unlocked")
+        else:
+            if st.button(
+                f"Unlock ({node['credit_cost']} cr)",
+                key=f"unlock_{node['id']}",
+                type="primary",
+                use_container_width=True,
+            ):
+                ok, message = unlock_node(node["id"], node["credit_cost"], node["label"])
+                if ok:
+                    st.toast(message)
+                    st.rerun()
+                else:
+                    st.error(message)
+    with cols[1]:
+        st.caption(node["short_name"])
+
+st.divider()
+left, right = st.columns(2)
+with left:
+    st.subheader("Session unlock log")
+    if st.session_state.unlock_log:
+        for line in reversed(st.session_state.unlock_log[-12:]):
+            st.text(f"· {line}")
+    else:
+        st.caption("No unlocks yet. Activate a research node to begin.")
+
+with right:
+    st.subheader("Sector brief")
+    st.markdown(
+        f"""
+        **Tenant:** {tenant}  
+        **Domain:** {domain}  
+        **Active sector:** `{sector}`  
+        **Theme:** slate-950 / slate-900 / emerald-500  
+
+        Kinetic research covers interface shear, pelvic/deceleration asymmetry,
+        and micro-tear chronology for intercollegiate performance staff.
+        """
     )

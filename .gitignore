@@ -1,0 +1,16 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Streamlit / local
+.streamlit/secrets.toml
+*.log
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
