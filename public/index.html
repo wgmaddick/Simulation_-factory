@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kinetic Asset Management Vault</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes healFlash {
+            0% { opacity: 0; transform: translateY(8px) scale(0.98); }
+            20% { opacity: 1; transform: translateY(0) scale(1); }
+            80% { opacity: 1; }
+            100% { opacity: 1; }
+        }
+        .heal-flash {
+            animation: healFlash 0.45s ease-out forwards;
+        }
+        @keyframes pulseRing {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
+            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .mic-live {
+            color: #34d399 !important;
+            animation: pulseRing 1s ease-out infinite;
+            border-radius: 9999px;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen flex flex-col">
+
+    <header class="border-b border-slate-800 bg-slate-900/50 p-4 flex justify-between items-center backdrop-blur-md">
+        <div>
+            <h1 id="domain-header" class="text-xs font-bold tracking-widest text-emerald-500 uppercase">LOADING DOMAIN...</h1>
+            <p id="tenant-subheader" class="text-sm text-slate-400 font-semibold"></p>
+        </div>
+        <div class="bg-slate-950 border border-slate-800 px-4 py-2 rounded-lg text-sm">
+            Available Allocation: <span id="credit-display" class="font-mono text-emerald-400 font-bold">---</span> Credits
+        </div>
+    </header>
+
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-10 gap-6 p-6 overflow-hidden">
+
+        <section class="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+            <h2 class="text-sm font-semibold tracking-wider text-slate-400 uppercase mb-4">Column 1: Media Canvas</h2>
+            <div id="drop-zone" class="flex-1 border-2 border-dashed border-slate-700 hover:border-emerald-500 rounded-lg flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-colors duration-200 bg-slate-950/40">
+                <p class="text-lg font-bold text-slate-200 mb-2">"Take your iPhone, video your problem, talk to it, and send it."</p>
+                <p class="text-xs text-slate-500">Supports raw video telemetry or static images</p>
+                <input type="file" id="file-input" class="hidden" accept="video/*,image/*">
+            </div>
+            <div id="media-status" class="mt-4 text-xs font-mono text-slate-500">System Intake status: Standby</div>
+        </section>
+
+        <section class="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+            <div>
+                <h2 class="text-sm font-semibold tracking-wider text-slate-400 uppercase mb-4">Column 2: Orchestration</h2>
+                <label class="block text-xs text-slate-400 font-medium mb-2 uppercase">Select Research Node</label>
+                <div id="nodes-container" class="space-y-3 mb-6"></div>
+
+                <label class="block text-xs text-slate-400 font-medium mb-2 uppercase">Vocal Command Ingestion</label>
+                <div class="relative">
+                    <input type="text" id="speech-input" placeholder="Or tap microphone to speak..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 text-slate-200 pr-12">
+                    <button id="voice-btn" type="button" class="absolute right-2 top-2 p-1.5 text-slate-500 hover:text-emerald-400 transition-colors" aria-label="Live audio capture feedback">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                            <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <button id="execute-btn" class="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] transition-all text-slate-950 font-bold uppercase py-4 rounded-lg tracking-wider text-sm mt-4 shadow-lg shadow-emerald-500/10">Execute Deep Analysis</button>
+        </section>
+
+        <section class="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col space-y-4 overflow-y-auto">
+            <h2 class="text-sm font-semibold tracking-wider text-slate-400 uppercase">Column 3: Advisory &amp; Sentinel</h2>
+
+            <div class="bg-slate-950 border border-slate-800 rounded-lg p-4">
+                <h3 class="text-xs font-bold tracking-wider text-slate-400 uppercase mb-2">Track 1: Expert Verdict</h3>
+                <p id="verdict-display" class="text-sm text-slate-300 italic">Awaiting structural intake visualization...</p>
+            </div>
+
+            <div id="sentinel-card" class="bg-red-950/20 border border-red-900/50 rounded-lg p-4 hidden transition-all duration-300">
+                <div class="flex items-center space-x-2 text-red-400 font-bold uppercase text-xs tracking-wider mb-2">
+                    <span aria-hidden="true">⚠</span>
+                    <span id="sentinel-title">SENTINEL OVERRIDE SIGNAL</span>
+                </div>
+                <p id="sentinel-loc" class="text-sm text-slate-200 font-bold mb-1"></p>
+                <p id="sentinel-desc" class="text-xs text-slate-400 mb-4"></p>
+
+                <div class="border-t border-red-900/30 pt-3 mb-4">
+                    <h4 class="text-[10px] font-bold tracking-wider text-red-400 uppercase mb-1">Risk Escalation Timeline</h4>
+                    <p id="sentinel-timeline" class="text-xs font-mono text-red-300 bg-red-950/40 p-2 rounded border border-red-900/20"></p>
+                </div>
+
+                <!-- Roster Replacement Match Matrix (revealed when Sentinel fires) -->
+                <div id="replacement-matrix" class="border-t border-red-900/30 pt-4 space-y-3">
+                    <div class="flex items-baseline justify-between gap-2">
+                        <h4 class="text-[10px] font-bold tracking-widest text-emerald-400 uppercase">Roster Replacement Match Matrix</h4>
+                        <span class="text-[10px] font-mono text-slate-500">Ranked · Interactive</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 mb-1">Select a backup to rotate in and cascade self-heal across sub-organizations.</p>
+
+                    <ul id="replacement-list" class="space-y-2" role="list">
+                        <li class="flex flex-col sm:flex-row sm:items-center gap-2 bg-slate-950/80 border border-slate-800 rounded-lg p-3">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-[10px] font-mono text-slate-500">#1</span>
+                                    <span class="text-sm font-bold text-slate-100">Davis</span>
+                                </div>
+                                <div class="flex flex-wrap gap-x-3 gap-y-1 text-[11px]">
+                                    <span class="text-emerald-400 font-semibold">94% Match</span>
+                                    <span class="text-slate-400">Low <span class="font-mono text-slate-300">12%</span> Fatigue Risk</span>
+                                </div>
+                            </div>
+                            <button type="button" data-candidate="Davis" class="rotate-heal-btn shrink-0 w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 active:scale-[0.97] text-slate-950 font-bold text-[10px] tracking-wider uppercase px-3 py-2.5 rounded-md shadow-md shadow-emerald-500/20 transition-all">
+                                [ ROTATE &amp; SELF-HEAL ]
+                            </button>
+                        </li>
+                        <li class="flex flex-col sm:flex-row sm:items-center gap-2 bg-slate-950/80 border border-slate-800 rounded-lg p-3">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-[10px] font-mono text-slate-500">#2</span>
+                                    <span class="text-sm font-bold text-slate-100">Miller</span>
+                                </div>
+                                <div class="flex flex-wrap gap-x-3 gap-y-1 text-[11px]">
+                                    <span class="text-amber-400 font-semibold">78% Match</span>
+                                    <span class="text-slate-400">Medium <span class="font-mono text-slate-300">38%</span> Fatigue Risk</span>
+                                </div>
+                            </div>
+                            <button type="button" data-candidate="Miller" class="rotate-heal-btn shrink-0 w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 active:scale-[0.97] text-slate-950 font-bold text-[10px] tracking-wider uppercase px-3 py-2.5 rounded-md shadow-md shadow-emerald-500/20 transition-all">
+                                [ ROTATE &amp; SELF-HEAL ]
+                            </button>
+                        </li>
+                        <li class="flex flex-col sm:flex-row sm:items-center gap-2 bg-slate-950/80 border border-slate-800 rounded-lg p-3">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-[10px] font-mono text-slate-500">#3</span>
+                                    <span class="text-sm font-bold text-slate-100">Henderson</span>
+                                </div>
+                                <div class="flex flex-wrap gap-x-3 gap-y-1 text-[11px]">
+                                    <span class="text-slate-300 font-semibold">62% Match</span>
+                                    <span class="text-slate-400">Low <span class="font-mono text-slate-300">5%</span> Fatigue Risk</span>
+                                </div>
+                            </div>
+                            <button type="button" data-candidate="Henderson" class="rotate-heal-btn shrink-0 w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 active:scale-[0.97] text-slate-950 font-bold text-[10px] tracking-wider uppercase px-3 py-2.5 rounded-md shadow-md shadow-emerald-500/20 transition-all">
+                                [ ROTATE &amp; SELF-HEAL ]
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Cascading self-heal confirmation panel -->
+            <div id="heal-confirmation" class="hidden bg-emerald-950/30 border border-emerald-800/60 rounded-lg p-4 heal-flash" role="status" aria-live="polite">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="inline-flex h-2 w-2 rounded-full bg-emerald-400"></span>
+                    <h3 class="text-xs font-bold tracking-widest text-emerald-400 uppercase">Sub-Organization Self-Healed</h3>
+                </div>
+                <p id="heal-headline" class="text-sm text-slate-200 font-semibold mb-3"></p>
+                <ul id="heal-notifications" class="space-y-2"></ul>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        let currentConfig = null;
+        let audioCtx = null;
+
+        function ensureAudioContext() {
+            if (!audioCtx) {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx) return null;
+                audioCtx = new Ctx();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        /** Mimic live mic feedback via Web Audio API oscillators + gain envelope. */
+        function playMicFeedback() {
+            const ctx = ensureAudioContext();
+            if (!ctx) return;
+
+            const now = ctx.currentTime;
+            const master = ctx.createGain();
+            master.gain.setValueAtTime(0.0001, now);
+            master.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+            master.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+            master.connect(ctx.destination);
+
+            // Soft carrier + slight FM-like second tone to feel "live"
+            const osc1 = ctx.createOscillator();
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(520, now);
+            osc1.frequency.exponentialRampToValueAtTime(180, now + 0.5);
+
+            const osc2 = ctx.createOscillator();
+            osc2.type = 'triangle';
+            osc2.frequency.setValueAtTime(780, now);
+            osc2.frequency.exponentialRampToValueAtTime(240, now + 0.45);
+
+            const g1 = ctx.createGain();
+            g1.gain.value = 0.55;
+            const g2 = ctx.createGain();
+            g2.gain.value = 0.2;
+
+            // Light noise burst for "open mic" texture
+            const bufferSize = Math.floor(ctx.sampleRate * 0.12);
+            const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const data = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+            }
+            const noise = ctx.createBufferSource();
+            noise.buffer = noiseBuffer;
+            const noiseGain = ctx.createGain();
+            noiseGain.gain.setValueAtTime(0.12, now);
+            noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+
+            osc1.connect(g1).connect(master);
+            osc2.connect(g2).connect(master);
+            noise.connect(noiseGain).connect(master);
+
+            osc1.start(now);
+            osc2.start(now);
+            noise.start(now);
+            osc1.stop(now + 0.55);
+            osc2.stop(now + 0.5);
+            noise.stop(now + 0.13);
+        }
+
+        async function initApp() {
+            const res = await fetch('/api/config');
+            currentConfig = await res.json();
+
+            document.getElementById('domain-header').innerText = currentConfig.target_domain;
+            document.getElementById('tenant-subheader').innerText = currentConfig.tenant_identity;
+            document.getElementById('credit-display').innerText = currentConfig.initial_credits;
+
+            const container = document.getElementById('nodes-container');
+            container.innerHTML = '';
+            currentConfig.research_nodes.forEach((node, idx) => {
+                container.innerHTML += `
+                    <label class="flex items-center justify-between p-3 border border-slate-800 rounded-lg bg-slate-950/50 cursor-pointer hover:border-slate-700 transition-all">
+                        <div class="flex items-center space-x-3">
+                            <input type="radio" name="node-selection" value="${node.id}" ${idx === 0 ? 'checked' : ''} class="accent-emerald-500">
+                            <span class="text-xs text-slate-300 font-medium">${node.label}</span>
+                        </div>
+                        <span class="text-[10px] font-mono font-bold bg-slate-800 text-slate-400 px-2 py-0.5 rounded">${node.credit_cost} Cr</span>
+                    </label>
+                `;
+            });
+        }
+
+        const dropZone = document.getElementById('drop-zone');
+        dropZone.addEventListener('click', () => document.getElementById('file-input').click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-emerald-500');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-emerald-500');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('file-input').files = files;
+                document.getElementById('media-status').innerText = `System Intake status: Telemetry Loaded (${files[0].name})`;
+                dropZone.classList.add('border-emerald-500');
+            }
+        });
+        document.getElementById('file-input').addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                document.getElementById('media-status').innerText = `System Intake status: Telemetry Loaded (${e.target.files[0].name})`;
+                dropZone.classList.add('border-emerald-500');
+            }
+        });
+
+        const voiceBtn = document.getElementById('voice-btn');
+        voiceBtn.addEventListener('click', () => {
+            playMicFeedback();
+            voiceBtn.classList.add('mic-live');
+
+            const mockPhrases = [
+                "Check his hamstring tension on that final deceleration cut.",
+                "Verify load orientation across the primary joint plane.",
+                "Audit torque asymmetry during high-impact braking loops."
+            ];
+            document.getElementById('speech-input').value = mockPhrases[Math.floor(Math.random() * mockPhrases.length)];
+
+            setTimeout(() => voiceBtn.classList.remove('mic-live'), 900);
+        });
+
+        function hideHealConfirmation() {
+            const panel = document.getElementById('heal-confirmation');
+            panel.classList.add('hidden');
+            panel.classList.remove('heal-flash');
+        }
+
+        function showHealConfirmation(payload) {
+            const panel = document.getElementById('heal-confirmation');
+            const list = document.getElementById('heal-notifications');
+            document.getElementById('heal-headline').textContent =
+                payload.message ||
+                `General Manager: entire sub-organization has been automatically re-aligned and self-healed for ${payload.candidateName}.`;
+
+            const notes = Array.isArray(payload.notifications) ? payload.notifications : [];
+            list.innerHTML = notes
+                .map(
+                    (n) => `
+                <li class="bg-slate-950/70 border border-emerald-900/40 rounded-md p-3">
+                    <p class="text-[10px] font-bold tracking-wider text-emerald-400 uppercase mb-1">${n.org}</p>
+                    <p class="text-xs text-slate-200 font-medium mb-1">${n.summary}</p>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">${n.detail}</p>
+                </li>`
+                )
+                .join('');
+
+            panel.classList.remove('hidden');
+            panel.classList.remove('heal-flash');
+            void panel.offsetWidth;
+            panel.classList.add('heal-flash');
+            panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        async function confirmRotation(candidateName, btn) {
+            const buttons = document.querySelectorAll('.rotate-heal-btn');
+            buttons.forEach((b) => {
+                b.disabled = true;
+            });
+            if (btn) {
+                btn.textContent = 'DISPATCHING…';
+            }
+
+            try {
+                const response = await fetch('/api/confirm-rotation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ candidateName }),
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    alert(data.error || 'Rotation dispatch failed.');
+                    return;
+                }
+                showHealConfirmation(data);
+            } catch (err) {
+                alert('Unable to reach self-heal cascade.');
+            } finally {
+                buttons.forEach((b) => {
+                    b.disabled = false;
+                    b.textContent = '[ ROTATE & SELF-HEAL ]';
+                });
+            }
+        }
+
+        document.querySelectorAll('.rotate-heal-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const name = btn.getAttribute('data-candidate');
+                if (name) confirmRotation(name, btn);
+            });
+        });
+
+        document.getElementById('execute-btn').addEventListener('click', async () => {
+            const activeRadio = document.querySelector('input[name="node-selection"]:checked');
+            const speechInput = document.getElementById('speech-input').value;
+
+            if (!activeRadio) return alert('Select a research heading node.');
+            if (!speechInput) return alert('Please present an interface query or voice parameter.');
+
+            document.getElementById('execute-btn').innerText = 'CALCULATING SIMULATION...';
+            document.getElementById('execute-btn').disabled = true;
+            hideHealConfirmation();
+
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nodeId: activeRadio.value, userSpeech: speechInput }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    alert(data.error || 'Analysis failed.');
+                    return;
+                }
+
+                document.getElementById('credit-display').innerText = data.creditsRemaining;
+                document.getElementById('verdict-display').innerText = data.expertVerdict;
+
+                const sentinelCard = document.getElementById('sentinel-card');
+                if (data.sentinelOverride && data.anomalyData) {
+                    document.getElementById('sentinel-loc').innerText = data.anomalyData.location;
+                    document.getElementById('sentinel-desc').innerText = data.anomalyData.description;
+                    document.getElementById('sentinel-timeline').innerText = data.anomalyData.timeline;
+                    sentinelCard.classList.remove('hidden');
+                } else {
+                    sentinelCard.classList.add('hidden');
+                }
+            } catch (err) {
+                alert('Unable to reach analysis engine.');
+            } finally {
+                document.getElementById('execute-btn').innerText = 'Execute Deep Analysis';
+                document.getElementById('execute-btn').disabled = false;
+            }
+        });
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>
