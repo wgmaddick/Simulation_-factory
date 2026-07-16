@@ -24,6 +24,93 @@ const VAULT_CONFIG = {
   research_nodes: RESEARCH_NODES,
 };
 
+/**
+ * Polymorphic Gateway Data Matrix — Phase 1 backbone.
+ * Each sector carries sponsor economics + an avatarPersona profile
+ * ready to stream into the front-end UI loop.
+ */
+const GATEWAY_SECTORS = {
+  football: {
+    id: 'football',
+    displayName: 'Football',
+    sponsorName: 'Nike Elite Performance Lab',
+    sponsorBudgetAllocation: '76 Compute Credits',
+    avatarPersona: {
+      title: 'Elite Sports Scientist',
+      tone: 'Precise, field-side biomechanics counsel with sprint-cycle urgency',
+      troubleshootingGreeting:
+        'Load path intake online. Describe the kinetic chain fault, plant-leg cue, or deceleration cut you need audited — I will map torque asymmetry and soft-tissue readiness before the next exposure window.',
+    },
+  },
+  rugby: {
+    id: 'rugby',
+    displayName: 'Rugby',
+    sponsorName: 'Gilbert Global Tech Guild',
+    sponsorBudgetAllocation: '120 Compute Credits',
+    avatarPersona: {
+      title: 'Elite Collision Performance Lead',
+      tone: 'Direct set-piece and contact-channel coaching language',
+      troubleshootingGreeting:
+        'Scrum axis and contact channel telemetry are live. Flag the ruck clear-out, tackle completion miss, or post-contact meter fade and I will re-weight the collision matrix for Saturday\'s rotation.',
+    },
+  },
+  clinicalDental: {
+    id: 'clinicalDental',
+    displayName: 'Clinical Dental',
+    sponsorName: 'Straumann Bio-Materials Corp',
+    sponsorBudgetAllocation: '94 Direct Procurement Credits',
+    avatarPersona: {
+      title: 'Chief Oral Surgeon',
+      tone: 'Calm chairside clinical authority with materials-science precision',
+      troubleshootingGreeting:
+        'Operatory intake ready. Detail the osseointegration concern, occlusal interference, or prosthetic seating issue and I will sequence imaging, bio-material lot checks, and chair-time recovery steps.',
+    },
+  },
+  healthcareMedicine: {
+    id: 'healthcareMedicine',
+    displayName: 'Healthcare & Medicine',
+    sponsorName: 'Municipal Emergency Health Fund',
+    sponsorBudgetAllocation: '$1,250,000 Active Departmental Run-Rate',
+    avatarPersona: {
+      title: 'Hospital Financial Auditor',
+      tone: 'Fiscal clarity with bed-capacity and triage operational realism',
+      troubleshootingGreeting:
+        'Departmental ledger and triage board are synchronized. Specify the run-rate variance, discharge bottleneck, or emergency surge line item and I will reconcile capacity against the active municipal allocation.',
+    },
+  },
+  assetInfrastructure: {
+    id: 'assetInfrastructure',
+    displayName: 'Asset Infrastructure',
+    sponsorName: 'Zurich Global Risk & Infrastructure Insure',
+    sponsorBudgetAllocation: 'Systemic Safeguard Tier Active',
+    avatarPersona: {
+      title: 'Systemic Continuity Underwriter',
+      tone: 'Risk-tier underwriting language focused on systemic safeguards',
+      troubleshootingGreeting:
+        'Infrastructure risk envelope is armed. Report the asset integrity fault, continuity breach, or safeguard-tier exception and I will underwrite exposure against the active systemic cover.',
+    },
+  },
+};
+
+/** Alias tokens → canonical sector id (normalized, case-insensitive). */
+const GATEWAY_ALIAS_MAP = {
+  football: 'football',
+  'football division': 'football',
+  rugby: 'rugby',
+  'rugby division': 'rugby',
+  'clinical dental': 'clinicalDental',
+  clinicaldental: 'clinicalDental',
+  dental: 'clinicalDental',
+  'healthcare medicine': 'healthcareMedicine',
+  healthcaremedicine: 'healthcareMedicine',
+  healthcare: 'healthcareMedicine',
+  medicine: 'healthcareMedicine',
+  'asset infrastructure': 'assetInfrastructure',
+  assetinfrastructure: 'assetInfrastructure',
+  infrastructure: 'assetInfrastructure',
+  asset: 'assetInfrastructure',
+};
+
 const VERDICTS = {
   hamstring_load: [
     'Posterior chain tension peaks late in the swing phase; eccentric capacity is within band but residual tightness concentrates at the distal musculotendinous junction.',
@@ -130,6 +217,73 @@ function slugify(name) {
     .replace(/^-|-$/g, '') || 'athlete';
 }
 
+/** Collapse free-form gateway labels into a comparable key. */
+function normalizeGatewayKey(raw) {
+  return String(raw ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\b(division|sector|gateway|profile|unit|dept|department)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Resolve a polymorphic gateway selection without throwing.
+ * Accepts labels like "Asset Infrastructure", "healthcare & medicine",
+ * or "Football Division" and returns the matching sector profile (or null).
+ */
+function resolveGatewaySector(selection) {
+  const normalized = normalizeGatewayKey(selection);
+  if (!normalized) return null;
+
+  const compact = normalized.replace(/\s+/g, '');
+
+  const aliasHit =
+    GATEWAY_ALIAS_MAP[normalized] ||
+    GATEWAY_ALIAS_MAP[compact] ||
+    null;
+  if (aliasHit && GATEWAY_SECTORS[aliasHit]) {
+    return GATEWAY_SECTORS[aliasHit];
+  }
+
+  for (const sector of Object.values(GATEWAY_SECTORS)) {
+    const displayKey = normalizeGatewayKey(sector.displayName);
+    const idKey = normalizeGatewayKey(sector.id);
+    if (
+      normalized === displayKey ||
+      normalized === idKey ||
+      compact === displayKey.replace(/\s+/g, '') ||
+      compact === idKey.replace(/\s+/g, '')
+    ) {
+      return sector;
+    }
+  }
+
+  // Soft contains match for compound UI labels (e.g. "Football Division Vault")
+  for (const [alias, sectorId] of Object.entries(GATEWAY_ALIAS_MAP)) {
+    if (
+      alias.length >= 5 &&
+      (normalized.includes(alias) || compact.includes(alias.replace(/\s+/g, '')))
+    ) {
+      return GATEWAY_SECTORS[sectorId] || null;
+    }
+  }
+
+  return null;
+}
+
+function listGatewaySectors() {
+  return Object.values(GATEWAY_SECTORS).map((sector) => ({
+    id: sector.id,
+    displayName: sector.displayName,
+    sponsorName: sector.sponsorName,
+    sponsorBudgetAllocation: sector.sponsorBudgetAllocation,
+    avatarPersona: { ...sector.avatarPersona },
+  }));
+}
+
 function buildLoadPathSignature(candidateName) {
   const digest = crypto
     .createHash('sha256')
@@ -152,13 +306,62 @@ function saturdayWeatherGrid() {
   };
 }
 
-// Route 1: Serve configuration to frontend
+// Route 1: Serve configuration to frontend (includes gateway matrix catalogue)
 app.get('/api/config', (req, res) => {
   res.json({
     ...VAULT_CONFIG,
     initial_credits: credits,
+    gatewaySectors: listGatewaySectors(),
   });
 });
+
+/** Catalogue of all polymorphic gateway sectors for the UI selector loop. */
+app.get('/api/gateways', (req, res) => {
+  res.json({
+    sectors: listGatewaySectors(),
+  });
+});
+
+/**
+ * Dynamic gateway lookup — case-insensitive string comparison.
+ * Accepts ?selection= / ?sector= / ?gateway= query, or JSON body { selection }.
+ */
+function handleGatewayLookup(req, res) {
+  const selection =
+    (req.params && req.params.selection) ||
+    (req.query && (req.query.selection || req.query.sector || req.query.gateway)) ||
+    (req.body && (req.body.selection || req.body.sector || req.body.gateway)) ||
+    '';
+
+  const sector = resolveGatewaySector(selection);
+
+  if (!sector) {
+    return res.status(404).json({
+      success: false,
+      error: 'Unknown gateway sector',
+      selection: String(selection || ''),
+      available: listGatewaySectors().map((s) => s.displayName),
+    });
+  }
+
+  return res.json({
+    success: true,
+    selection: String(selection),
+    normalizedKey: normalizeGatewayKey(selection),
+    sector: {
+      id: sector.id,
+      displayName: sector.displayName,
+      sponsorName: sector.sponsorName,
+      sponsorBudgetAllocation: sector.sponsorBudgetAllocation,
+      avatarPersona: { ...sector.avatarPersona },
+    },
+  });
+}
+
+app.get('/api/gateway', handleGatewayLookup);
+app.get('/api/gateway/:selection', handleGatewayLookup);
+app.post('/api/gateway', handleGatewayLookup);
+app.post('/api/gateway-select', handleGatewayLookup);
 
 app.post('/api/reset-credits', (req, res) => {
   credits = VAULT_CONFIG.initial_credits;
