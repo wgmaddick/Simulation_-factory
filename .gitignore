@@ -6,9 +6,6 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 
-# Node
-node_modules/
-
 # Streamlit / local
 .streamlit/secrets.toml
 *.log

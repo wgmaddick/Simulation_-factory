@@ -1,26 +1,25 @@
-# University Operations Vault — Kinetic Sector
+# Kinetic Vault — Polymorphic Streamlit Framework
 
-Streamlit multipage app for **University Intercollegiate Athletics** operations research.
+Single-page Streamlit shell that binds one of two retained vault data profiles at a time.
 
-## Tenant brief
+## Vault profiles
 
-| Field | Value |
-| --- | --- |
-| Tenant | University Operations Vault |
-| Domain | University Intercollegiate Athletics |
-| Sector | `SEC_01_KINETIC` |
-| Starting credits | 450 |
-| Theme | slate-950 / slate-900 / emerald-500 |
+| Profile | Credits | Research nodes |
+| --- | ---: | --- |
+| **University Operations Vault** | 450 | Shear Stress Mapping · Decel Chain Asymmetry · Micro-Tear Chronology |
+| **AAT Phoenix / Asset Infrastructure** | 100 | Hamstring Load · Thermal Map · Vibration Signature |
 
-## Pages
+Switching the active vault in the sidebar rebinds credits, nodes, metrics, verdicts, and sentinel data instantly. Each profile keeps its own session ledger (unlocks are not retired when you switch).
 
-- **University Operations Vault** (`app.py`) — credit ledger and research-node unlock tree:
-  - Node 1.1 Dynamic Interface Shear Stress Mapping (5 cr)
-  - Node 1.2 Pelvic Tilt & Deceleration Chain Asymmetry (8 cr)
-  - Node 1.3 Cellular Longevity & Micro-Tear Chronology (12 cr)
-- **Kinetic Lab** (`pages/1_Kinetic_Lab.py`) — live athlete acquisition console. Channels activate only for unlocked nodes. Engine: `kinetic_simulation.py`.
+## Layout (unified)
 
-Config lives in `config.py` (mirrors the sector brief).
+`app.py` merges both prior surfaces into one execution loop:
+
+1. Credit ledger + profile-bound metrics container  
+2. Research-node unlock tree  
+3. Media canvas · Orchestration · Advisory / Sentinel (+ roster self-heal)
+
+All profile payloads live in `config.py` (`VAULT_PROFILES`).
 
 ## Run
 
