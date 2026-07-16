@@ -252,7 +252,7 @@ def _execute_analysis(profile: dict[str, Any], node_id: str, speech: str) -> Non
     state["heal_notice"] = None
 
     if _should_trigger_sentinel(node_id, speech):
-        state["sentinel"] = dict(profile["sentinel"][node_id])
+        state["sentinel"] = dict(profile["sentinel"].get(node_id, {}))
     else:
         state["sentinel"] = None
 
