@@ -543,8 +543,8 @@ def render_capital_market_dashboard() -> None:
         st.metric(
             "Direct Equity Injections weight",
             f"{equity_weight:.2f}",
-            help="Complement of Convertible Notes weight (always sums to 1.00).",
         )
+        st.caption("Complement of Convertible Notes weight (always sums to 1.00).")
 
     # ------------------------------------------------------------------
     # Column 3 — Strategic Consortium Anchor Tracer
