@@ -65,6 +65,8 @@ class KineticLabState:
         self.recovery_clears = 0
         self.uptime_ticks = 0
         self.integrity_override = False
+        self.circuit_breaker = None
+        self.divergence_ledger = None
         self.log = ["[INIT] Kinetic lab reset. Awaiting acquisition start."]
         self.athletes = [
             AthleteChannel(name=roster[i % len(roster)])

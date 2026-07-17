@@ -164,7 +164,14 @@ with st.sidebar:
                         "lab_operator",
                         intervention or "Supervised load reduction",
                     )
-                    lab.divergence_ledger.compute_new_reality()
+                    fork = lab.divergence_ledger.compute_new_reality()
+                    post_athletes = fork.post_drift_readout.get("athletes", [])
+                    for athlete, telemetry in zip(lab.athletes, post_athletes):
+                        if not isinstance(telemetry, dict):
+                            continue
+                        athlete.shear_peak_n = float(telemetry["shear_peak_n"])
+                        athlete.asymmetry_pct = float(telemetry["asymmetry_pct"])
+                        athlete.tissue_debt = float(telemetry["tissue_debt"])
                     lab.integrity_override = False
                     lab.log.append("[GOV] Path A (Compliance) — system recovered.")
                     st.rerun()
@@ -245,4 +252,7 @@ with right:
 if lab.running:
     step_simulation(lab)
     time.sleep(lab.speed)
+    st.rerun()
+elif lab.integrity_override:
+    time.sleep(min(lab.speed, 1.0))
     st.rerun()
