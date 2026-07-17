@@ -413,7 +413,11 @@ def main() -> int:
     vault_body = vault_path.read_text(encoding="utf-8")
     assert "SOVEREIGN INTELLIGENCE REPORT" in vault_body
     vault_hash = vault_path.stem.removeprefix("AUDIT_")
+    pdf_path = vault_path.with_suffix(".pdf")
+    assert pdf_path.exists(), f"Expected companion PDF {pdf_path}"
+    assert pdf_path.read_bytes()[:4] == b"%PDF"
     log(f"Vault forensic file:           {vault_path}")
+    log(f"Vault PDF companion:           {pdf_path}")
     log(f"Vault SHA-256 seal:            {vault_hash}")
     log("CONFIRMED: immutable forensic history written to secure_audit_vault/")
 
