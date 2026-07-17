@@ -61,28 +61,34 @@ class DriftStatus(str, Enum):
 # Default Human Governance Window duration (milliseconds).
 DEFAULT_GOVERNANCE_WINDOW_MS: int = 30_000
 
-# Isolated audit storage node. Prefer the conceptual absolute mount
-# ``/secure/audit/log``; fall back to a workspace-local mirror when the
-# host denies creation of the system path.
-_CONCEPTUAL_AUDIT_DIR = Path("/secure/audit/log")
-_FALLBACK_AUDIT_DIR = Path(__file__).resolve().parent / "secure" / "audit" / "log"
+# Isolated black-box audit vault (workspace-local designated directory).
+SECURE_AUDIT_VAULT_DIR: Path = (
+    Path(__file__).resolve().parent / "secure_audit_vault"
+)
+
+# Shield confirmation emitted after every successful hard write.
+SYSTEM_PROTECTION_SHIELD_MSG = (
+    "SYSTEM PROTECTION SHIELD ACTIVE: Un-erasable forensic history written "
+    "to isolated disk storage."
+)
+
+# Primary audit artifact extension (text SIR blueprint; PDF companion optional).
+AUDIT_FILE_EXTENSION = ".txt"
 
 
 def resolve_audit_log_dir() -> Path:
-    """Return the writable isolated audit directory for sovereign receipts."""
-    for candidate in (_CONCEPTUAL_AUDIT_DIR, _FALLBACK_AUDIT_DIR):
-        try:
-            candidate.mkdir(parents=True, exist_ok=True)
-            probe = candidate / ".write_probe"
-            probe.write_text("ok", encoding="utf-8")
-            probe.unlink(missing_ok=True)
-            return candidate
-        except OSError:
-            continue
-    raise OSError("No writable isolated audit storage node available.")
+    """Return the writable isolated audit directory for sovereign receipts.
+
+    Designated vault: ``secure_audit_vault/`` inside the workspace.
+    """
+    SECURE_AUDIT_VAULT_DIR.mkdir(parents=True, exist_ok=True)
+    probe = SECURE_AUDIT_VAULT_DIR / ".write_probe"
+    probe.write_text("ok", encoding="utf-8")
+    probe.unlink(missing_ok=True)
+    return SECURE_AUDIT_VAULT_DIR
 
 
-AUDIT_LOG_DIR: Path = _FALLBACK_AUDIT_DIR  # resolved lazily on first export
+AUDIT_LOG_DIR: Path = SECURE_AUDIT_VAULT_DIR
 
 
 class DivergenceUIStatus(str, Enum):
@@ -711,13 +717,60 @@ def write_to_isolated_disk(filename: str | Path, binary_payload: bytes) -> Path:
     return path
 
 
-def _build_sovereign_pdf(segment: HolisticAuditSegment) -> bytes:
-    """Render a minimal single-page PDF embedding the sovereign hash receipt.
+def format_sovereign_intelligence_report(
+    segment: HolisticAuditSegment,
+    *,
+    path_label: str | None = None,
+) -> str:
+    """Render the stark official Sovereign Intelligence Report layout blueprint.
 
-    Dependency-free PDF writer — keeps the audit export self-contained.
+    Four co-equal quadrants are printed in fixed order with the SHA-256 seal
+    as the absolute cryptographic binding across the entire dossier.
     """
+    path_line = path_label or (
+        (segment.systemic_interpretation or {}).get("path")
+        or (segment.avatar_output or {}).get("directive")
+        or "UNDECLARED"
+    )
+    divider = "=" * 72
+    thin = "-" * 72
+    sections = [
+        divider,
+        "SOVEREIGN INTELLIGENCE REPORT",
+        "Holistic Audit Segment — Absolute Cryptographic Binding",
+        divider,
+        f"Segment ID      : {segment.segment_id}",
+        f"Created (ms)    : {segment.created_at_ms}",
+        f"Governance Path : {path_line}",
+        f"Schema          : sovereign_intelligence_segment.v1",
+        f"Integrity Check : {'VERIFIED' if segment.verify() else 'FAILED'}",
+        thin,
+        "QUADRANT I  — USER INPUT",
+        _canonical_json(segment.user_input),
+        thin,
+        "QUADRANT II — SYSTEM CONTEXT (Digital Twin)",
+        _canonical_json(segment.system_context),
+        thin,
+        "QUADRANT III — AVATAR OUTPUT (Verbal Declarations / Directives)",
+        _canonical_json(segment.avatar_output),
+        thin,
+        "QUADRANT IV — SYSTEMIC INTERPRETATION (Math / Cost-Avoidance)",
+        _canonical_json(segment.systemic_interpretation),
+        thin,
+        "SHA-256 BLOCK HASH (UN-ALTERABLE SEAL)",
+        segment.block_hash,
+        divider,
+        "STATUS: SEALED — TAMPER-PROOF FORENSIC AUDIT TRAIL",
+        divider,
+        "",
+    ]
+    return "\n".join(sections)
+
+
+def _build_sovereign_pdf(segment: HolisticAuditSegment) -> bytes:
+    """Minimal PDF companion placeholder embedding the sovereign hash receipt."""
     lines = [
-        "SOVEREIGN INTELLIGENCE AUDIT RECEIPT",
+        "SOVEREIGN INTELLIGENCE REPORT (PDF PLACEHOLDER)",
         f"Segment: {segment.segment_id}",
         f"Created (ms): {segment.created_at_ms}",
         f"SHA-256: {segment.block_hash}",
@@ -725,8 +778,8 @@ def _build_sovereign_pdf(segment: HolisticAuditSegment) -> bytes:
         f"Verified: {segment.verify()}",
         "Schema: sovereign_intelligence_segment.v1",
         "STATUS: SEALED — TAMPER-PROOF AUDIT TRAIL",
+        "Primary artifact: AUDIT_[SHA256].txt in secure_audit_vault/",
     ]
-    # Escape PDF string specials.
     content_lines = []
     y = 750
     for line in lines:
@@ -735,28 +788,24 @@ def _build_sovereign_pdf(segment: HolisticAuditSegment) -> bytes:
             .replace("(", "\\(")
             .replace(")", "\\)")
         )
-        content_lines.append(f"BT /F1 10 Tf 40 {y} Td ({safe}) Tj ET")
-        y -= 18
-    # Embed canonical payload fingerprint as a final line (truncated for page fit).
-    finger = segment.canonical_payload[:120].replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
-    content_lines.append(f"BT /F1 8 Tf 40 {y} Td (Payload: {finger}...) Tj ET")
+        content_lines.append(f"BT /F1 9 Tf 40 {y} Td ({safe}) Tj ET")
+        y -= 16
     stream = "\n".join(content_lines).encode("latin-1", errors="replace")
 
-    objects: list[bytes] = []
-    objects.append(b"1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n")
-    objects.append(b"2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n")
-    objects.append(
-        b"3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
-        b"/Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>endobj\n"
-    )
-    objects.append(
-        f"4 0 obj<< /Length {len(stream)} >>stream\n".encode("ascii")
-        + stream
-        + b"\nendstream\nendobj\n"
-    )
-    objects.append(
-        b"5 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>endobj\n"
-    )
+    objects: list[bytes] = [
+        b"1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n",
+        b"2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n",
+        (
+            b"3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+            b"/Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>endobj\n"
+        ),
+        (
+            f"4 0 obj<< /Length {len(stream)} >>stream\n".encode("ascii")
+            + stream
+            + b"\nendstream\nendobj\n"
+        ),
+        b"5 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>endobj\n",
+    ]
 
     out = bytearray(b"%PDF-1.4\n")
     offsets = [0]
@@ -779,15 +828,25 @@ def compile_sovereign_report_dossier(
     session_data: Mapping[str, Any],
     *,
     ledger: RealityDivergenceLedger | None = None,
+    as_text: bool = True,
 ) -> SovereignReportDossier:
-    """Compile the four co-equal quadrants into the Sovereign Report format."""
+    """Compile the four co-equal quadrants into the Sovereign Report format.
+
+    Primary artifact is ``AUDIT_{SHA256}.txt`` (official SIR blueprint).
+    Set ``as_text=False`` to emit the PDF placeholder companion instead.
+    """
     segment = generate_sovereign_intelligence_segment(
         session_data,
         ledger=ledger,
     )
-    binary_payload = _build_sovereign_pdf(segment)
     audit_dir = resolve_audit_log_dir()
-    filename = str(audit_dir / f"AUDIT_{segment.hash}.pdf")
+    if as_text:
+        report_body = format_sovereign_intelligence_report(segment)
+        binary_payload = report_body.encode("utf-8")
+        filename = str(audit_dir / f"AUDIT_{segment.hash}{AUDIT_FILE_EXTENSION}")
+    else:
+        binary_payload = _build_sovereign_pdf(segment)
+        filename = str(audit_dir / f"AUDIT_{segment.hash}.pdf")
     return SovereignReportDossier(
         segment=segment,
         hash=segment.hash,
@@ -803,27 +862,37 @@ def execute_silent_background_export(
     ledger: RealityDivergenceLedger | None = None,
     dossier: SovereignReportDossier | None = None,
     daemon: bool = True,
+    triggered_at_ms: int | None = None,
 ) -> threading.Thread:
-    """Fire an independent background thread for absolute system protection.
+    """Fire an isolated background thread for absolute system protection.
 
-    Compiles the Sovereign Report (unless a pre-built ``dossier`` is supplied)
-    and hard-commits ``AUDIT_{hash}.pdf`` to the isolated audit storage node
-    without blocking the foreground UI tranche.
+    Spawned at the exact millisecond Path B is triggered. Compiles the full
+    Holistic Audit Segment into the Sovereign Intelligence Report blueprint and
+    hard-commits ``AUDIT_{SHA256}.txt`` under ``secure_audit_vault/`` without
+    blocking the foreground telemetry / UI tranche.
     """
-    # Deep-copy session_data so the background worker is isolated from UI mutations.
     frozen = json.loads(json.dumps(dict(session_data), default=str))
     prebuilt = dossier
+    trip_ms = int(triggered_at_ms if triggered_at_ms is not None else _now_ms())
 
     def _worker() -> None:
         try:
             report = prebuilt or compile_sovereign_report_dossier(
-                frozen, ledger=ledger
+                frozen, ledger=ledger, as_text=True
             )
             path = write_to_isolated_disk(report.filename, report.binary_payload)
+            # Clean console confirmation — absolute forensic seal.
+            print(SYSTEM_PROTECTION_SHIELD_MSG, flush=True)
+            print(
+                f"  → vault={path}  hash={report.hash}  "
+                f"triggered_ms={trip_ms}  bytes={len(report.binary_payload)}",
+                flush=True,
+            )
             logger.critical(
-                "SILENT_AUDIT_EXPORT path=%s hash=%s bytes=%d",
+                "SILENT_AUDIT_EXPORT path=%s hash=%s triggered_ms=%s bytes=%d",
                 path,
                 report.hash,
+                trip_ms,
                 len(report.binary_payload),
             )
         except Exception:  # noqa: BLE001 — never crash the UI tranche
@@ -836,6 +905,33 @@ def execute_silent_background_export(
     )
     thread.start()
     return thread
+
+
+def export_sovereign_report_sync(
+    session_data: Mapping[str, Any],
+    *,
+    ledger: RealityDivergenceLedger | None = None,
+    write_vault: bool = False,
+) -> SovereignReportDossier:
+    """Foreground/manual export path — compile SIR without blocking telemetry.
+
+    Returns the dossier (text blueprint + hash). Optionally hard-writes to
+    ``secure_audit_vault/`` when ``write_vault`` is True.
+    """
+    dossier = compile_sovereign_report_dossier(
+        session_data, ledger=ledger, as_text=True
+    )
+    if write_vault:
+        write_to_isolated_disk(dossier.filename, dossier.binary_payload)
+        print(SYSTEM_PROTECTION_SHIELD_MSG, flush=True)
+        return SovereignReportDossier(
+            segment=dossier.segment,
+            hash=dossier.hash,
+            binary_payload=dossier.binary_payload,
+            filename=dossier.filename,
+            written=True,
+        )
+    return dossier
 
 
 def build_session_data_from_lab(
@@ -948,7 +1044,8 @@ def handle_timeline_divergence(
 
     Path B — dual-tranche execution:
       1. Foreground UI reflects mutated reality (OVERRIDE_HAZARD)
-      2. Independent background thread hard-commits the sovereign audit PDF
+      2. Isolated background thread hard-commits AUDIT_{SHA256}.txt
+         into secure_audit_vault/ (zero latency on the live telemetry loop)
     """
     data: dict[str, Any] = dict(session_data)
     key = path_selection.strip().upper().replace(" ", "_")
@@ -969,6 +1066,8 @@ def handle_timeline_divergence(
         )
 
     if key in {"PATH_B", "PATH_B_FAILURE_TO_ACT", "B", "OVERRIDE", "FAILURE"}:
+        # Exact millisecond Path B (Failure to Act / Manual Override) fires.
+        triggered_at_ms = _now_ms()
         status = DivergenceUIStatus.OVERRIDE_HAZARD
         if ui_updater is not None:
             ui_updater(data, status=status.value)
@@ -976,17 +1075,28 @@ def handle_timeline_divergence(
             data.setdefault("ui", {})["column_3_status"] = status.value
         if isinstance(session_data, dict):
             session_data.setdefault("ui", {})["column_3_status"] = status.value
+            session_data.setdefault("systemic_interpretation", {})[
+                "path_b_triggered_ms"
+            ] = triggered_at_ms
+        data.setdefault("systemic_interpretation", {})[
+            "path_b_triggered_ms"
+        ] = triggered_at_ms
 
         export_started = False
         audit_filename = None
         if start_background_export:
-            # Compile once in the foreground, then hard-commit on a worker thread.
-            dossier = compile_sovereign_report_dossier(data, ledger=ledger)
-            audit_filename = dossier.filename
+            # Spawn immediately — compile + hard-write run entirely off-thread
+            # so the primary live telemetry loop incurs no export latency.
             execute_silent_background_export(
-                data, ledger=ledger, dossier=dossier
+                data,
+                ledger=ledger,
+                triggered_at_ms=triggered_at_ms,
             )
             export_started = True
+            # Deterministic vault path pattern (hash finalized inside worker).
+            audit_filename = str(
+                resolve_audit_log_dir() / f"AUDIT_*{AUDIT_FILE_EXTENSION}"
+            )
 
         return TimelineDivergenceResult(
             path="PATH_B",
@@ -995,8 +1105,8 @@ def handle_timeline_divergence(
             background_export_started=export_started,
             audit_filename=audit_filename,
             notes=(
-                "Path B — dual-tranche: UI OVERRIDE_HAZARD + silent background "
-                "sovereign audit export."
+                f"Path B — dual-tranche at ms={triggered_at_ms}: "
+                "UI OVERRIDE_HAZARD + silent secure_audit_vault export."
             ),
         )
 
@@ -1221,6 +1331,7 @@ def _compute_divergence(pre: Mapping[str, Any], post: Mapping[str, Any]) -> floa
 
 
 __all__ = [
+    "AUDIT_FILE_EXTENSION",
     "AUDIT_LOG_DIR",
     "DEFAULT_GOVERNANCE_WINDOW_MS",
     "DivergenceUIStatus",
@@ -1230,6 +1341,8 @@ __all__ = [
     "MomentOfDriftRecord",
     "RealityDivergenceLedger",
     "RealityFork",
+    "SECURE_AUDIT_VAULT_DIR",
+    "SYSTEM_PROTECTION_SHIELD_MSG",
     "SovereignReportDossier",
     "TimelineDivergenceResult",
     "apply_path_selection_to_lab",
@@ -1238,6 +1351,8 @@ __all__ = [
     "build_system_context_from_kinetic",
     "compile_sovereign_report_dossier",
     "execute_silent_background_export",
+    "export_sovereign_report_sync",
+    "format_sovereign_intelligence_report",
     "generate_sovereign_intelligence_segment",
     "handle_timeline_divergence",
     "resolve_audit_log_dir",

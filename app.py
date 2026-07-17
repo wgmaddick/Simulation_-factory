@@ -14,6 +14,9 @@ from config import TENANT_CONFIG, THEME, research_nodes, total_unlock_cost
 from ledger import (
     DivergenceUIStatus,
     TimelineDivergenceResult,
+    export_sovereign_report_sync,
+    format_sovereign_intelligence_report,
+    generate_sovereign_intelligence_segment,
     handle_timeline_divergence as _ledger_handle_timeline_divergence,
 )
 
@@ -84,8 +87,61 @@ def handle_timeline_divergence(
     return result
 
 
+def _live_session_frame() -> dict[str, Any]:
+    """Deterministically assemble the current live frame for manual export."""
+    base = dict(st.session_state.get("divergence_session") or {})
+    status = st.session_state.get(
+        "column_3_status", DivergenceUIStatus.PENDING.value
+    )
+    path = "PATH_A" if status == DivergenceUIStatus.COMPLIANT.value else (
+        "PATH_B" if status == DivergenceUIStatus.OVERRIDE_HAZARD.value else "PENDING"
+    )
+    # Overlay live vault session signals so Path A / Path B both map current state.
+    base.setdefault("user_input", {})
+    base["user_input"] = {
+        **dict(base.get("user_input") or {}),
+        "manual_export": True,
+        "path_selection": path,
+        "credits": int(st.session_state.get("credits", 0)),
+        "unlocked_nodes": sorted(
+            str(n) for n in (st.session_state.get("unlocked_nodes") or set())
+        ),
+        "conversation": (
+            (base.get("user_input") or {}).get("conversation")
+            or f"Manual Column-3 export during {path}"
+        ),
+    }
+    base.setdefault("system_context", {})
+    base["system_context"] = {
+        **dict(base.get("system_context") or {}),
+        "tenant": TENANT_CONFIG.get("tenant_identity"),
+        "sector": TENANT_CONFIG.get("active_sector_code"),
+        "column_3_status": status,
+        "nodes_online": len(st.session_state.get("unlocked_nodes") or set()),
+    }
+    base.setdefault("avatar_output", {})
+    base["avatar_output"] = {
+        **dict(base.get("avatar_output") or {}),
+        "verbal_declaration": (
+            (base.get("avatar_output") or {}).get("verbal_declaration")
+            or "Sentinel & Advisory Panel — manual sovereign diagnostic requested."
+        ),
+        "directive": path,
+    }
+    base.setdefault("systemic_interpretation", {})
+    base["systemic_interpretation"] = {
+        **dict(base.get("systemic_interpretation") or {}),
+        "path": path,
+        "manual_frame": True,
+        "credit_burn": int(TENANT_CONFIG["initial_credits"])
+        - int(st.session_state.get("credits", 0)),
+    }
+    base.setdefault("ui", {})["column_3_status"] = status
+    return base
+
+
 def render_column_3_divergence_panel() -> None:
-    """Foreground Column 3 — timeline divergence / sovereign audit status."""
+    """Column 3 — The Sentinel & Advisory Panel (timeline + manual export)."""
     status = st.session_state.get("column_3_status", DivergenceUIStatus.PENDING.value)
     last = st.session_state.get("last_divergence_result") or {}
     audit_file = st.session_state.get("last_audit_filename")
@@ -101,12 +157,12 @@ def render_column_3_divergence_panel() -> None:
     else:
         accent = THEME["muted"]
         label = "PENDING · No divergence"
-        detail = "Column 3 idle until a Moment of Drift is resolved."
+        detail = "Sentinel idle until a Moment of Drift is resolved."
 
     st.markdown(
         f"""
         <div class="node-card" style="border-left-color:{accent};">
-          <div class="node-meta">COLUMN 3 · TIMELINE DIVERGENCE</div>
+          <div class="node-meta">COLUMN 3 · THE SENTINEL &amp; ADVISORY PANEL</div>
           <div class="node-title" style="color:{accent};">{label}</div>
           <div class="node-body">{detail}</div>
         </div>
@@ -120,6 +176,72 @@ def render_column_3_divergence_panel() -> None:
         )
     if audit_file:
         st.code(audit_file, language=None)
+
+    # Low-profile utility block — manual foreground printing / export.
+    st.markdown(
+        f"""
+        <div class="node-card" style="border-left-color:{THEME["border"]};padding:0.85rem 1rem;">
+          <div class="node-meta">UTILITY · SOVEREIGN REPORTING</div>
+          <div class="node-body" style="margin:0;">
+            View the live Holistic Audit Segment or export a stamped Sovereign
+            Intelligence Report for save / print on demand. Independent of the
+            Path B black-box vault writer.
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    b1, b2 = st.columns(2)
+    with b1:
+        view_clicked = st.button(
+            "View Sovereign Diagnostic",
+            key="col3_view_sovereign",
+            use_container_width=True,
+        )
+    with b2:
+        export_clicked = st.button(
+            "Export Stamped Audit Record",
+            key="col3_export_sovereign",
+            type="primary",
+            use_container_width=True,
+        )
+
+    if view_clicked:
+        frame = _live_session_frame()
+        segment = generate_sovereign_intelligence_segment(frame)
+        report = format_sovereign_intelligence_report(segment)
+        st.session_state.sovereign_diagnostic_text = report
+        st.session_state.sovereign_diagnostic_hash = segment.block_hash
+        st.success("Sovereign diagnostic compiled from live frame.")
+
+    if export_clicked:
+        frame = _live_session_frame()
+        dossier = export_sovereign_report_sync(frame, write_vault=False)
+        st.session_state.sovereign_diagnostic_text = dossier.binary_payload.decode(
+            "utf-8"
+        )
+        st.session_state.sovereign_diagnostic_hash = dossier.hash
+        st.session_state.last_manual_export_hash = dossier.hash
+        st.success("Stamped audit record ready — hash sealed below.")
+
+    sealed_hash = st.session_state.get("sovereign_diagnostic_hash")
+    if sealed_hash:
+        st.markdown("**Un-alterable SHA-256 seal**")
+        st.code(sealed_hash, language=None)
+
+    report_text = st.session_state.get("sovereign_diagnostic_text")
+    if report_text:
+        with st.expander("Sovereign Intelligence Report", expanded=bool(view_clicked)):
+            st.text(report_text)
+        st.download_button(
+            label="Download / Print Sovereign Intelligence Report",
+            data=report_text,
+            file_name=f"AUDIT_{sealed_hash or 'PENDING'}.txt",
+            mime="text/plain",
+            key="col3_download_sir",
+            use_container_width=True,
+        )
 
 
 def _inject_theme() -> None:
@@ -245,6 +367,12 @@ def _init_session() -> None:
         st.session_state.last_divergence_result = None
     if "last_audit_filename" not in st.session_state:
         st.session_state.last_audit_filename = None
+    if "sovereign_diagnostic_text" not in st.session_state:
+        st.session_state.sovereign_diagnostic_text = None
+    if "sovereign_diagnostic_hash" not in st.session_state:
+        st.session_state.sovereign_diagnostic_hash = None
+    if "last_manual_export_hash" not in st.session_state:
+        st.session_state.last_manual_export_hash = None
 
 
 def unlock_node(node_id: str, cost: int, label: str) -> tuple[bool, str]:
@@ -393,9 +521,9 @@ with mid:
     )
 
 with right:
-    st.subheader("Divergence / audit")
+    st.subheader("Sentinel & Advisory")
     render_column_3_divergence_panel()
     st.caption(
-        "Path A keeps the standard loop (COMPLIANT). Path B dual-tranche fires "
-        "OVERRIDE_HAZARD UI + silent `AUDIT_{{hash}}.pdf` export via ledger."
+        "Path A → COMPLIANT (manual export on demand). Path B → OVERRIDE_HAZARD "
+        "+ silent `secure_audit_vault/AUDIT_[SHA256].txt` black-box writer."
     )

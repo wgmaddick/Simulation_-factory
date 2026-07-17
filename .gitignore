@@ -20,4 +20,6 @@ node_modules/
 
 # Isolated sovereign audit seals (local storage node mirror)
 secure/audit/log/
+secure_audit_vault/
+
 
