@@ -881,6 +881,21 @@ def execute_silent_background_export(
                 frozen, ledger=ledger, as_text=True
             )
             path = write_to_isolated_disk(report.filename, report.binary_payload)
+
+            # Companion print-ready PDF via report_generator.compile_pdf()
+            pdf_path = None
+            try:
+                from report_generator import compile_pdf
+
+                pdf_bytes = compile_pdf(
+                    frozen,
+                    segment=report.segment,
+                )
+                pdf_path = Path(report.filename).with_suffix(".pdf")
+                write_to_isolated_disk(str(pdf_path), pdf_bytes)
+            except Exception:  # noqa: BLE001 — text seal must survive PDF failure
+                logger.exception("Sovereign PDF companion export failed")
+
             # Clean console confirmation — absolute forensic seal.
             print(SYSTEM_PROTECTION_SHIELD_MSG, flush=True)
             print(
@@ -888,9 +903,12 @@ def execute_silent_background_export(
                 f"triggered_ms={trip_ms}  bytes={len(report.binary_payload)}",
                 flush=True,
             )
+            if pdf_path is not None:
+                print(f"  → pdf={pdf_path}", flush=True)
             logger.critical(
-                "SILENT_AUDIT_EXPORT path=%s hash=%s triggered_ms=%s bytes=%d",
+                "SILENT_AUDIT_EXPORT path=%s pdf=%s hash=%s triggered_ms=%s bytes=%d",
                 path,
+                pdf_path,
                 report.hash,
                 trip_ms,
                 len(report.binary_payload),
@@ -923,6 +941,15 @@ def export_sovereign_report_sync(
     )
     if write_vault:
         write_to_isolated_disk(dossier.filename, dossier.binary_payload)
+        try:
+            from report_generator import compile_pdf
+
+            pdf_bytes = compile_pdf(session_data, segment=dossier.segment)
+            write_to_isolated_disk(
+                str(Path(dossier.filename).with_suffix(".pdf")), pdf_bytes
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception("Foreground PDF vault companion write failed")
         print(SYSTEM_PROTECTION_SHIELD_MSG, flush=True)
         return SovereignReportDossier(
             segment=dossier.segment,
@@ -932,6 +959,24 @@ def export_sovereign_report_sync(
             written=True,
         )
     return dossier
+
+
+def export_sovereign_pdf_bytes(
+    session_data: Mapping[str, Any],
+    *,
+    ledger: RealityDivergenceLedger | None = None,
+) -> tuple[bytes, str, Any]:
+    """Compile print-ready PDF bytes + hash for foreground download.
+
+    Returns ``(pdf_bytes, sha256_hash, segment)``.
+    """
+    from report_generator import compile_pdf
+
+    segment = generate_sovereign_intelligence_segment(
+        session_data, ledger=ledger
+    )
+    pdf_bytes = compile_pdf(session_data, segment=segment)
+    return pdf_bytes, segment.block_hash, segment
 
 
 def build_session_data_from_lab(
@@ -1351,6 +1396,7 @@ __all__ = [
     "build_system_context_from_kinetic",
     "compile_sovereign_report_dossier",
     "execute_silent_background_export",
+    "export_sovereign_pdf_bytes",
     "export_sovereign_report_sync",
     "format_sovereign_intelligence_report",
     "generate_sovereign_intelligence_segment",

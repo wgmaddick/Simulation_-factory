@@ -14,6 +14,7 @@ from config import TENANT_CONFIG, THEME, research_nodes, total_unlock_cost
 from ledger import (
     DivergenceUIStatus,
     TimelineDivergenceResult,
+    export_sovereign_pdf_bytes,
     export_sovereign_report_sync,
     format_sovereign_intelligence_report,
     generate_sovereign_intelligence_segment,
@@ -217,13 +218,14 @@ def render_column_3_divergence_panel() -> None:
 
     if export_clicked:
         frame = _live_session_frame()
-        dossier = export_sovereign_report_sync(frame, write_vault=False)
-        st.session_state.sovereign_diagnostic_text = dossier.binary_payload.decode(
-            "utf-8"
-        )
-        st.session_state.sovereign_diagnostic_hash = dossier.hash
-        st.session_state.last_manual_export_hash = dossier.hash
-        st.success("Stamped audit record ready — hash sealed below.")
+        # On-the-fly PDF from live frame memory — no tracking-engine reload.
+        pdf_bytes, sealed, segment = export_sovereign_pdf_bytes(frame)
+        text_report = format_sovereign_intelligence_report(segment)
+        st.session_state.sovereign_diagnostic_text = text_report
+        st.session_state.sovereign_diagnostic_hash = sealed
+        st.session_state.last_manual_export_hash = sealed
+        st.session_state.sovereign_pdf_bytes = pdf_bytes
+        st.success("Stamped audit PDF compiled — hash sealed below.")
 
     sealed_hash = st.session_state.get("sovereign_diagnostic_hash")
     if sealed_hash:
@@ -234,12 +236,24 @@ def render_column_3_divergence_panel() -> None:
     if report_text:
         with st.expander("Sovereign Intelligence Report", expanded=bool(view_clicked)):
             st.text(report_text)
+
+    pdf_bytes = st.session_state.get("sovereign_pdf_bytes")
+    if pdf_bytes:
         st.download_button(
-            label="Download / Print Sovereign Intelligence Report",
+            label="Download / Print Sovereign Intelligence Report (PDF)",
+            data=pdf_bytes,
+            file_name=f"AUDIT_{sealed_hash or 'PENDING'}.pdf",
+            mime="application/pdf",
+            key="col3_download_sir_pdf",
+            use_container_width=True,
+        )
+    elif report_text:
+        st.download_button(
+            label="Download Sovereign Intelligence Report (TXT)",
             data=report_text,
             file_name=f"AUDIT_{sealed_hash or 'PENDING'}.txt",
             mime="text/plain",
-            key="col3_download_sir",
+            key="col3_download_sir_txt",
             use_container_width=True,
         )
 
@@ -373,6 +387,8 @@ def _init_session() -> None:
         st.session_state.sovereign_diagnostic_hash = None
     if "last_manual_export_hash" not in st.session_state:
         st.session_state.last_manual_export_hash = None
+    if "sovereign_pdf_bytes" not in st.session_state:
+        st.session_state.sovereign_pdf_bytes = None
 
 
 def unlock_node(node_id: str, cost: int, label: str) -> tuple[bool, str]:
@@ -525,5 +541,5 @@ with right:
     render_column_3_divergence_panel()
     st.caption(
         "Path A → COMPLIANT (manual export on demand). Path B → OVERRIDE_HAZARD "
-        "+ silent `secure_audit_vault/AUDIT_[SHA256].txt` black-box writer."
+        "+ silent `secure_audit_vault/AUDIT_[SHA256].txt|.pdf` black-box writer."
     )
