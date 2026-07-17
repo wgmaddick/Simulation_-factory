@@ -10,6 +10,11 @@ from typing import Any, Mapping, MutableMapping
 
 import streamlit as st
 
+from capital_market import (
+    DEFAULT_CONSORTIUM_SEED_USD,
+    DEFAULT_EARLY_OPS_RISK_CAPITAL_USD,
+    build_capital_pro_forma,
+)
 from config import TENANT_CONFIG, THEME, research_nodes, total_unlock_cost
 from ledger import (
     DivergenceUIStatus,
@@ -360,6 +365,73 @@ def _inject_theme() -> None:
         div[data-testid="stMetricValue"] {{
             color: {THEME["accent"]} !important;
         }}
+        .capital-panel {{
+            border: 1px solid #e5e5e5;
+            background: #fafafa;
+            color: #0a0a0a;
+            padding: 1rem 1.1rem;
+            margin-bottom: 0.85rem;
+        }}
+        .capital-panel .cap-meta {{
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.72rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #525252;
+            margin-bottom: 0.4rem;
+        }}
+        .capital-panel .cap-title {{
+            font-family: "IBM Plex Sans", sans-serif;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #0a0a0a;
+            margin-bottom: 0.35rem;
+        }}
+        .capital-panel .cap-body {{
+            font-size: 0.88rem;
+            color: #262626;
+            line-height: 1.45;
+        }}
+        .capital-bar {{
+            background: #0a0a0a;
+            color: #fafafa;
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.78rem;
+            letter-spacing: 0.06em;
+            padding: 0.55rem 0.85rem;
+            margin: 1.25rem 0 0.85rem 0;
+        }}
+        .capital-metric-grid {{
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.55rem;
+            margin-top: 0.65rem;
+        }}
+        .capital-metric {{
+            border: 1px solid #0a0a0a;
+            padding: 0.55rem 0.65rem;
+            background: #fff;
+        }}
+        .capital-metric .lbl {{
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.65rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #525252;
+        }}
+        .capital-metric .val {{
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #0a0a0a;
+            margin-top: 0.15rem;
+        }}
+        .proforma-box {{
+            border: 2px solid #0a0a0a;
+            background: #fff;
+            padding: 0.85rem 1rem;
+            margin-top: 0.75rem;
+        }}
         </style>
         """,
         unsafe_allow_html=True,
@@ -389,6 +461,234 @@ def _init_session() -> None:
         st.session_state.last_manual_export_hash = None
     if "sovereign_pdf_bytes" not in st.session_state:
         st.session_state.sovereign_pdf_bytes = None
+    if "consortium_seed_usd" not in st.session_state:
+        st.session_state.consortium_seed_usd = DEFAULT_CONSORTIUM_SEED_USD
+    if "early_ops_risk_capital_usd" not in st.session_state:
+        st.session_state.early_ops_risk_capital_usd = DEFAULT_EARLY_OPS_RISK_CAPITAL_USD
+
+
+def _money(value: float) -> str:
+    return f"${value:,.0f}"
+
+
+def render_capital_market_dashboard() -> None:
+    """Sovereign Capital Ledger — multi-tier Capital Market Dashboard."""
+    st.markdown(
+        '<div class="capital-bar">SOVEREIGN CAPITAL LEDGER · CAPITAL MARKET DASHBOARD</div>',
+        unsafe_allow_html=True,
+    )
+    st.caption(
+        "Multi-tier capital structure controls. Adjusting reserves and instrument "
+        "weights recalculates pro-forma WACC, stability, and market-player attraction "
+        "without mutating the kinetic integrity vault."
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    # ------------------------------------------------------------------
+    # Column 1 — Reserve threshold sliding scale
+    # ------------------------------------------------------------------
+    with col1:
+        st.markdown(
+            """
+            <div class="capital-panel">
+              <div class="cap-meta">TIER I · CAPITAL RESERVES</div>
+              <div class="cap-title">Minimum Capital Reserve Threshold</div>
+              <div class="cap-body">
+                Interactive sliding scale. Raising the reserve ratio compresses WACC
+                and lifts the Operational Stability Index.
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        reserve_ratio = st.slider(
+            "Minimum Capital Reserve Threshold Ratio",
+            min_value=0.05,
+            max_value=0.50,
+            value=0.18,
+            step=0.01,
+            format="%.2f",
+            key="reserve_ratio",
+            help="Institutional floor reference: 0.12. Fortified band typically ≥ 0.25.",
+        )
+
+    # ------------------------------------------------------------------
+    # Column 2 — Instrument Allocation Matrix
+    # ------------------------------------------------------------------
+    with col2:
+        st.markdown(
+            """
+            <div class="capital-panel">
+              <div class="cap-meta">TIER II · INSTRUMENT ALLOCATION MATRIX</div>
+              <div class="cap-title">Funding Mix Parameters</div>
+              <div class="cap-body">
+                Convertible Notes versus Direct Equity Injections. Weights feed the
+                dynamic pro-forma without altering vault mathematics.
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        convertible_weight = st.slider(
+            "Convertible Notes weight",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.40,
+            step=0.01,
+            format="%.2f",
+            key="convertible_notes_weight",
+        )
+        equity_weight = round(1.0 - convertible_weight, 2)
+        st.metric(
+            "Direct Equity Injections weight",
+            f"{equity_weight:.2f}",
+            help="Complement of Convertible Notes weight (always sums to 1.00).",
+        )
+
+    # ------------------------------------------------------------------
+    # Column 3 — Strategic Consortium Anchor Tracer
+    # ------------------------------------------------------------------
+    with col3:
+        st.markdown(
+            """
+            <div class="capital-panel">
+              <div class="cap-meta">TIER III · STRATEGIC CONSORTIUM ANCHOR</div>
+              <div class="cap-title">Early-Adopter Skin in the Game</div>
+              <div class="cap-body">
+                Tracks seed funding committed by early adopters and the exact
+                percentage of early operational risk offset by this anchor.
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        seed = st.number_input(
+            "Consortium seed commitment (USD)",
+            min_value=0,
+            max_value=50_000_000,
+            value=int(st.session_state.consortium_seed_usd),
+            step=100_000,
+            key="consortium_seed_input",
+        )
+        risk_cap = st.number_input(
+            "Early operational risk capital (USD)",
+            min_value=1,
+            max_value=100_000_000,
+            value=int(st.session_state.early_ops_risk_capital_usd),
+            step=250_000,
+            key="early_ops_risk_input",
+        )
+        st.session_state.consortium_seed_usd = float(seed)
+        st.session_state.early_ops_risk_capital_usd = float(risk_cap)
+
+    # Dynamic pro-forma (pure display — vault untouched)
+    pro_forma = build_capital_pro_forma(
+        reserve_ratio=reserve_ratio,
+        convertible_notes_weight=convertible_weight,
+        consortium_seed_usd=float(seed),
+        early_ops_risk_capital_usd=float(risk_cap),
+    )
+    anchor = pro_forma["consortium_anchor"]
+    reserves = pro_forma["reserve_metrics"]
+    instruments = pro_forma["instrument_allocation"]
+
+    m1, m2, m3 = st.columns(3)
+    with m1:
+        st.markdown(
+            f"""
+            <div class="capital-panel">
+              <div class="cap-meta">Projected Operational Stability Index</div>
+              <div class="cap-title">{reserves["operational_stability_index"]:.1f}
+                <span style="font-size:0.85rem;color:#525252;">/ 100 · {reserves["stability_band"]}</span>
+              </div>
+              <div class="capital-metric-grid">
+                <div class="capital-metric">
+                  <div class="lbl">WACC</div>
+                  <div class="val">{reserves["wacc"]:.2f}%</div>
+                </div>
+                <div class="capital-metric">
+                  <div class="lbl">Cost of Equity</div>
+                  <div class="val">{reserves["cost_of_equity"]:.2f}%</div>
+                </div>
+                <div class="capital-metric">
+                  <div class="lbl">After-Tax Hybrid</div>
+                  <div class="val">{reserves["after_tax_cost_of_hybrid"]:.2f}%</div>
+                </div>
+                <div class="capital-metric">
+                  <div class="lbl">Reserve Gap vs 12% Floor</div>
+                  <div class="val">{reserves["reserve_surplus_gap"]:+.2f} pp</div>
+                </div>
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with m2:
+        attraction = instruments["player_attraction"]
+        rows = "".join(
+            f'<div class="capital-metric"><div class="lbl">{k}</div>'
+            f'<div class="val">{v:.1f}</div></div>'
+            for k, v in attraction.items()
+        )
+        st.markdown(
+            f"""
+            <div class="proforma-box">
+              <div class="cap-meta" style="font-family:IBM Plex Mono,monospace;font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;color:#525252;">
+                DYNAMIC PRO-FORMA · MARKET PLAYER ATTRACTION
+              </div>
+              <div class="cap-title" style="font-weight:700;margin:0.35rem 0;">
+                Capital Efficiency Rating · {instruments["capital_efficiency_rating"]:.1f}
+              </div>
+              <div class="cap-body" style="font-size:0.88rem;color:#262626;margin-bottom:0.55rem;">
+                Primary sleeve: <strong>{instruments["primary_market_player"]}</strong>
+                · Secondary: <strong>{instruments["secondary_market_player"]}</strong><br/>
+                CN {instruments["convertible_notes_weight"]*100:.0f}% /
+                Equity {instruments["direct_equity_weight"]*100:.0f}% ·
+                Dilution pressure {instruments["implied_dilution_pressure"]:.1f} ·
+                Liquidity preference {instruments["liquidity_preference_score"]:.1f}
+              </div>
+              <div class="capital-metric-grid">{rows}</div>
+              <div class="cap-body" style="font-size:0.82rem;color:#404040;margin-top:0.65rem;">
+                {instruments["narrative"]}
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with m3:
+        st.markdown(
+            f"""
+            <div class="capital-panel">
+              <div class="cap-meta">Strategic Consortium Anchor · Tracer</div>
+              <div class="cap-title">{anchor["status"]}</div>
+              <div class="capital-metric-grid">
+                <div class="capital-metric">
+                  <div class="lbl">Seed Commitment</div>
+                  <div class="val">{_money(anchor["seed_commitment_usd"])}</div>
+                </div>
+                <div class="capital-metric">
+                  <div class="lbl">Early Ops Risk Capital</div>
+                  <div class="val">{_money(anchor["early_ops_risk_capital_usd"])}</div>
+                </div>
+                <div class="capital-metric">
+                  <div class="lbl">Risk Offset (Skin in Game)</div>
+                  <div class="val">{anchor["risk_offset_pct"]:.2f}%</div>
+                </div>
+                <div class="capital-metric">
+                  <div class="lbl">Skin-in-Game Multiple</div>
+                  <div class="val">{anchor["skin_in_game_multiple"]:.2f}x</div>
+                </div>
+              </div>
+              <div class="cap-body" style="margin-top:0.65rem;font-size:0.82rem;color:#404040;">
+                Exact percentage of early operational risk offset by consortium
+                seed: <strong>{anchor["risk_offset_pct"]:.2f}%</strong>.
+                Target enterprise value reference {_money(pro_forma["enterprise_value_usd"])}.
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 def unlock_node(node_id: str, cost: int, label: str) -> tuple[bool, str]:
@@ -473,6 +773,8 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+render_capital_market_dashboard()
 
 st.subheader("Research nodes")
 st.caption("Unlock in any order. Each node permanently enables its Kinetic Lab channels for this session.")
