@@ -40,8 +40,10 @@ from breaker import (
 from ledger import (
     GovernancePath,
     RealityDivergenceLedger,
+    SECURE_AUDIT_VAULT_DIR,
     bind_breaker_to_ledger,
     generate_sovereign_intelligence_segment,
+    handle_timeline_divergence,
 )
 
 
@@ -340,13 +342,10 @@ def main() -> int:
     )
     log("CONFIRMED: post-drift readout differs from pre-drift intersection")
 
-    # ------------------------------------------------------------------
-    # STEP 4 — Export sovereign ledger receipt
-    # ------------------------------------------------------------------
-    banner("STEP 4 · EXPORT THE SOVEREIGN LEDGER RECEIPT")
-
-    segment = generate_sovereign_intelligence_segment(
-        user_input={
+    # Dual-tranche Path B → isolated background vault hard-write
+    log("Dispatching handle_timeline_divergence(PATH_B) → secure_audit_vault/…")
+    session_data = {
+        "user_input": {
             "conversation": (
                 "Automated Path B harness — zero operator intervention. "
                 "Warning window allowed to expire without authenticated input."
@@ -355,7 +354,7 @@ def main() -> int:
             "intervention_supplied": False,
             "scenario": "simulate_drift.PathB",
         },
-        system_context={
+        "system_context": {
             "digital_twin": target.snapshot(),
             "breaker": {
                 "system_state": breaker.system_state.value,
@@ -367,7 +366,7 @@ def main() -> int:
             "fork_id": fork.fork_id,
             "governance_path": path_b.path.value,
         },
-        avatar_output={
+        "avatar_output": {
             "verbal_declaration": (
                 "HARD CIRCUIT BREAKER TRIP — system integrity compromised. "
                 "Human governance window engaged."
@@ -375,7 +374,7 @@ def main() -> int:
             "directive": "Path B (Failure to Act) — engine reactivated under hazard.",
             "edge_alert": edge_dispatch_log[-1].to_dict() if edge_dispatch_log else {},
         },
-        systemic_interpretation={
+        "systemic_interpretation": {
             "breach_math": [
                 {
                     "variable": b.variable,
@@ -395,7 +394,38 @@ def main() -> int:
                 "asymmetry_pct": compromised.deceleration_asymmetry,
                 "tissue_debt": compromised.structural_degradation_rate,
             },
+            "path": "PATH_B",
         },
+    }
+    divergence = handle_timeline_divergence(
+        session_data, "PATH_B", ledger=ledger
+    )
+    log(f"Divergence UI status:          {divergence.ui_status.value}")
+    log(f"Background export started:     {divergence.background_export_started}")
+    time.sleep(0.35)  # allow isolated writer thread to hard-commit
+
+    vault_files = sorted(
+        SECURE_AUDIT_VAULT_DIR.glob("AUDIT_*.txt"),
+        key=lambda p: p.stat().st_mtime,
+    )
+    assert vault_files, "Expected immutable AUDIT_*.txt in secure_audit_vault/"
+    vault_path = vault_files[-1]
+    vault_body = vault_path.read_text(encoding="utf-8")
+    assert "SOVEREIGN INTELLIGENCE REPORT" in vault_body
+    vault_hash = vault_path.stem.removeprefix("AUDIT_")
+    log(f"Vault forensic file:           {vault_path}")
+    log(f"Vault SHA-256 seal:            {vault_hash}")
+    log("CONFIRMED: immutable forensic history written to secure_audit_vault/")
+
+    # ------------------------------------------------------------------
+    # STEP 4 — Export sovereign ledger receipt
+    # ------------------------------------------------------------------
+    banner("STEP 4 · EXPORT THE SOVEREIGN LEDGER RECEIPT")
+
+    # Reuse the same session_data the background writer sealed (includes
+    # path_b_triggered_ms) so the on-screen hash matches the vault filename.
+    segment = generate_sovereign_intelligence_segment(
+        session_data,
         ledger=ledger,
     )
 
@@ -404,6 +434,9 @@ def main() -> int:
     log(f"Verify():       {segment.verify()}")
     assert segment.verify() is True
     assert len(segment.block_hash) == 64
+    assert segment.block_hash == vault_hash, (
+        f"On-screen hash {segment.block_hash} != vault hash {vault_hash}"
+    )
 
     print()
     print("  ╔══════════════════════════════════════════════════════════════════╗")
@@ -413,6 +446,7 @@ def main() -> int:
     print(f"  {segment.block_hash}")
     print()
     log("CONFIRMED: Holistic Audit Segment sealed — tamper-proof receipt exported")
+    log(f"Vault artifact: {vault_path.name}")
 
     # ------------------------------------------------------------------
     # Summary
@@ -422,7 +456,8 @@ def main() -> int:
     log(f"Edge dispatches:         {len(edge_dispatch_log)}")
     log(f"Governance path:         {path_b.path.value}")
     log(f"Reality divergence:      {fork.divergence_score}")
-    log(f"Sovereign hash:          {segment.block_hash[:16]}…{segment.block_hash[-16:]}")
+    log(f"Vault file:              {vault_path.name}")
+    log(f"Sovereign hash:          {segment.block_hash}")
     log("Result:                   ALL CHECKS PASSED")
     print()
     print("=" * 72)
