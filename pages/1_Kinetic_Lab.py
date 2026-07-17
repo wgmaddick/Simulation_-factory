@@ -7,6 +7,10 @@ import time
 import streamlit as st
 
 from config import TENANT_CONFIG, THEME, research_nodes
+from ledger import (
+    apply_path_selection_to_lab,
+    handle_timeline_divergence,
+)
 from kinetic_simulation import (
     AthleteState,
     KineticLabState,
@@ -160,37 +164,86 @@ with st.sidebar:
         with g1:
             if st.button("Path A — Comply", use_container_width=True):
                 try:
-                    lab.divergence_ledger.submit_intervention(
-                        "lab_operator",
-                        intervention or "Supervised load reduction",
+                    session_data = apply_path_selection_to_lab(
+                        lab,
+                        "PATH_A",
+                        operator_id="lab_operator",
+                        intervention=intervention or "Supervised load reduction",
                     )
-                    lab.divergence_ledger.compute_new_reality()
-                    lab.integrity_override = False
-                    lab.log.append("[GOV] Path A (Compliance) — system recovered.")
+                    result = handle_timeline_divergence(session_data, "PATH_A")
+                    st.session_state.column_3_status = result.ui_status.value
+                    st.session_state.last_divergence_result = {
+                        "path": result.path,
+                        "ui_status": result.ui_status.value,
+                        "notes": result.notes,
+                    }
+                    lab.log.append(
+                        "[GOV] Path A (Compliance) — COMPLIANT; awaiting manual UI."
+                    )
                     st.rerun()
                 except Exception as exc:  # noqa: BLE001
                     st.error(str(exc))
         with g2:
             if st.button("Path B — Override", use_container_width=True):
-                lab.divergence_ledger.declare_warning_override(operator_id="lab_operator")
-                lab.divergence_ledger.compute_new_reality()
-                # Reactivate acquisition under compromised / hazardous parameters.
-                lab.integrity_override = False
-                lab.log.append(
-                    "[GOV] Path B (Failure to Act) — engine reactivated under hazard."
-                )
-                st.rerun()
-        # Auto-expire window → Path B
+                try:
+                    session_data = apply_path_selection_to_lab(
+                        lab,
+                        "PATH_B",
+                        operator_id="lab_operator",
+                        intervention=intervention,
+                    )
+                    result = handle_timeline_divergence(
+                        session_data,
+                        "PATH_B",
+                        ledger=lab.divergence_ledger,
+                    )
+                    st.session_state.column_3_status = result.ui_status.value
+                    st.session_state.last_divergence_result = {
+                        "path": result.path,
+                        "ui_status": result.ui_status.value,
+                        "background_export_started": result.background_export_started,
+                        "audit_filename": result.audit_filename,
+                        "notes": result.notes,
+                    }
+                    if result.audit_filename:
+                        st.session_state.last_audit_filename = result.audit_filename
+                    lab.log.append(
+                        "[GOV] Path B — OVERRIDE_HAZARD + silent audit export fired."
+                    )
+                    if result.audit_filename:
+                        lab.log.append(f"[AUDIT] {result.audit_filename}")
+                    st.rerun()
+                except Exception as exc:  # noqa: BLE001
+                    st.error(str(exc))
+        # Auto-expire window → Path B dual-tranche
         expired = lab.divergence_ledger.tick_governance_window()
         if (
             expired is not None
             and expired.path.value.startswith("Path B")
             and expired.forked_reality_id is None
         ):
-            lab.divergence_ledger.compute_new_reality()
-            lab.integrity_override = False
-            lab.log.append("[GOV] Path B (Failure to Act) — governance window closed.")
+            session_data = apply_path_selection_to_lab(
+                lab, "PATH_B", operator_id="lab_operator"
+            )
+            result = handle_timeline_divergence(
+                session_data,
+                "PATH_B",
+                ledger=lab.divergence_ledger,
+            )
+            st.session_state.column_3_status = result.ui_status.value
+            if result.audit_filename:
+                st.session_state.last_audit_filename = result.audit_filename
+            lab.log.append(
+                "[GOV] Path B (Failure to Act) — governance window closed; "
+                "silent audit export dispatched."
+            )
             st.rerun()
+
+    col3_status = st.session_state.get("column_3_status")
+    if col3_status:
+        st.caption(f"Column 3 status: {col3_status}")
+        if st.session_state.get("last_audit_filename"):
+            st.caption(f"Audit seal: {st.session_state.last_audit_filename}")
 
 if not unlocked:
     st.info(

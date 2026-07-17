@@ -1,10 +1,21 @@
-"""University Operations Vault — Kinetic sector research-node unlock console."""
+"""University Operations Vault — Kinetic sector research-node unlock console.
+
+Hosts the foreground timeline-divergence UI (Column 3) and dispatches Path A /
+Path B dual-tranche handling via ``ledger.handle_timeline_divergence``.
+"""
 
 from __future__ import annotations
+
+from typing import Any, Mapping, MutableMapping
 
 import streamlit as st
 
 from config import TENANT_CONFIG, THEME, research_nodes, total_unlock_cost
+from ledger import (
+    DivergenceUIStatus,
+    TimelineDivergenceResult,
+    handle_timeline_divergence as _ledger_handle_timeline_divergence,
+)
 
 st.set_page_config(
     page_title="University Operations Vault",
@@ -12,6 +23,103 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+
+# ---------------------------------------------------------------------------
+# Timeline divergence — Column 3 UI + Path A / Path B dispatch
+# ---------------------------------------------------------------------------
+
+
+def update_column_3_ui(
+    session_data: MutableMapping[str, Any] | Mapping[str, Any],
+    status: str = "PENDING",
+) -> None:
+    """Update foreground Column 3 to reflect timeline-divergence status.
+
+    Path A → COMPLIANT (standard loop; await manual UI request)
+    Path B → OVERRIDE_HAZARD (mutated reality readout)
+    """
+    normalized = str(status).strip().upper()
+    try:
+        ui_status = DivergenceUIStatus(normalized)
+    except ValueError:
+        ui_status = DivergenceUIStatus.PENDING
+
+    st.session_state.column_3_status = ui_status.value
+    st.session_state.divergence_session = dict(session_data)
+    ui_bucket = st.session_state.divergence_session.setdefault("ui", {})
+    ui_bucket["column_3_status"] = ui_status.value
+
+    if isinstance(session_data, dict):
+        session_data.setdefault("ui", {})["column_3_status"] = ui_status.value
+
+
+def handle_timeline_divergence(
+    session_data: MutableMapping[str, Any] | Mapping[str, Any],
+    path_selection: str,
+) -> TimelineDivergenceResult:
+    """Conceptual architecture entry-point for Path A / Path B divergence.
+
+    PATH_A — keep process in the standard loop; Column 3 → COMPLIANT.
+    PATH_B — dual-tranche: Column 3 → OVERRIDE_HAZARD, then fire
+    ``execute_silent_background_export`` for absolute system protection.
+    """
+    result = _ledger_handle_timeline_divergence(
+        session_data,
+        path_selection,
+        ui_updater=update_column_3_ui,
+        start_background_export=True,
+    )
+    st.session_state.column_3_status = result.ui_status.value
+    st.session_state.last_divergence_result = {
+        "path": result.path,
+        "ui_status": result.ui_status.value,
+        "fork_id": result.fork_id,
+        "background_export_started": result.background_export_started,
+        "audit_filename": result.audit_filename,
+        "notes": result.notes,
+    }
+    if result.audit_filename:
+        st.session_state.last_audit_filename = result.audit_filename
+    return result
+
+
+def render_column_3_divergence_panel() -> None:
+    """Foreground Column 3 — timeline divergence / sovereign audit status."""
+    status = st.session_state.get("column_3_status", DivergenceUIStatus.PENDING.value)
+    last = st.session_state.get("last_divergence_result") or {}
+    audit_file = st.session_state.get("last_audit_filename")
+
+    if status == DivergenceUIStatus.COMPLIANT.value:
+        accent = THEME["accent"]
+        label = "COMPLIANT · Path A"
+        detail = "Standard loop active. Awaiting manual UI request."
+    elif status == DivergenceUIStatus.OVERRIDE_HAZARD.value:
+        accent = "#ef4444"
+        label = "OVERRIDE_HAZARD · Path B"
+        detail = "Mutated reality engaged. Silent audit export dispatched."
+    else:
+        accent = THEME["muted"]
+        label = "PENDING · No divergence"
+        detail = "Column 3 idle until a Moment of Drift is resolved."
+
+    st.markdown(
+        f"""
+        <div class="node-card" style="border-left-color:{accent};">
+          <div class="node-meta">COLUMN 3 · TIMELINE DIVERGENCE</div>
+          <div class="node-title" style="color:{accent};">{label}</div>
+          <div class="node-body">{detail}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    if last:
+        st.caption(
+            f"Last path: `{last.get('path', '—')}` · "
+            f"export: {'yes' if last.get('background_export_started') else 'no'}"
+        )
+    if audit_file:
+        st.code(audit_file, language=None)
 
 
 def _inject_theme() -> None:
@@ -129,6 +237,14 @@ def _init_session() -> None:
         st.session_state.unlocked_nodes = set()
     if "unlock_log" not in st.session_state:
         st.session_state.unlock_log = []
+    if "column_3_status" not in st.session_state:
+        st.session_state.column_3_status = DivergenceUIStatus.PENDING.value
+    if "divergence_session" not in st.session_state:
+        st.session_state.divergence_session = {}
+    if "last_divergence_result" not in st.session_state:
+        st.session_state.last_divergence_result = None
+    if "last_audit_filename" not in st.session_state:
+        st.session_state.last_audit_filename = None
 
 
 def unlock_node(node_id: str, cost: int, label: str) -> tuple[bool, str]:
@@ -253,7 +369,7 @@ for node in nodes:
         st.caption(node["short_name"])
 
 st.divider()
-left, right = st.columns(2)
+left, mid, right = st.columns(3)
 with left:
     st.subheader("Session unlock log")
     if st.session_state.unlock_log:
@@ -262,7 +378,7 @@ with left:
     else:
         st.caption("No unlocks yet. Activate a research node to begin.")
 
-with right:
+with mid:
     st.subheader("Sector brief")
     st.markdown(
         f"""
@@ -274,4 +390,12 @@ with right:
         Kinetic research covers interface shear, pelvic/deceleration asymmetry,
         and micro-tear chronology for intercollegiate performance staff.
         """
+    )
+
+with right:
+    st.subheader("Divergence / audit")
+    render_column_3_divergence_panel()
+    st.caption(
+        "Path A keeps the standard loop (COMPLIANT). Path B dual-tranche fires "
+        "OVERRIDE_HAZARD UI + silent `AUDIT_{{hash}}.pdf` export via ledger."
     )
