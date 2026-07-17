@@ -7,7 +7,7 @@ Does **not** mutate the kinetic integrity vault (breaker / ledger / audit).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Mapping
 
 
 # Institutional baseline assumptions (pro-forma; not vault state).
@@ -272,6 +272,99 @@ def build_capital_pro_forma(
     }
 
 
+# ---------------------------------------------------------------------------
+# Lookback License Fee · performance valuation (display-layer finance)
+# ---------------------------------------------------------------------------
+
+DEFAULT_LOOKBACK_BASE_FEE_USD: float = 125_000.0
+HERO_BASELINE: dict[str, float] = {
+    "shear_n": 180.0,
+    "asymmetry_pct": 5.0,
+    "tissue_debt": 4.0,
+}
+
+
+def compute_physical_drift_index(
+    *,
+    shear_n: float,
+    asymmetry_pct: float,
+    tissue_debt: float,
+    baseline: dict[str, float] | None = None,
+) -> dict[str, Any]:
+    """Map live telemetry vs Hero Baseline into a unitless drift index (0–1+)."""
+    hero = baseline or HERO_BASELINE
+    shear_div = max(0.0, float(shear_n) - float(hero["shear_n"])) / max(
+        float(hero["shear_n"]), 1.0
+    )
+    asym_div = max(0.0, float(asymmetry_pct) - float(hero["asymmetry_pct"])) / max(
+        float(hero["asymmetry_pct"]), 1.0
+    )
+    debt_div = max(0.0, float(tissue_debt) - float(hero["tissue_debt"])) / max(
+        float(hero["tissue_debt"]), 1.0
+    )
+    # Weighted composite — asymmetry and tissue debt dominate lookback premium.
+    composite = 0.25 * shear_div + 0.40 * asym_div + 0.35 * debt_div
+    return {
+        "shear_divergence": round(shear_div, 4),
+        "asymmetry_divergence": round(asym_div, 4),
+        "tissue_debt_divergence": round(debt_div, 4),
+        "composite_drift_index": round(composite, 4),
+        "hero_baseline": dict(hero),
+        "live": {
+            "shear_n": round(float(shear_n), 2),
+            "asymmetry_pct": round(float(asymmetry_pct), 2),
+            "tissue_debt": round(float(tissue_debt), 2),
+        },
+    }
+
+
+def compute_financial_liability_variance(
+    drift: Mapping[str, Any] | dict[str, Any],
+    *,
+    base_liability_usd: float = 62_000.0,
+) -> dict[str, Any]:
+    """Project Financial Liability Variance from physical drift divergence."""
+    idx = float(drift.get("composite_drift_index", 0.0) or 0.0)
+    variance_usd = round(base_liability_usd * idx, 2)
+    path_a_avoidance = round(185_000.0 * min(1.0, idx), 2)
+    return {
+        "financial_liability_variance_usd": variance_usd,
+        "path_a_cost_avoidance_at_risk_usd": path_a_avoidance,
+        "unaddressed_drift_bleed_usd": variance_usd,
+        "drift_index": round(idx, 4),
+    }
+
+
+def compute_lookback_license_fee(
+    drift: Mapping[str, Any] | dict[str, Any],
+    *,
+    base_fee_usd: float = DEFAULT_LOOKBACK_BASE_FEE_USD,
+    premium_elasticity: float = 1.85,
+) -> dict[str, Any]:
+    """Live Lookback License Fee Basis from the performance valuation formula.
+
+    ``live_fee = base_fee × (1 + elasticity × composite_drift_index)``
+
+    As physical drift indicators climb, the client's lookback licensing premium
+    projects upward in lockstep (unaddressed drift → higher operational fee).
+    """
+    idx = float(drift.get("composite_drift_index", 0.0) or 0.0)
+    premium_factor = round(premium_elasticity * idx, 4)
+    live_fee = round(float(base_fee_usd) * (1.0 + premium_factor), 2)
+    premium_usd = round(live_fee - float(base_fee_usd), 2)
+    return {
+        "lookback_base_fee_usd": round(float(base_fee_usd), 2),
+        "premium_elasticity": premium_elasticity,
+        "premium_factor": premium_factor,
+        "drift_driven_premium_usd": premium_usd,
+        "live_lookback_license_fee_usd": live_fee,
+        "fee_basis_label": "LOOKBACK LICENSE FEE BASIS",
+        "valuation_formula": (
+            f"fee = {base_fee_usd:,.0f} × (1 + {premium_elasticity:g} × drift_index)"
+        ),
+    }
+
+
 def compute_path_b_capital_status(
     *,
     path_a_cost_avoidance_usd: float = 185_000.0,
@@ -353,11 +446,16 @@ __all__ = [
     "ConsortiumAnchor",
     "DEFAULT_CONSORTIUM_SEED_USD",
     "DEFAULT_EARLY_OPS_RISK_CAPITAL_USD",
+    "DEFAULT_LOOKBACK_BASE_FEE_USD",
+    "HERO_BASELINE",
     "InstrumentAllocation",
     "ReserveMetrics",
     "build_capital_pro_forma",
     "compute_consortium_anchor",
+    "compute_financial_liability_variance",
     "compute_instrument_allocation",
+    "compute_lookback_license_fee",
     "compute_path_b_capital_status",
+    "compute_physical_drift_index",
     "compute_reserve_metrics",
 ]
