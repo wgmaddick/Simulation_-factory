@@ -345,9 +345,16 @@ def _inject_theme() -> None:
             line-height: 1.45;
         }}
         .yield-line {{
-            margin-top: 0.65rem;
-            font-size: 0.85rem;
-            color: {THEME["accent"]};
+            margin-top: 0.85rem;
+            padding: 0.55rem 0.7rem;
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            line-height: 1.4;
+            color: #00FFCC;
+            background: rgba(0, 255, 204, 0.08);
+            border-left: 3px solid #00FFCC;
+            text-shadow: 0 0 12px rgba(0, 255, 204, 0.45), 0 1px 0 rgba(0, 0, 0, 0.85);
         }}
         .credit-panel {{
             border: 1px solid {THEME["border"]};
