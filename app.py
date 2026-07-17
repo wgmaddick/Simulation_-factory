@@ -371,6 +371,201 @@ def _inject_theme() -> None:
         }}
         div[data-testid="stMetricValue"] {{
             color: {THEME["accent"]} !important;
+            font-size: 1.55rem !important;
+            font-weight: 700 !important;
+        }}
+
+        /* ---- Global legibility: metric titles (Credits / Nodes / Sector / Domain) ---- */
+        div[data-testid="stMetricLabel"],
+        div[data-testid="stMetricLabel"] *,
+        label[data-testid="stMetricLabel"],
+        [data-testid="stMetricLabel"] p {{
+            color: #E2E8F0 !important;
+            font-size: 1rem !important;
+            font-weight: 600 !important;
+            letter-spacing: 0.02em !important;
+            opacity: 1 !important;
+        }}
+        div[data-testid="stMetricDelta"] {{
+            font-size: 0.95rem !important;
+            font-weight: 600 !important;
+        }}
+
+        /* ---- Global legibility: slider / number / text input labels ---- */
+        .stSlider label,
+        .stNumberInput label,
+        .stTextInput label,
+        .stSelectbox label,
+        .stTextArea label,
+        [data-testid="stWidgetLabel"],
+        [data-testid="stWidgetLabel"] p,
+        [data-testid="stWidgetLabel"] span,
+        [data-testid="stSlider"] label,
+        [data-testid="stNumberInput"] label,
+        label[data-testid="stWidgetLabel"] {{
+            color: #FFFFFF !important;
+            font-size: 1.05rem !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.01em !important;
+            opacity: 1 !important;
+            line-height: 1.35 !important;
+        }}
+        /* Slider help / tick annotations stay readable */
+        [data-testid="stSlider"] [data-testid="stTickBarMin"],
+        [data-testid="stSlider"] [data-testid="stTickBarMax"],
+        [data-testid="stSliderTickBarMin"],
+        [data-testid="stSliderTickBarMax"] {{
+            color: #CBD5E1 !important;
+            font-size: 0.9rem !important;
+            font-weight: 600 !important;
+            opacity: 1 !important;
+        }}
+
+        /* ---- Sidebar + utility subheaders / captions ---- */
+        [data-testid="stSidebar"] {{
+            background: {THEME["card"]};
+            border-right: 1px solid {THEME["border"]};
+        }}
+        [data-testid="stSidebar"] * {{
+            color: #F1F5F9 !important;
+        }}
+        [data-testid="stSidebar"] h1,
+        [data-testid="stSidebar"] h2,
+        [data-testid="stSidebar"] h3,
+        [data-testid="stSidebar"] h4,
+        [data-testid="stSidebar"] .stMarkdown p,
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
+        [data-testid="stSidebar"] [data-testid="stCaptionContainer"],
+        [data-testid="stSidebar"] [data-testid="stCaptionContainer"] * {{
+            color: #F8FAFC !important;
+            font-size: 1.05rem !important;
+            font-weight: 600 !important;
+            line-height: 1.4 !important;
+            opacity: 1 !important;
+        }}
+        [data-testid="stSidebar"] strong {{
+            color: #FFFFFF !important;
+            font-weight: 700 !important;
+            font-size: 1.1rem !important;
+        }}
+        [data-testid="stSidebar"] .sector-chip {{
+            font-size: 0.9rem !important;
+            color: #00FFCC !important;
+            border-color: #00FFCC !important;
+        }}
+
+        /* Main-pane captions, helper lines, and Streamlit subheaders */
+        [data-testid="stCaptionContainer"],
+        [data-testid="stCaptionContainer"] *,
+        .stCaption,
+        .stCaption * {{
+            color: #E2E8F0 !important;
+            font-size: 1rem !important;
+            font-weight: 600 !important;
+            opacity: 1 !important;
+        }}
+        h2, h3, h4,
+        [data-testid="stHeadingWithActionElements"] h2,
+        [data-testid="stHeadingWithActionElements"] h3 {{
+            color: #F8FAFC !important;
+            font-weight: 700 !important;
+        }}
+        h2 {{ font-size: 1.45rem !important; }}
+        h3 {{ font-size: 1.25rem !important; }}
+        h4 {{ font-size: 1.1rem !important; }}
+
+        /* Custom deck text blocks used across Operational + Capital views */
+        .vault-sub {{
+            color: #E2E8F0 !important;
+            font-size: 1.1rem !important;
+            font-weight: 600 !important;
+            margin-bottom: 1.25rem;
+            line-height: 1.45;
+        }}
+        .node-meta {{
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.95rem !important;
+            font-weight: 600 !important;
+            color: #CBD5E1 !important;
+            margin-bottom: 0.35rem;
+            letter-spacing: 0.04em;
+        }}
+        .node-body {{
+            font-size: 1.02rem !important;
+            font-weight: 500 !important;
+            color: #E2E8F0 !important;
+            line-height: 1.5;
+        }}
+        .node-title {{
+            font-size: 1.2rem !important;
+            font-weight: 700 !important;
+            margin-bottom: 0.45rem;
+            color: #F8FAFC !important;
+        }}
+        .capital-bar {{
+            background: #0a0a0a;
+            color: #FFFFFF !important;
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 1rem !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.06em;
+            padding: 0.7rem 0.95rem;
+            margin: 1.25rem 0 0.85rem 0;
+        }}
+        /* Light capital cards keep dark ink for contrast on white panels */
+        .capital-panel .cap-meta {{
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.9rem !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #171717 !important;
+            margin-bottom: 0.4rem;
+        }}
+        .capital-panel .cap-title {{
+            font-family: "IBM Plex Sans", sans-serif;
+            font-size: 1.2rem !important;
+            font-weight: 700 !important;
+            color: #0a0a0a !important;
+            margin-bottom: 0.35rem;
+        }}
+        .capital-panel .cap-body {{
+            font-size: 1.02rem !important;
+            font-weight: 500 !important;
+            color: #171717 !important;
+            line-height: 1.5;
+        }}
+        .capital-metric .lbl {{
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.85rem !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #262626 !important;
+        }}
+        .capital-metric .val {{
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 1.25rem !important;
+            font-weight: 700 !important;
+            color: #0a0a0a !important;
+            margin-top: 0.15rem;
+        }}
+        .proforma-box .cap-meta,
+        .proforma-box .cap-title,
+        .proforma-box .cap-body {{
+            color: #0a0a0a !important;
+        }}
+        .proforma-box .cap-meta {{
+            font-size: 0.9rem !important;
+            font-weight: 700 !important;
+        }}
+        .proforma-box .cap-title {{
+            font-size: 1.2rem !important;
+            font-weight: 700 !important;
+        }}
+        .proforma-box .cap-body {{
+            font-size: 1.02rem !important;
+            font-weight: 500 !important;
         }}
         .capital-panel {{
             border: 1px solid #e5e5e5;
@@ -378,35 +573,6 @@ def _inject_theme() -> None:
             color: #0a0a0a;
             padding: 1rem 1.1rem;
             margin-bottom: 0.85rem;
-        }}
-        .capital-panel .cap-meta {{
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.72rem;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: #525252;
-            margin-bottom: 0.4rem;
-        }}
-        .capital-panel .cap-title {{
-            font-family: "IBM Plex Sans", sans-serif;
-            font-size: 1.05rem;
-            font-weight: 700;
-            color: #0a0a0a;
-            margin-bottom: 0.35rem;
-        }}
-        .capital-panel .cap-body {{
-            font-size: 0.88rem;
-            color: #262626;
-            line-height: 1.45;
-        }}
-        .capital-bar {{
-            background: #0a0a0a;
-            color: #fafafa;
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.78rem;
-            letter-spacing: 0.06em;
-            padding: 0.55rem 0.85rem;
-            margin: 1.25rem 0 0.85rem 0;
         }}
         .capital-metric-grid {{
             display: grid;
@@ -419,25 +585,36 @@ def _inject_theme() -> None:
             padding: 0.55rem 0.65rem;
             background: #fff;
         }}
-        .capital-metric .lbl {{
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.65rem;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            color: #525252;
-        }}
-        .capital-metric .val {{
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 1.15rem;
-            font-weight: 600;
-            color: #0a0a0a;
-            margin-top: 0.15rem;
-        }}
         .proforma-box {{
             border: 2px solid #0a0a0a;
             background: #fff;
             padding: 0.85rem 1rem;
             margin-top: 0.75rem;
+        }}
+        .credit-panel {{
+            border: 1px solid {THEME["border"]};
+            background: linear-gradient(160deg, {THEME["card"]} 0%, #022c22 140%);
+            padding: 1rem 1.15rem;
+            margin-bottom: 1rem;
+        }}
+        .credit-value {{
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 2rem;
+            font-weight: 500;
+            color: {THEME["accent"]};
+            line-height: 1;
+        }}
+        .yield-line {{
+            margin-top: 0.85rem;
+            padding: 0.55rem 0.7rem;
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            line-height: 1.4;
+            color: #00FFCC;
+            background: rgba(0, 255, 204, 0.08);
+            border-left: 3px solid #00FFCC;
+            text-shadow: 0 0 12px rgba(0, 255, 204, 0.45), 0 1px 0 rgba(0, 0, 0, 0.85);
         }}
         </style>
         """,
