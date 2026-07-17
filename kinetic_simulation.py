@@ -1,10 +1,15 @@
-"""Kinetic lab simulation — athlete force / asymmetry / tissue-debt ticks."""
+"""Kinetic lab simulation — athlete force / asymmetry / tissue-debt ticks.
+
+Optional hard-breaker / divergence-ledger hooks live in ``breaker`` and
+``ledger``. Call ``attach_integrity_substrate`` to bind them to a lab state.
+"""
 
 from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any
 
 
 class AthleteState(str, Enum):
@@ -37,6 +42,10 @@ class KineticLabState:
     recovery_clears: int = 0
     uptime_ticks: int = 0
     unlocked_nodes: set[str] = field(default_factory=set)
+    # Optional integrity substrate (Hard Circuit Breaker + Divergence Ledger).
+    circuit_breaker: Any | None = None
+    divergence_ledger: Any | None = None
+    integrity_override: bool = False
 
     def reset(self, athlete_count: int = 5) -> None:
         roster = [
@@ -55,6 +64,7 @@ class KineticLabState:
         self.asymmetry_alerts = 0
         self.recovery_clears = 0
         self.uptime_ticks = 0
+        self.integrity_override = False
         self.log = ["[INIT] Kinetic lab reset. Awaiting acquisition start."]
         self.athletes = [
             AthleteChannel(name=roster[i % len(roster)])
@@ -68,9 +78,53 @@ def _append_log(state: KineticLabState, message: str, max_lines: int = 80) -> No
         state.log = state.log[-max_lines:]
 
 
+def attach_integrity_substrate(state: KineticLabState) -> tuple[Any, Any]:
+    """Bind Hard Circuit Breaker + Reality Divergence Ledger to a lab state."""
+    from breaker import HardCircuitBreaker, SafetyThresholds
+    from ledger import RealityDivergenceLedger, bind_breaker_to_ledger
+
+    breaker = HardCircuitBreaker(SafetyThresholds())
+    ledger = RealityDivergenceLedger(breaker=breaker)
+    bind_breaker_to_ledger(breaker, ledger, snapshot_provider=state)
+    state.circuit_breaker = breaker
+    state.divergence_ledger = ledger
+    _append_log(state, "[INIT] Integrity substrate online (breaker + ledger).")
+    return breaker, ledger
+
+
+def _evaluate_integrity_after_tick(state: KineticLabState) -> None:
+    """Run absolute integrity referee against current athlete telemetry."""
+    breaker = state.circuit_breaker
+    if breaker is None:
+        return
+    from breaker import telemetry_from_kinetic_lab
+
+    samples = telemetry_from_kinetic_lab(state)
+    if not samples:
+        return
+    verdict = breaker.tracking_loop_tick(samples)
+    if verdict.is_override and not state.integrity_override:
+        state.integrity_override = True
+        state.running = False
+        vars_hit = ", ".join(sorted({b.variable for b in verdict.breaches})) or "manual"
+        _append_log(
+            state,
+            f"[TICK {state.tick:04d}] HARD OVERRIDE — integrity breach "
+            f"({vars_hit}). Human governance window engaged.",
+        )
+
+
 def step_simulation(state: KineticLabState) -> None:
     """Advance kinetic acquisition by one tick using unlocked research nodes."""
     if not state.running:
+        return
+
+    # Absolute halt while the hard breaker is latched in OVERRIDE.
+    if state.integrity_override:
+        _append_log(
+            state,
+            f"[TICK {state.tick:04d}] Acquisition blocked — System_State=OVERRIDE.",
+        )
         return
 
     state.tick += 1
@@ -153,6 +207,8 @@ def step_simulation(state: KineticLabState) -> None:
                     0.0,
                     round(athlete.tissue_debt - random.uniform(0.1, 0.5), 2),
                 )
+
+    _evaluate_integrity_after_tick(state)
 
 
 def readiness(state: KineticLabState) -> float:

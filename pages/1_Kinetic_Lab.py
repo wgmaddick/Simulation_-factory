@@ -10,6 +10,7 @@ from config import TENANT_CONFIG, THEME, research_nodes
 from kinetic_simulation import (
     AthleteState,
     KineticLabState,
+    attach_integrity_substrate,
     mean_asymmetry,
     mean_shear,
     readiness,
@@ -57,7 +58,10 @@ def init_lab() -> None:
     if "kinetic_lab" not in st.session_state:
         lab = KineticLabState()
         lab.reset(athlete_count=5)
+        attach_integrity_substrate(lab)
         st.session_state.kinetic_lab = lab
+    elif getattr(st.session_state.kinetic_lab, "circuit_breaker", None) is None:
+        attach_integrity_substrate(st.session_state.kinetic_lab)
 
 
 def render_athlete_card(athlete) -> None:
@@ -142,6 +146,50 @@ with st.sidebar:
         if st.button("Reset", use_container_width=True):
             lab.reset(athlete_count=athlete_count)
             lab.unlocked_nodes = set(unlocked)
+            if lab.circuit_breaker is None:
+                attach_integrity_substrate(lab)
+            st.rerun()
+
+    if lab.integrity_override and lab.divergence_ledger is not None:
+        st.warning("Hard circuit breaker OVERRIDE — human governance window open.")
+        remaining = lab.divergence_ledger.governance_window_remaining_ms()
+        st.caption(f"Governance window remaining: {remaining} ms")
+        lab.divergence_ledger.register_operator("lab_operator")
+        intervention = st.text_input("Operator intervention directive", key="gov_input")
+        g1, g2 = st.columns(2)
+        with g1:
+            if st.button("Path A — Comply", use_container_width=True):
+                try:
+                    lab.divergence_ledger.submit_intervention(
+                        "lab_operator",
+                        intervention or "Supervised load reduction",
+                    )
+                    lab.divergence_ledger.compute_new_reality()
+                    lab.integrity_override = False
+                    lab.log.append("[GOV] Path A (Compliance) — system recovered.")
+                    st.rerun()
+                except Exception as exc:  # noqa: BLE001
+                    st.error(str(exc))
+        with g2:
+            if st.button("Path B — Override", use_container_width=True):
+                lab.divergence_ledger.declare_warning_override(operator_id="lab_operator")
+                lab.divergence_ledger.compute_new_reality()
+                # Reactivate acquisition under compromised / hazardous parameters.
+                lab.integrity_override = False
+                lab.log.append(
+                    "[GOV] Path B (Failure to Act) — engine reactivated under hazard."
+                )
+                st.rerun()
+        # Auto-expire window → Path B
+        expired = lab.divergence_ledger.tick_governance_window()
+        if (
+            expired is not None
+            and expired.path.value.startswith("Path B")
+            and expired.forked_reality_id is None
+        ):
+            lab.divergence_ledger.compute_new_reality()
+            lab.integrity_override = False
+            lab.log.append("[GOV] Path B (Failure to Act) — governance window closed.")
             st.rerun()
 
 if not unlocked:
@@ -161,8 +209,16 @@ k5.metric(
 )
 
 status = "RUNNING" if lab.running else "PAUSED"
+if lab.integrity_override:
+    status = "OVERRIDE"
+breaker = lab.circuit_breaker
+breaker_label = (
+    f"{breaker.system_state.value} ({breaker.binary})"
+    if breaker is not None
+    else "UNBOUND"
+)
 st.caption(
-    f"Status: {status} · Speed: {lab.speed}s/tick · "
+    f"Status: {status} · Breaker: {breaker_label} · Speed: {lab.speed}s/tick · "
     f"Channels: {len(unlocked)}/{len(nodes)} · "
     f"Recovery clears: {lab.recovery_clears}"
 )
