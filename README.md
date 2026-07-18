@@ -1,26 +1,25 @@
-# University Operations Vault — Kinetic Sector
+# Sovereign Case Management Engine
 
-Streamlit multipage app for **University Intercollegiate Athletics** operations research.
+Streamlit executive dashboard for **operational risk governance** — portfolio metrics, hierarchical audit portals, clinical triage intake, and a Preventative Drift Radar with lookback fee basis.
 
-## Tenant brief
+## Surface
 
-| Field | Value |
+| Area | What it does |
 | --- | --- |
-| Tenant | University Operations Vault |
-| Domain | University Intercollegiate Athletics |
-| Sector | `SEC_01_KINETIC` |
-| Starting credits | 450 |
-| Theme | slate-950 / slate-900 / emerald-500 |
+| Governance sidebar | Role matrix, CapEx mitigation floor, strategic mandate injection |
+| Portfolio bar | Assets protected, critical drift, ODG alignment, indemnity exposure |
+| Audit Oracle | Operations & asset availability tranche drill-down |
+| Clinical Triage Intake | Anonymized subject token, ICF anatomy, age, occupation, ambient NLP notes |
+| Preventative Drift Radar | Asymmetrical `[1.6, 1.0]` layout — physical alignment table + TASE / PPD / lookback liability panel with remediate/escalate gate |
 
-## Pages
+## Core math
 
-- **University Operations Vault** (`app.py`) — credit ledger and research-node unlock tree:
-  - Node 1.1 Dynamic Interface Shear Stress Mapping (5 cr)
-  - Node 1.2 Pelvic Tilt & Deceleration Chain Asymmetry (8 cr)
-  - Node 1.3 Cellular Longevity & Micro-Tear Chronology (12 cr)
-- **Kinetic Lab** (`pages/1_Kinetic_Lab.py`) — live athlete acquisition console. Channels activate only for unlocked nodes. Engine: `kinetic_simulation.py`.
-
-Config lives in `config.py` (mirrors the sector brief).
+- Age / occupation / anatomy modulate baseline cost and ODG timeline
+- CapEx mitigation floor compresses allowable baseline spend
+- Functional drift = `max(0, 100 − ROM%)`
+- IVC = spend variance vs modulated baseline
+- Projected TASE escalates with drift and IVC; PPD uses a logistic risk curve
+- Lookback license fee = `$5,000 + 12% × projected TASE`
 
 ## Run
 
@@ -30,3 +29,5 @@ source .venv/bin/activate
 pip install -r requirements.txt
 streamlit run app.py
 ```
+
+Optional Kinetic Lab page remains under `pages/` for research-node acquisition demos.
