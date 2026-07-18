@@ -1,12 +1,7 @@
-"""Sovereign Case Management Engine — executive operational risk governance.
+"""AAT Scheme Performance Engine — predictive operational risk governance.
 
-Stark dark-theme portfolio surface with Clinical Triage Intake, Preventative
-Drift Radar (asymmetrical high-real-estate layout), and Lookback License Fee
-basis.
-
-Layout contract: the dynamic case-management composition below is permanently
-locked for production demos — portfolio bar, triage intake, drift radar,
-privacy enclave, and historical cost trend.
+High-contrast sovereign dark theme for scheme claims performance, triage intake,
+preventative drift radar, role-based ledger masking, and longitudinal cost trends.
 """
 
 from __future__ import annotations
@@ -18,72 +13,52 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-# Permanently lock the executive case-management layout composition.
+# Layout contract: AAT Scheme Performance Engine composition is locked.
 LAYOUT_LOCKED = True
 
-# ---------------------------------------------------------------------------
-# Bulk Data Ingestion Gate + synthetic fallback (never blank the deck)
-# ---------------------------------------------------------------------------
-GM_ROLE = "General Manager"
-RESTRICTED_ROLES = {
-    "Caseworker / Analyst",
-    "Technical Expert ('Docteur')",
-}
+SCHEME_DIRECTOR = "Scheme Director (GM)"
 
 
-def default_corporate_profile() -> pd.DataFrame:
-    """Baseline synthetic portfolio used when no corporate file is loaded."""
+def default_aat_profile() -> pd.DataFrame:
+    """Standard AAT performance profile used when no client file is loaded."""
     return pd.DataFrame(
         {
-            "subject_token": [
-                "Asset_ID_Crypt_Delta_2026",
-                "Asset_ID_Crypt_Echo_2026",
-                "Asset_ID_Crypt_Foxtrot_2026",
+            "participant_token": [
+                "AAT-Claimant-Delta-2026",
+                "AAT-Claimant-Echo-2026",
+                "AAT-Claimant-Foxtrot-2026",
             ],
-            "anatomy": [
-                "Glenohumeral Joint (Shoulder)",
-                "Lumbar Spine",
-                "Knee Extensor Mechanism",
-            ],
-            "age": [48, 41, 55],
-            "occupation": [
-                "Heavy Industrial Laborer",
-                "Medium Logistics / Operator",
-                "Sedentary / Administrative",
-            ],
-            "rom_pct": [75, 88, 62],
-            "actual_spend": [28400.0, 19250.0, 34100.0],
             "critical_flag": [1, 0, 1],
-            "odg_alignment_pct": [87.3, 92.1, 78.4],
-            "indemnity_exposure_usd": [412500.0, 188000.0, 276000.0],
+            "aat_alignment_pct": [87.3, 92.1, 78.4],
+            "scheme_liability_usd": [412500.0, 188000.0, 276000.0],
+            "actual_spend": [28400.0, 19250.0, 34100.0],
+            "age": [48, 41, 55],
         }
     )
 
 
-def load_corporate_data_profile(uploaded_file: Any) -> tuple[pd.DataFrame, str]:
-    """Parse CSV/XLSX when present; otherwise fall back to synthetic defaults."""
+def load_client_data_profile(uploaded_file: Any) -> tuple[pd.DataFrame, str]:
+    """Parse CSV/XLSX when present; otherwise fall back to the AAT sample profile."""
     if uploaded_file is None:
-        return default_corporate_profile(), "synthetic"
+        return default_aat_profile(), "synthetic"
 
     try:
         name = (uploaded_file.name or "").lower()
-        raw = uploaded_file.getvalue()
-        buffer = BytesIO(raw)
+        buffer = BytesIO(uploaded_file.getvalue())
         if name.endswith(".csv"):
             frame = pd.read_csv(buffer)
         elif name.endswith(".xlsx") or name.endswith(".xls"):
             frame = pd.read_excel(buffer)
         else:
-            return default_corporate_profile(), "synthetic"
+            return default_aat_profile(), "synthetic"
 
         if frame is None or frame.empty:
-            return default_corporate_profile(), "synthetic"
+            return default_aat_profile(), "synthetic"
 
         frame.columns = [str(c).strip().lower().replace(" ", "_") for c in frame.columns]
         return frame, "uploaded"
     except Exception:
-        # Never surface a hard failure — keep the executive deck operational.
-        return default_corporate_profile(), "synthetic"
+        return default_aat_profile(), "synthetic"
 
 
 def _col(df: pd.DataFrame, *candidates: str) -> str | None:
@@ -93,137 +68,39 @@ def _col(df: pd.DataFrame, *candidates: str) -> str | None:
     return None
 
 
-def portfolio_summary(df: pd.DataFrame) -> dict[str, Any]:
-    """Derive Layer-1 portfolio KPIs from the active corporate profile."""
-    n_cases = int(len(df)) if len(df) else 142
-    crit_col = _col(df, "critical_flag", "critical", "point_of_drift")
+def scheme_kpis(df: pd.DataFrame) -> dict[str, Any]:
+    """Derive macro scheme bar metrics from the active client profile."""
+    n_cases = int(len(df)) if len(df) else 3
+    crit_col = _col(df, "critical_flag", "critical", "pathway_drift")
     if crit_col is not None:
         critical = int(pd.to_numeric(df[crit_col], errors="coerce").fillna(0).astype(bool).sum())
     else:
-        critical = max(1, int(round(n_cases * 0.13)))
+        critical = max(1, int(round(n_cases * 0.67)))
 
-    odg_col = _col(df, "odg_alignment_pct", "odg_alignment", "odg")
-    if odg_col is not None:
-        odg = float(pd.to_numeric(df[odg_col], errors="coerce").dropna().mean())
+    align_col = _col(df, "aat_alignment_pct", "odg_alignment_pct", "alignment")
+    if align_col is not None:
+        alignment = float(pd.to_numeric(df[align_col], errors="coerce").dropna().mean())
     else:
-        odg = 87.3
+        alignment = 85.9
 
-    ind_col = _col(df, "indemnity_exposure_usd", "indemnity_exposure", "indemnity")
-    if ind_col is not None:
-        indemnity = float(pd.to_numeric(df[ind_col], errors="coerce").fillna(0).sum())
+    liab_col = _col(df, "scheme_liability_usd", "indemnity_exposure_usd", "liability")
+    if liab_col is not None:
+        exposure = float(pd.to_numeric(df[liab_col], errors="coerce").fillna(0).sum())
     else:
-        indemnity = 412500.0
+        exposure = 876500.0
 
     return {
-        "total_assets": n_cases,
-        "critical_drift": critical,
-        "odg_alignment": odg,
-        "indemnity_exposure": indemnity,
+        "cases": n_cases,
+        "drift": critical,
+        "alignment": alignment,
+        "exposure": exposure,
     }
 
 
-def is_general_manager(active_role: str) -> bool:
-    return active_role == GM_ROLE
-
-
-def can_view_indemnity(active_role: str) -> bool:
-    """Indemnity card is GM-only; Caseworker / Docteur are explicitly masked."""
-    return active_role not in RESTRICTED_ROLES and is_general_manager(active_role)
-
-
-def build_clinical_timeline(
-    *,
-    odg_target_cost: float,
-    actual_cumulative_at_day: float,
-    observed_day: int = 42,
-    horizon_days: int = 120,
-    odg_horizon_days: int = 90,
-) -> pd.DataFrame:
-    """Structure a standard 120-day clinical cost runway vs spend-velocity loop."""
-    days = np.arange(0, horizon_days + 1, dtype=float)
-    odg_days = max(float(odg_horizon_days), 1.0)
-    observe = max(int(observed_day), 1)
-
-    # Standard ODG Cost Runway — linear to target by ODG horizon, then plateau
-    odg_runway = np.clip(days / odg_days, 0.0, 1.0) * float(odg_target_cost)
-
-    # Actual Cumulative Spend Velocity — constant velocity through observed day,
-    # then mild post-observation acceleration when spend outpaces the ODG path.
-    daily_velocity = float(actual_cumulative_at_day) / observe
-    actual_spend = days * daily_velocity
-    odg_at_observe = min(1.0, observe / odg_days) * float(odg_target_cost)
-    overshoot = max(0.0, float(actual_cumulative_at_day) - odg_at_observe)
-    if overshoot > 0:
-        post = np.maximum(days - observe, 0.0)
-        actual_spend = actual_spend + post * (overshoot / 40.0)
-
-    return pd.DataFrame(
-        {
-            "Days Elapsed": days.astype(int),
-            "Standard ODG Cost Runway": odg_runway,
-            "Actual Cumulative Spend Velocity": actual_spend,
-        }
-    )
-
-
-def build_portfolio_timeline(
-    portfolio: pd.DataFrame,
-    *,
-    observed_day: int = 42,
-    horizon_days: int = 120,
-) -> pd.DataFrame:
-    """Aggregate cumulative spending across the full portfolio matrix (GM view)."""
-    if portfolio is None or portfolio.empty:
-        return build_clinical_timeline(
-            odg_target_cost=22500.0 * 3,
-            actual_cumulative_at_day=28400.0 * 3,
-            observed_day=observed_day,
-            horizon_days=horizon_days,
-        )
-
-    spend_col = _col(portfolio, "actual_spend", "spend", "cumulative_spend")
-    age_col = _col(portfolio, "age")
-    n = max(len(portfolio), 1)
-
-    if spend_col is not None:
-        spends = pd.to_numeric(portfolio[spend_col], errors="coerce").fillna(28400.0)
-    else:
-        spends = pd.Series([28400.0] * n)
-
-    if age_col is not None:
-        ages = pd.to_numeric(portfolio[age_col], errors="coerce").fillna(48.0)
-        odg_targets = 22500.0 * (1.0 + (ages - 25.0) * 0.015)
-    else:
-        odg_targets = pd.Series([22500.0] * n)
-
-    # Sum independent subject runways into one portfolio curve
-    aggregate = None
-    for odg_target, spend in zip(odg_targets.tolist(), spends.tolist()):
-        curve = build_clinical_timeline(
-            odg_target_cost=float(odg_target),
-            actual_cumulative_at_day=float(spend),
-            observed_day=observed_day,
-            horizon_days=horizon_days,
-        )
-        if aggregate is None:
-            aggregate = curve
-        else:
-            aggregate["Standard ODG Cost Runway"] += curve["Standard ODG Cost Runway"]
-            aggregate["Actual Cumulative Spend Velocity"] += curve[
-                "Actual Cumulative Spend Velocity"
-            ]
-    return aggregate if aggregate is not None else build_clinical_timeline(
-        odg_target_cost=22500.0,
-        actual_cumulative_at_day=28400.0,
-        observed_day=observed_day,
-        horizon_days=horizon_days,
-    )
-
-
-# 1. Stark Executive Dark Theme & Contrast UI Rig
+# 1. High-Contrast Sovereign Dark Theme Configuration
 st.set_page_config(
     layout="wide",
-    page_title="Sovereign Case Management Engine",
+    page_title="AAT Scheme Performance Engine",
     page_icon="⬡",
     initial_sidebar_state="expanded",
 )
@@ -256,7 +133,7 @@ st.markdown(
         color: #ffffff !important;
         font-weight: 700 !important;
     }
-    /* Industry Metric Card Highlights */
+    /* Institutional Metric Box Wrappers */
     .metric-box {
         background-color: #161b22;
         border: 1px solid #30363d;
@@ -286,52 +163,30 @@ st.markdown(
         font-weight: 700;
         color: #e2e8f0;
     }
-    /* Table Accessibility Wrap Overrides */
     th, td,
     [data-testid="stTable"] th,
-    [data-testid="stTable"] td,
-    [data-testid="stTable"] table {
+    [data-testid="stTable"] td {
         color: #ffffff !important;
         font-size: 0.95rem !important;
         white-space: normal !important;
         overflow-wrap: anywhere !important;
         word-break: break-word !important;
-        line-height: 1.4 !important;
-        vertical-align: top !important;
-    }
-    [data-testid="stTable"],
-    [data-testid="stTable"] table {
-        width: 100% !important;
     }
     label, [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] {
         color: #ffffff !important;
         font-weight: 700 !important;
     }
-    [data-testid="stExpander"] summary,
-    [data-testid="stExpander"] summary span {
-        color: #ffffff !important;
-        font-weight: 700 !important;
-    }
-    /* High-contrast controls — keep labels/values readable on dark deck */
     .stButton > button {
         background-color: #21262d !important;
         color: #ffffff !important;
         border: 1px solid #30363d !important;
         font-weight: 700 !important;
     }
-    .stButton > button:hover {
-        background-color: #30363d !important;
-        border-color: #8b949e !important;
-        color: #ffffff !important;
-    }
     .stButton > button p,
-    .stButton > button span,
-    .stButton > button div {
+    .stButton > button span {
         color: #ffffff !important;
     }
     [data-baseweb="select"] > div,
-    [data-baseweb="input"] > div,
-    [data-baseweb="textarea"] > div,
     .stTextInput input,
     .stNumberInput input,
     .stTextArea textarea {
@@ -339,12 +194,6 @@ st.markdown(
         color: #ffffff !important;
         border-color: #30363d !important;
     }
-    [data-baseweb="select"] span,
-    [data-baseweb="menu"] li,
-    [data-baseweb="menu"] li span {
-        color: #ffffff !important;
-    }
-    /* Historical cost trend chart — high-contrast on dark deck */
     [data-testid="stVegaLiteChart"],
     [data-testid="stLineChart"] {
         background-color: #161b22 !important;
@@ -357,417 +206,361 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# 2. Dynamic Variable Ingestion Layer (State Initialization)
+# 2. State Initialization for Dynamic Calculators
 if "ivc" not in st.session_state:
     st.session_state.ivc = 0.0
 if "functional_drift" not in st.session_state:
     st.session_state.functional_drift = 0.0
-if "mandate_exceptions" not in st.session_state:
-    st.session_state.mandate_exceptions = []
-if "pathway_accelerations" not in st.session_state:
-    st.session_state.pathway_accelerations = 0
 
-# --- SIDEBAR: CONTROLS & DYNAMIC PARAMETER INJECTION ---
+# --- SIDEBAR: CONTROLS & DYNAMIC ROLE PRIVACY MATRIX ---
 with st.sidebar:
-    st.markdown("### GOVERNANCE LAYER")
+    st.markdown("### AAT SCHEME GOVERNANCE")
     st.markdown(
-        "<p style='color:#8b949e; font-size:0.85rem;'>"
-        "Tiered Access Enforced • Secure Executive Vault</p>",
+        "<p style='color:#8b949e; font-size:0.85rem;'>Role-Based Access Control Active</p>",
         unsafe_allow_html=True,
     )
 
     role = st.selectbox(
         "Active User Role Matrix",
         [
-            "General Manager",
-            "Caseworker / Analyst",
-            "Technical Expert ('Docteur')",
+            "Scheme Director (GM)",
+            "Claims Officer / Analyst",
+            "Reviewing Specialist",
         ],
     )
 
     st.markdown("---")
-    st.markdown("### DYNAMIC MANDATE INJECTION")
-    st.markdown(
-        "<p style='color:#8b949e; font-size:0.85rem;'>"
-        "Uncodified Parameter Override</p>",
-        unsafe_allow_html=True,
+    st.markdown("### SCHEME MANDATE INJECTION")
+    cap_floor = st.slider("Enforce Liability Mitigation Floor (%)", 0, 50, 15)
+    strategic_note = st.text_input(
+        "Disseminate Performance Mandate",
+        placeholder="e.g., Accelerate Pathway Interventions",
     )
+    st.caption(f"Active role: **{role}** · Liability floor **{cap_floor}%**")
+    if strategic_note:
+        st.caption(f"Mandate: {strategic_note}")
 
-    target_reduction = st.slider("Enforce CapEx Mitigation Floor (%)", 0, 50, 15)
-    custom_mandate = st.text_input(
-        "Disseminate Strategic Mandate",
-        placeholder="e.g., Prioritize Conservative Therapy Paths",
-    )
-
-    st.markdown("---")
-    st.caption(f"Active role: **{role}**")
-    st.caption(f"CapEx mitigation floor: **{target_reduction}%**")
-    if custom_mandate:
-        st.caption(f"Mandate: {custom_mandate}")
-
-# --- MAIN EXECUTIVE VIEW: PORTFOLIO & ASSET LIFE RUNWAY ---
-st.title("SOVEREIGN CASE MANAGEMENT ENGINE")
+# --- MAIN PERFORMANCE DASHBOARD ---
+st.title("AAT SCHEME PERFORMANCE ENGINE")
 st.markdown(
     "<p style='color:#8b949e; margin-top:-10px;'>"
-    "Sophisticated Operational Risk Governance in Simple Terms</p>",
+    "Predictive Operational Risk & Long-Tail Claims Governance</p>",
     unsafe_allow_html=True,
 )
 st.markdown("---")
 
-# Bulk Data Ingestion Gate — corporate CSV / XLSX with synthetic fallback
+# MODULE 1: DYNAMIC DATA INGESTION GATE (EASY BULK UPLOAD)
 uploaded_file = st.file_uploader(
-    "📥 LOAD CORPORATE DATA PROFILE (Drag & Drop CSV / XLSX)",
+    "📥 LOAD CUSTOM CLIENT DATA PROFILE (Drag & Drop CSV / XLSX)",
     type=["csv", "xlsx"],
 )
-portfolio_df, portfolio_source = load_corporate_data_profile(uploaded_file)
-kpis = portfolio_summary(portfolio_df)
-if portfolio_source == "uploaded":
-    st.caption(
-        f"Corporate profile loaded · {len(portfolio_df)} rows · "
-        f"{uploaded_file.name if uploaded_file else 'workbook'}"
-    )
+
+profile_df, profile_source = load_client_data_profile(uploaded_file)
+kpis = scheme_kpis(profile_df)
+
+# Set dynamic cohort baselines based on whether a file is loaded or using the active engine sample
+if profile_source == "uploaded":
+    st.success("Custom client profile ingested successfully.")
+    base_cost_multiplier = 1.15
 else:
-    st.caption("Synthetic corporate profile active · upload CSV / XLSX to override.")
+    st.markdown(
+        "<p style='color:#8b949e; font-size:0.85rem; font-style:italic;'>"
+        "Standard AAT Performance Profile Active • Upload client spreadsheet to overwrite baseline."
+        "</p>",
+        unsafe_allow_html=True,
+    )
+    base_cost_multiplier = 1.0
 
-# Global Portfolio Layer 1 Widgets (The Top Metrics Bar)
-# Dynamic Privacy Filtering Engine — hide indemnity for non-GM roles
-show_indemnity = can_view_indemnity(role)
-metric_cols = st.columns(4 if show_indemnity else 3)
+display_cases = kpis["cases"]
+display_drift = kpis["drift"]
+display_alignment = f"{kpis['alignment']:.1f}%"
+display_exposure = f"${kpis['exposure'] / 1000.0:,.1f}K"
 
-with metric_cols[0]:
+# Macro Scheme Performance Metrics Bar
+col1, col2, col3, col4 = st.columns(4)
+with col1:
     st.markdown(
-        '<div class="metric-box"><div class="metric-label">Total Assets Protected</div>'
-        f'<div class="metric-value-silver">{kpis["total_assets"]} Cases</div></div>',
+        f'<div class="metric-box"><div class="metric-label">Total Scheme Claims</div>'
+        f'<div class="metric-value-silver">{display_cases} Cases</div></div>',
         unsafe_allow_html=True,
     )
-with metric_cols[1]:
+with col2:
     st.markdown(
-        '<div class="metric-box"><div class="metric-label">Critical Point of Drift</div>'
-        f'<div class="metric-value-crimson">{kpis["critical_drift"]} Subjects</div></div>',
+        f'<div class="metric-box"><div class="metric-label">Critical Pathway Drift</div>'
+        f'<div class="metric-value-crimson">{display_drift} Subjects</div></div>',
         unsafe_allow_html=True,
     )
-with metric_cols[2]:
+with col3:
     st.markdown(
-        '<div class="metric-box"><div class="metric-label">ODG Timeline Baseline Alignment</div>'
-        f'<div class="metric-value-green">{kpis["odg_alignment"]:.1f}%</div></div>',
+        f'<div class="metric-box"><div class="metric-label">AAT Baseline Performance Index</div>'
+        f'<div class="metric-value-green">{display_alignment}</div></div>',
         unsafe_allow_html=True,
     )
-if show_indemnity:
-    indemnity_k = kpis["indemnity_exposure"] / 1000.0
-    with metric_cols[3]:
+with col4:
+    # Privacy Masking Rule: Hide macro financial exposures from standard analysts
+    if role == SCHEME_DIRECTOR:
         st.markdown(
-            '<div class="metric-box"><div class="metric-label">Projected Indemnity Exposure</div>'
-            f'<div class="metric-value-silver">${indemnity_k:,.1f}K</div></div>',
+            f'<div class="metric-box"><div class="metric-label">Projected Scheme Liability</div>'
+            f'<div class="metric-value-silver">{display_exposure}</div></div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            '<div class="metric-box"><div class="metric-label">Projected Scheme Liability</div>'
+            '<div style="color:#8b949e; font-size:1.2rem; font-weight:700; margin-top:0.8rem;">'
+            "🔒 RESTRICTED</div></div>",
             unsafe_allow_html=True,
         )
 
-# --- NESTED AUDIT ORACLE MATRIX (Drill-Down Framework) ---
-st.markdown("### HIERARCHICAL AUDIT PORTALS")
-with st.expander("AUDIT ORACLE: Operations & Asset Availability Tranche"):
-    st.markdown("#### Dynamic Allocation Router (Central Funding Ledger)")
-    st.info(
-        "Central Capital approved. Current allocations meticulously tagged: "
-        "[TARGET: Rehabilitation Substrate] - [SOURCE: Corporate Reserves] - "
-        "[STATUS: Audited]"
-    )
-    if custom_mandate:
-        st.caption(f"Strategic mandate in force: {custom_mandate}")
-
-# --- CLINICAL TRIAGE INTAKE (Multi-Modal Ingestion Gate) ---
-st.markdown("### MODULE 1: CLINICAL TRIAGE INTAKE")
-st.markdown(
-    "<p style='color:#8b949e; font-size:0.9rem;'>"
-    "Clinician Zero-Friction Capture (Video, Photographic & Speech NLP Pipeline)</p>",
-    unsafe_allow_html=True,
-)
-
+# --- MODULE 2: CLINICAL INTAKE MODALITY ---
+st.markdown("### SCHEME TRIAGE INTAKE INGESTION")
 intake_col1, intake_col2, intake_col3 = st.columns(3)
 with intake_col1:
-    subject_id = st.text_input(
-        "Anonymized Subject Token",
-        value="Asset_ID_Crypt_Delta_2026",
+    subject_token = st.text_input(
+        "Participant Identifier Token",
+        value="AAT-Claimant-Delta-2026",
     )
     anatomy = st.selectbox(
         "Anatomical Target Site (ICF Matrix)",
         [
             "Glenohumeral Joint (Shoulder)",
             "Lumbar Spine",
-            "Knee Extensor Mechanism",
+            "Lower Extremity",
         ],
     )
 with intake_col2:
     age = st.number_input("Actuarial Chronological Age", min_value=18, max_value=75, value=48)
-    occupation = st.selectbox(
-        "Occupational Duty Tier",
+    duty_tier = st.selectbox(
+        "Occupational Demands Tier",
         [
-            "Heavy Industrial Laborer",
-            "Medium Logistics / Operator",
-            "Sedentary / Administrative",
+            "Heavy Manual / Industrial",
+            "Medium Logistics / Transport",
+            "Sedentary Clerical",
         ],
     )
 with intake_col3:
     st.markdown(
         "<b style='font-size:0.85rem; color:#8b949e; font-family:monospace;'>"
-        "VOICE DICTATION NLP INGESTION</b>",
+        "VOICE DICTATION NLP PIPELINE</b>",
         unsafe_allow_html=True,
     )
     dictation = st.text_area(
-        "Ambient Speech Notes",
+        "Clinical Summary Dictation Ingest",
         value=(
-            "Patient exhibits partial thickness tear of the supraspinatus tendon. "
-            "Chronological age capacity inflates baseline time metrics. High fear of "
-            "re-injury noted, cognitive resilience score tracking low."
+            "Claimant presents with severe structural disruption. Age curve indicates "
+            "prolonged cellular recovery timeline. Noted elevation in psychosocial "
+            "barriers to return-to-work path."
         ),
     )
 
-# Dynamically modulate baseline cost and timeline using the core logic formulas
-occupation_factor = {
-    "Heavy Industrial Laborer": 1.18,
-    "Medium Logistics / Operator": 1.08,
-    "Sedentary / Administrative": 1.0,
-}[occupation]
+# Dynamic calculations for age-calibrated timeline modeling
+duty_factor = {
+    "Heavy Manual / Industrial": 1.18,
+    "Medium Logistics / Transport": 1.08,
+    "Sedentary Clerical": 1.0,
+}[duty_tier]
 anatomy_factor = {
     "Glenohumeral Joint (Shoulder)": 1.0,
     "Lumbar Spine": 1.12,
-    "Knee Extensor Mechanism": 1.06,
+    "Lower Extremity": 1.06,
 }[anatomy]
 
 age_factor = (age - 25) * 0.015
-base_cost = 22500.0 * (1.0 + age_factor) * occupation_factor * anatomy_factor
-# CapEx mitigation floor compresses allowable baseline spend
-base_cost *= 1.0 - (target_reduction / 100.0) * 0.35
-base_days = int(90 * (1.0 + age_factor) * occupation_factor)
+calibrated_base_cost = (
+    22500.0 * (1.0 + age_factor) * base_cost_multiplier * duty_factor * anatomy_factor
+)
+# Liability mitigation floor compresses allowable baseline spend
+calibrated_base_cost *= 1.0 - (cap_floor / 100.0) * 0.35
+calibrated_base_days = int(90 * (1.0 + age_factor) * duty_factor)
 
-# --- THE PREVENTATIVE DRIFT RADAR (High Real-Estate Vertical Realignment) ---
+# --- MODULE 3: PREVENTATIVE DRIFT RADAR ---
 st.markdown("---")
 st.markdown("## PREVENTATIVE DRIFT RADAR")
 st.markdown(
     "<p style='color:#8b949e; font-size:0.9rem;'>"
-    "Live Divergence Mapping and Retrospective Lookback Allocation Controls</p>",
+    "Live Divergence Mapping and Retrospective Lookback Control Panel</p>",
     unsafe_allow_html=True,
 )
 
-# Interactive simulation controls mimicking the caseworker input loops
-st.markdown("### Live Telemetry Simulation Overrides")
+st.markdown("### Live Claim Telemetry Simulation Input")
 sim_col1, sim_col2 = st.columns(2)
 with sim_col1:
     actual_rom = st.slider(
-        "Current Functional Range of Motion (% of Expected)",
+        "Logged Functional Range of Motion (% of Expected Target)",
         0,
         100,
         75,
     )
 with sim_col2:
     actual_spend = st.number_input(
-        "Actual Invoiced Expense to Date (USD)",
+        "Actual Invoiced Claims Cost to Date (USD)",
         min_value=0.0,
         value=28400.0,
     )
 
-# Calculate live functional drift and input variance metrics
+# Re-compute indicators dynamically based on manual inputs
 st.session_state.functional_drift = max(0.0, 100.0 - float(actual_rom))
-st.session_state.ivc = max(0.0, (float(actual_spend) - base_cost) / base_cost)
-
-# Dynamic cost escalation math projection
+st.session_state.ivc = max(
+    0.0, (float(actual_spend) - calibrated_base_cost) / calibrated_base_cost
+)
 projected_final_cost = (
-    base_cost
+    calibrated_base_cost
     + (st.session_state.functional_drift * 185.0)
-    + (st.session_state.ivc * base_cost)
+    + (st.session_state.ivc * calibrated_base_cost)
 )
 permanent_disability_prob = 1.0 / (
     1.0
     + np.exp(
-        -(
-            -2.5
-            + (age * 0.04)
-            + (st.session_state.functional_drift * 0.05)
-        )
+        -(-2.5 + (age * 0.04) + (st.session_state.functional_drift * 0.05))
     )
 )
-lookback_fee = 5000.0 + (projected_final_cost * 0.12)
 
-# Decision matrix labels for Point of Drift
-cost_delta = float(actual_spend) - base_cost
-if st.session_state.functional_drift <= 5:
-    rom_delta_label = "Within Envelope"
-elif st.session_state.functional_drift <= 15:
-    rom_delta_label = f"-{st.session_state.functional_drift:.0f}% Variance"
-else:
-    rom_delta_label = f"-{st.session_state.functional_drift:.0f}% Variance"
-
-odg_status = "On Track" if st.session_state.functional_drift <= 15 else "Timeline Breach"
 psych_flag = (
-    "Path B Trigger Alert"
-    if ("fear" in dictation.lower() or "stress" in dictation.lower())
+    "Path B Trigger Activated"
+    if ("fear" in dictation.lower() or "stress" in dictation.lower() or "barrier" in dictation.lower())
     else "Nominal Watch"
 )
+odg_status = (
+    "On Track" if st.session_state.functional_drift <= 15 else "Timeline Breach"
+)
 
-# The Asymmetrical Layout Matrix to maximize iPad readability
 table_col, metric_col = st.columns([1.6, 1.0])
 
 with table_col:
-    st.markdown("#### Physical Alignment Vector vs. Expected Target")
-    df_physical = pd.DataFrame(
+    st.markdown("#### Operational Pathway Alignment Vector")
+    df_vector = pd.DataFrame(
         {
-            "Metric Dimension": [
-                "ODG Timeline Envelope",
-                "Expected Base Cost",
-                "Functional Range of Motion",
-                "Biopsychosocial Risk (ICF)",
+            "Performance Dimension": [
+                "Target Recovery Runway",
+                "Expected Base Cost Runway",
+                "Current Functional Capacity",
+                "Biopsychosocial Barriers Index",
             ],
-            "Validated Baseline": [
-                f"{base_days} Days",
-                f"${base_cost:,.2f}",
-                "100% Target Arc",
+            "Validated Standard": [
+                f"{calibrated_base_days} Days",
+                f"${calibrated_base_cost:,.2f}",
+                "100% Path Arc",
                 "Nominal Resilience",
             ],
-            "Live Ingestion State": [
+            "Live Ingest State": [
                 "Day 42",
                 f"${actual_spend:,.2f}",
                 f"{actual_rom}% Flexion",
-                "High Fear/Stress Flag"
-                if psych_flag == "Path B Trigger Alert"
+                "High Stress / Fear Flag"
+                if psych_flag == "Path B Trigger Activated"
                 else "Stable Affect",
             ],
-            "Point of Drift Delta": [
+            "Point of Drift Variance": [
                 odg_status,
-                f"${cost_delta:+,.2f}",
-                rom_delta_label,
+                f"${float(actual_spend) - calibrated_base_cost:+,.2f}",
+                f"-{st.session_state.functional_drift:.0f}% Deviation",
                 psych_flag,
             ],
         }
     )
-    st.table(df_physical)
+    st.table(df_vector)
     st.caption(
-        f"Subject `{subject_id}` · {anatomy} · {occupation} · Age {age} · Role {role}"
+        f"Participant `{subject_token}` · {anatomy} · {duty_tier} · Age {age} · Role {role}"
     )
 
 with metric_col:
-    st.markdown("#### Macro Financial Liability & Lookback Valuation")
-
-    # Check conditional severity to alter lookback warnings
+    st.markdown("#### Macro Financial Liability Ledger")
     if st.session_state.functional_drift > 15.0 or permanent_disability_prob > 0.50:
-        status_color = "crimson"
-        status_label = "CRITICAL PATHWAY DRIFT WARNING"
+        status_label = "CRITICAL PATHWAY DRIFT DETECTED"
+        status_color = "#ef4444"
     else:
-        status_color = "green"
-        status_label = "NOMINAL SYSTEMIC ALIGNMENT"
+        status_label = "NOMINAL PATHWAY ALIGNMENT"
+        status_color = "#10b981"
 
-    border = "#ef4444" if status_color == "crimson" else "#10b981"
-    label_color = border
-    ppd_color = "#ef4444" if permanent_disability_prob > 0.50 else "#e2e8f0"
-
-    # The dynamic privacy switch embedded within the financial summary box
-    if role == "General Manager":
-        privacy_ledger_html = f"""
-            <div class="metric-label">Projected Total Case Cost (TASE)</div>
+    # Secure Ledger Data Masking Logic Matrix (embedded in one metric box)
+    if role == SCHEME_DIRECTOR:
+        ledger_body = f"""
+            <div class="metric-label">Total Absolute System Exposure (TASE)</div>
             <div class="metric-value-silver">${projected_final_cost:,.2f}</div>
-            <div class="metric-label" style="margin-top:0.8rem;">Dynamic Lookback License Premium Fee Basis</div>
+            <div class="metric-label" style="margin-top:0.8rem;">Probability of Permanent Disability (PPD)</div>
+            <div class="metric-value-crimson" style="color:{'#ef4444' if permanent_disability_prob > 0.50 else '#e2e8f0'};">
+                {permanent_disability_prob * 100:.1f}%
+            </div>
+            <div class="metric-label" style="margin-top:0.8rem;">Dynamic Lookback Valuation Basis</div>
             <div class="metric-value-green">${(5000 + (projected_final_cost * 0.12)):,.2f}</div>
         """
     else:
-        privacy_ledger_html = """
-            <div class="metric-label">Projected Total Case Cost (TASE)</div>
-            <div style="color:#8b949e; font-style:italic; font-size:1.1rem; margin-bottom:0.8rem;">🔒 MASKED (Analyst Clearance Only)</div>
-            <div class="metric-label">Dynamic Lookback License Premium Fee Basis</div>
-            <div style="color:#8b949e; font-style:italic; font-size:1.1rem;">🔒 RESTRICTED: Requires GM Level</div>
+        ledger_body = """
+            <div class="metric-label">Total Absolute System Exposure (TASE)</div>
+            <div style="color:#8b949e; font-style:italic; font-size:1.1rem; margin-bottom:0.8rem;">
+                🔒 MASKED (Director Clearance Required)
+            </div>
+            <div class="metric-label">Probability of Permanent Disability (PPD)</div>
+            <div style="color:#8b949e; font-style:italic; font-size:1.1rem; margin-bottom:0.8rem;">
+                🔒 MASKED
+            </div>
+            <div class="metric-label">Dynamic Lookback Valuation Basis</div>
+            <div style="color:#8b949e; font-style:italic; font-size:1.1rem;">
+                🔒 RESTRICTED MASK ACTIVE
+            </div>
         """
 
     st.markdown(
         f"""
-        <div class="metric-box" style="border-left: 4px solid {border};">
-            <div class="metric-label">Platform Governance Status</div>
-            <div style="color:{label_color}; font-weight:700; font-size:1.1rem; margin-bottom:0.8rem;">
+        <div class="metric-box" style="border-left: 4px solid {status_color};">
+            <div class="metric-label">Scheme Alignment Status</div>
+            <div style="color:{status_color}; font-weight:700; font-size:1.1rem; margin-bottom:0.8rem;">
                 {status_label}
             </div>
-            {privacy_ledger_html}
-            <div class="metric-label" style="margin-top:0.8rem;">
-                Probability of Permanent Disability (PPD)
-            </div>
-            <div class="metric-value-crimson" style="color: {ppd_color};">
-                {permanent_disability_prob * 100:.1f}%
-            </div>
-            <div class="metric-label" style="margin-top:0.8rem;">Input Variance Coefficient (IVC)</div>
-            <div class="metric-value-silver">{st.session_state.ivc * 100:.1f}%</div>
+            {ledger_body}
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # 4. Automated Remediate / Escalate Action Panel Gate
-    if status_color == "crimson":
+    if status_color == "#ef4444":
         st.error(
-            "SYSTEMIC DRIFT THRESHOLD BREACHED: Unaddressed drift is inflating "
-            "long-tail capital liabilities."
+            "CRITICAL PATHWAY DRIFT DETECTED: Unaddressed drift is inflating "
+            "long-tail scheme liabilities."
         )
-        btn_col1, btn_col2 = st.columns(2)
-        with btn_col1:
-            if st.button("Initiate Pathway Acceleration", use_container_width=True):
-                st.session_state.pathway_accelerations += 1
-                st.success(
-                    "Authorized: Swapping to dynamic ODG rehabilitation sub-pathway."
-                )
-        with btn_col2:
-            if st.button("Log Mandate Compliance Exception", use_container_width=True):
-                st.session_state.mandate_exceptions.append(
-                    {
-                        "subject": subject_id,
-                        "role": role,
-                        "mandate": custom_mandate or "(none)",
-                        "drift": st.session_state.functional_drift,
-                    }
-                )
-                st.info("Cryptographic data provenance receipt stamped into vault.")
+        if strategic_note:
+            st.info(f"Active performance mandate: {strategic_note}")
 
-        if st.session_state.pathway_accelerations:
-            st.caption(
-                f"Accelerations logged this session: {st.session_state.pathway_accelerations}"
-            )
-        if st.session_state.mandate_exceptions:
-            st.caption(
-                f"Compliance exceptions stamped: {len(st.session_state.mandate_exceptions)}"
-            )
-    else:
-        st.success("Drift within governance envelope. No remediation gate required.")
-
-# --- HISTORICAL COST TREND (beneath Preventative Drift Radar) ---
+# --- MODULE 4: LONGITUDINAL HISTORICAL COST TREND VISUALIZATION ---
 st.markdown("---")
-st.markdown("## HISTORICAL COST TREND")
+st.markdown("### HISTORICAL PERFORMANCE ANALYTICS")
 st.markdown(
     "<p style='color:#8b949e; font-size:0.9rem;'>"
-    "120-Day Clinical Timeline — Standard ODG Cost Runway vs Actual Cumulative Spend Velocity</p>",
+    "120-Day Longitudinal Claim Trajectory Matrix — Expected Pathway vs Actual Cumulative Spend</p>",
     unsafe_allow_html=True,
 )
 
-observed_day = 42
-if role == "General Manager":
-    df_timeline = build_portfolio_timeline(
-        portfolio_df,
-        observed_day=observed_day,
-        horizon_days=120,
+# Build a clean data grid simulating the cost split over time
+days_series = np.arange(0, 121, 10)
+standard_trajectory = np.array(
+    [min(calibrated_base_cost, (calibrated_base_cost / 90) * d) for d in days_series]
+)
+actual_trajectory = np.array(
+    [
+        (calibrated_base_cost / 90) * d * (1.0 + (0.008 * d) if d > 40 else 1.0)
+        for d in days_series
+    ]
+)
+
+if role == SCHEME_DIRECTOR:
+    df_chart = pd.DataFrame(
+        {
+            "Days Elapsed": days_series,
+            "Standard Expected Runway": standard_trajectory,
+            "Actual Cumulative Spend Velocity": actual_trajectory,
+        }
     )
-    trend_scope = (
-        f"Portfolio aggregate · {len(portfolio_df)} subjects · "
-        "global financial matrix visible"
+    st.caption(
+        f"Scheme Director view · longitudinal aggregate for `{subject_token}` pathway"
+    )
+    st.line_chart(
+        df_chart,
+        x="Days Elapsed",
+        y=["Standard Expected Runway", "Actual Cumulative Spend Velocity"],
+        color=["#10b981", "#ef4444"],
     )
 else:
-    # Caseworker / Analyst (and Docteur): subject-scoped only — mask portfolio totals
-    df_timeline = build_clinical_timeline(
-        odg_target_cost=float(base_cost),
-        actual_cumulative_at_day=float(actual_spend),
-        observed_day=observed_day,
-        horizon_days=120,
-        odg_horizon_days=max(int(base_days), 1),
+    st.warning(
+        "🔒 SECURE LEDGER TRAJECTORY MASKED: Longitudinal aggregate chart vectors "
+        "are restricted to Scheme Director governance access pools."
     )
-    trend_scope = (
-        f"Subject-scoped trajectory · `{subject_id}` · "
-        "portfolio-wide spend records masked"
-    )
-
-st.caption(trend_scope)
-st.line_chart(
-    data=df_timeline,
-    x="Days Elapsed",
-    y=["Standard ODG Cost Runway", "Actual Cumulative Spend Velocity"],
-    color=["#10b981", "#ef4444"],
-)

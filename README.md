@@ -1,25 +1,25 @@
-# Sovereign Case Management Engine
+# AAT Scheme Performance Engine
 
-Streamlit executive dashboard for **operational risk governance** — portfolio metrics, hierarchical audit portals, clinical triage intake, and a Preventative Drift Radar with lookback fee basis.
+Streamlit executive surface for **predictive operational risk & long-tail claims governance**.
 
 ## Surface
 
-| Area | What it does |
+| Module | Purpose |
 | --- | --- |
-| Governance sidebar | Role matrix, CapEx mitigation floor, strategic mandate injection |
-| Portfolio bar | Assets protected, critical drift, ODG alignment, indemnity exposure |
-| Audit Oracle | Operations & asset availability tranche drill-down |
-| Clinical Triage Intake | Anonymized subject token, ICF anatomy, age, occupation, ambient NLP notes |
-| Preventative Drift Radar | Asymmetrical `[1.6, 1.0]` layout — physical alignment table + TASE / PPD / lookback liability panel with remediate/escalate gate |
+| Scheme governance sidebar | Role matrix, liability mitigation floor, performance mandate |
+| Bulk ingestion gate | CSV / XLSX client profile upload with AAT sample fallback |
+| Macro metrics bar | Scheme claims, pathway drift, AAT performance index, liability (GM-only) |
+| Triage intake | Participant token, ICF anatomy, age, duty tier, clinical dictation NLP |
+| Preventative Drift Radar | Alignment vector table + Macro Financial Liability Ledger |
+| Historical analytics | 120-day expected runway vs actual spend (Scheme Director only) |
 
-## Core math
+## Role privacy
 
-- Age / occupation / anatomy modulate baseline cost and ODG timeline
-- CapEx mitigation floor compresses allowable baseline spend
-- Functional drift = `max(0, 100 − ROM%)`
-- IVC = spend variance vs modulated baseline
-- Projected TASE escalates with drift and IVC; PPD uses a logistic risk curve
-- Lookback license fee = `$5,000 + 12% × projected TASE`
+| Role | Liability metric | Ledger (TASE / PPD / Lookback) | Cost chart |
+| --- | --- | --- | --- |
+| Scheme Director (GM) | Visible | Visible | Visible |
+| Claims Officer / Analyst | Restricted | Masked | Masked |
+| Reviewing Specialist | Restricted | Masked | Masked |
 
 ## Run
 
@@ -29,5 +29,3 @@ source .venv/bin/activate
 pip install -r requirements.txt
 streamlit run app.py
 ```
-
-Optional Kinetic Lab page remains under `pages/` for research-node acquisition demos.
