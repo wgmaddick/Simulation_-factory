@@ -1,18 +1,17 @@
 # AAT Scheme Performance Engine
 
-Streamlit executive surface for **predictive operational risk & long-tail claims governance** (NZD), optimized for portrait tablet frames.
+Portrait-tablet Streamlit surface for **predictive operational risk & long-tail claims governance** (NZD).
 
 ## Views
 
 | View | Purpose |
 | --- | --- |
-| **Global Scheme Portfolio** | 3-column macro metrics, master claims ledger, aggregate CapEx velocity (open to all roles) |
-| **Log New Claimant Profile** | Unlocked triage intake with live PPD / TASE / mitigated reserve / trajectory |
-| **Individual claim drill-down** | Locked clinical fields + Preventative Drift Radar deep-dive |
+| **Global Scheme Portfolio** | 3-column metrics, slim ledger (`Claim ID` / `Anatomy Target` / `Status`), CapEx velocity |
+| **Log New Claimant Profile** | Unlocked triage → live Comprehensive Scheme Ledger Dossier |
+| **Individual claim drill-down** | Consolidated dossier card (metadata + NLP + PPD/TASE/reserve) + alignment vector + time-cost axis |
 
-## Liability ledger (all roles)
+## Dossier
 
-- Crimson **4rem PPD** callout
-- **TASE** + **Mitigated Capital Reserve Target** (sidebar CapEx floor applied live)
-- **Lookback valuation** visible only to Scheme Director; others see executive proxy notice
-- Time-cost charts open for every role
+- Critical → crimson PPD · Nominal → green PPD  
+- CapEx floor drives Mitigated Capital Reserve Target  
+- Lookback valuation Director-only (others see executive proxy)  

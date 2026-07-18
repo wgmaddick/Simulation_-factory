@@ -1,8 +1,7 @@
 """AAT Scheme Performance Engine — predictive operational risk governance.
 
-Portrait-tablet optimized: 3-column global metrics, crimson large-print PPD for
-all roles, CapEx-floor mitigated reserve, and open time-cost charts. Lookback
-valuation remains Director-proxied.
+Portrait-tablet optimized: slim 3-column global metrics, core-vector master
+ledger, and a consolidated Comprehensive Scheme Ledger Dossier on drill-down.
 """
 
 from __future__ import annotations
@@ -21,8 +20,8 @@ DUTY_OPTIONS = [
     "Sedentary Clerical",
 ]
 ANATOMY_OPTIONS = [
-    "Glenohumeral Joint (Shoulder)",
-    "Lumbar Spine",
+    "Shoulder (Glenohumeral)",
+    "Lumbar Spine Matrix",
     "Lower Extremity (Knee)",
 ]
 
@@ -62,7 +61,7 @@ st.markdown(
         color: #ffffff !important;
         font-weight: 700 !important;
     }
-    /* Institutional Metric Box Wrappers */
+    /* Institutional Metric Box Grid Wrappers */
     .metric-box {
         background-color: #161b22;
         border: 1px solid #30363d;
@@ -73,44 +72,53 @@ st.markdown(
     }
     .metric-label {
         font-family: "IBM Plex Mono", monospace;
-        font-size: 0.82rem;
+        font-size: 0.80rem;
         text-transform: uppercase;
         color: #8b949e;
         letter-spacing: 0.05em;
         margin-bottom: 0.4rem;
     }
     .metric-value-silver {
-        font-size: 2rem;
+        font-size: 1.8rem;
         font-weight: 700;
         color: #e2e8f0;
         line-height: 1.1;
     }
     .metric-value-crimson {
-        font-size: 2rem;
+        font-size: 1.8rem;
         font-weight: 700;
         color: #ef4444;
         line-height: 1.1;
     }
     .metric-value-green {
-        font-size: 2rem;
+        font-size: 1.8rem;
         font-weight: 700;
         color: #10b981;
         line-height: 1.1;
     }
     .metric-subtext {
-        font-size: 0.88rem;
+        font-size: 0.85rem;
         color: #8b949e;
         margin-top: 0.3rem;
     }
-    /* Executive Crimson Large-Print Callout Focus */
+    /* Executive Large-Print Callout Focus */
     .critical-impact-value {
-        font-size: 4rem;
+        font-size: 3.8rem;
         font-weight: 700;
         line-height: 1;
-        margin-top: 0.5rem;
-        margin-bottom: 0.5rem;
+        margin-top: 0.4rem;
+        margin-bottom: 0.4rem;
         font-family: "IBM Plex Mono", monospace;
         color: #ef4444 !important;
+    }
+    .nominal-impact-value {
+        font-size: 3.8rem;
+        font-weight: 700;
+        line-height: 1;
+        margin-top: 0.4rem;
+        margin-bottom: 0.4rem;
+        font-family: "IBM Plex Mono", monospace;
+        color: #10b981 !important;
     }
     th, td,
     [data-testid="stTable"] th,
@@ -145,11 +153,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-if "ivc" not in st.session_state:
-    st.session_state.ivc = 0.0
-if "functional_drift" not in st.session_state:
-    st.session_state.functional_drift = 0.0
-
 
 # --- MASTER CLAIMS DATABASE CORE ---
 @st.cache_data
@@ -157,8 +160,8 @@ def load_internal_portfolio_ledger() -> pd.DataFrame:
     return pd.DataFrame(
         [
             {
-                "Claim_ID": "AAT-Claimant-Delta-2026",
-                "Anatomy": "Glenohumeral Joint (Shoulder)",
+                "Claim ID": "AAT-Claimant-Delta-2026",
+                "Anatomy Target": "Shoulder (Glenohumeral)",
                 "Age": 48,
                 "Demands": "Heavy Manual / Industrial",
                 "ROM_Actual": 62.0,
@@ -166,8 +169,8 @@ def load_internal_portfolio_ledger() -> pd.DataFrame:
                 "Status": "CRITICAL DRIFT",
             },
             {
-                "Claim_ID": "AAT-Claimant-Epsilon-2026",
-                "Anatomy": "Lumbar Spine",
+                "Claim ID": "AAT-Claimant-Epsilon-2026",
+                "Anatomy Target": "Lumbar Spine Matrix",
                 "Age": 32,
                 "Demands": "Sedentary Clerical",
                 "ROM_Actual": 94.0,
@@ -175,8 +178,8 @@ def load_internal_portfolio_ledger() -> pd.DataFrame:
                 "Status": "NOMINAL ALIGNMENT",
             },
             {
-                "Claim_ID": "AAT-Claimant-Zeta-2026",
-                "Anatomy": "Lower Extremity (Knee)",
+                "Claim ID": "AAT-Claimant-Zeta-2026",
+                "Anatomy Target": "Lower Extremity (Knee)",
                 "Age": 61,
                 "Demands": "Heavy Manual / Industrial",
                 "ROM_Actual": 48.0,
@@ -184,8 +187,8 @@ def load_internal_portfolio_ledger() -> pd.DataFrame:
                 "Status": "CRITICAL DRIFT",
             },
             {
-                "Claim_ID": "AAT-Claimant-Eta-2026",
-                "Anatomy": "Glenohumeral Joint (Shoulder)",
+                "Claim ID": "AAT-Claimant-Eta-2026",
+                "Anatomy Target": "Shoulder (Glenohumeral)",
                 "Age": 29,
                 "Demands": "Medium Logistics / Transport",
                 "ROM_Actual": 88.0,
@@ -242,7 +245,6 @@ def compute_claim_metrics(
     age_factor = (age - 25) * 0.015
     calibrated_base_cost = 22500.0 * (1.0 + age_factor) * job_multiplier
     calibrated_base_days = max(1, int(90 * (1.0 + age_factor) * job_multiplier))
-
     functional_drift = 100.0 - actual_rom
     ivc = (actual_spend - calibrated_base_cost) / calibrated_base_cost
     projected_final_cost = (
@@ -250,7 +252,6 @@ def compute_claim_metrics(
         + (functional_drift * 185.0)
         + (ivc * calibrated_base_cost)
     )
-    # Sidebar CapEx mitigation floor scales the mitigated reserve target live
     mitigated_reserve_target = projected_final_cost * (1.0 - (cap_floor / 100.0))
     permanent_disability_prob = 1.0 / (
         1.0
@@ -267,57 +268,8 @@ def compute_claim_metrics(
     }
 
 
-def render_liability_ledger(
-    *,
-    role: str,
-    cap_floor: int,
-    status_label: str,
-    status_color: str,
-    permanent_disability_prob: float,
-    projected_final_cost: float,
-    mitigated_reserve_target: float,
-) -> None:
-    """PPD/TASE/mitigated reserve open to all roles; lookback Director-only."""
-    if role == SCHEME_DIRECTOR:
-        fee_block = f"""
-            <div class="metric-label" style="margin-top:0.4rem;">Dynamic Lookback Valuation Basis</div>
-            <div class="metric-value-green" style="font-size:1.3rem;">
-                ${(5000 + (projected_final_cost * 0.12)):,.2f} NZD
-            </div>
-        """
-    else:
-        fee_block = """
-            <div class="metric-label" style="margin-top:0.4rem;">Dynamic Lookback Valuation Basis</div>
-            <div style="color:#8b949e; font-style:italic; font-size:0.95rem;">
-                🔒 SECURE LEDGER PROXIED TO EXECUTIVE SECTOR
-            </div>
-        """
-
-    html_payload = f"""
-    <div class="metric-box" style="border-left: 4px solid {status_color}; min-height: 290px;">
-        <div class="metric-label">Scheme Alignment Status</div>
-        <div style="color:{status_color}; font-weight:700; font-size:1.1rem; margin-bottom:0.5rem;">
-            {status_label}
-        </div>
-        <div class="metric-label">Probability of Permanent Disability (PPD)</div>
-        <div class="critical-impact-value">{permanent_disability_prob * 100:.1f}%</div>
-        <hr style="border:0; border-top:1px solid #30363d; margin: 0.8rem 0;"/>
-        <div class="metric-label">Total Absolute System Exposure (TASE)</div>
-        <div class="metric-value-silver" style="font-size:1.5rem; margin-bottom:0.3rem;">
-            ${projected_final_cost:,.2f} NZD
-        </div>
-        <div class="metric-label">Mitigated Capital Reserve Target ({cap_floor}% Floor Applied)</div>
-        <div class="metric-value-green" style="font-size:1.5rem; margin-bottom:0.3rem; color:#10b981;">
-            ${mitigated_reserve_target:,.2f} NZD
-        </div>
-        {fee_block}
-    </div>
-    """
-    st.markdown(html_payload, unsafe_allow_html=True)
-
-
 df_master_ledger = load_internal_portfolio_ledger()
-claim_ids = df_master_ledger["Claim_ID"].tolist()
+claim_ids = df_master_ledger["Claim ID"].tolist()
 
 # --- SIDEBAR: GOVERNANCE LAYER FILTERS ---
 with st.sidebar:
@@ -332,7 +284,6 @@ with st.sidebar:
     )
     st.markdown("---")
     st.markdown("### SCHEME MANDATE INJECTION")
-    # Wired up to directly scale systemic mitigation metrics live
     cap_floor = st.slider("Enforce Liability Mitigation Floor (%)", 0, 50, 15)
     strategic_note = st.text_input(
         "Disseminate Performance Mandate",
@@ -362,45 +313,35 @@ st.markdown("<br>", unsafe_allow_html=True)
 # INTERFACE LAYER A: GLOBAL SCHEME PORTFOLIO VIEW (PORTRAIT TABLET OPTIMIZED)
 # ==============================================================================
 if view_selection == GLOBAL_VIEW:
-    # Cleaned Three-Column Grid to completely eliminate page overflow layout issues
+    # Text optimized to avoid text wrapping on tablet layouts
     col1, col2, col3 = st.columns(3)
     with col1:
         st.markdown(
             '<div class="metric-box"><div class="metric-label">Total Scheme Claims</div>'
-            '<div class="metric-value-silver">142 Cases</div>'
-            '<div class="metric-subtext">Active Regional Log</div></div>',
+            '<div class="metric-value-silver">142 Active</div>'
+            '<div class="metric-subtext">Regional Portfolio Intake</div></div>',
             unsafe_allow_html=True,
         )
     with col2:
         st.markdown(
             '<div class="metric-box"><div class="metric-label">Critical Pathway Drift</div>'
             '<div class="metric-value-crimson">18 Subjects</div>'
-            '<div class="metric-subtext">Requires Active Intervention</div></div>',
+            '<div class="metric-subtext">Targeted Escalations Pending</div></div>',
             unsafe_allow_html=True,
         )
     with col3:
         st.markdown(
-            '<div class="metric-box"><div class="metric-label">Aggregate Performance Index</div>'
-            '<div class="metric-value-green">85.9% Alignment</div>'
-            '<div class="metric-subtext">Scheme Trajectory Arc</div></div>',
+            '<div class="metric-box"><div class="metric-label">Performance Index</div>'
+            '<div class="metric-value-green">85.9%</div>'
+            '<div class="metric-subtext">Baseline Trajectory Alignment</div></div>',
             unsafe_allow_html=True,
         )
 
     st.markdown("### MASTER CLAIMS ACCOUNTABILITY LEDGER")
-    st.markdown(
-        "<p style='color:#8b949e; font-size:0.9rem; margin-top:-10px;'>"
-        "Real-time tracking of active asset classes. Select individual claimant token "
-        "above to audit metrics.</p>",
-        unsafe_allow_html=True,
-    )
-
-    df_formatted_ledger = df_master_ledger.copy()
-    df_formatted_ledger["Spend_To_Date"] = df_formatted_ledger["Spend_To_Date"].map(
-        lambda x: f"${x:,.0f} NZD"
-    )
-    df_formatted_ledger["ROM_Actual"] = df_formatted_ledger["ROM_Actual"].map(
-        lambda x: f"{x:.0f}% Target"
-    )
+    # Sliced down strictly to core vectors to prevent page overflow
+    df_formatted_ledger = df_master_ledger[
+        ["Claim ID", "Anatomy Target", "Status"]
+    ].copy()
     st.table(df_formatted_ledger)
 
     st.markdown("---")
@@ -426,27 +367,27 @@ if view_selection == GLOBAL_VIEW:
     )
 
 # ==============================================================================
-# INTERFACE LAYER B: INDIVIDUAL / NEW CLAIMANT (COMPLETELY ACTIVE & AUTORUN)
+# INTERFACE LAYER B: INDIVIDUAL / NEW CLAIM (EXECUTIVE CARD CONSOLIDATED)
 # ==============================================================================
 else:
     is_new_claim = view_selection == NEW_CLAIM_VIEW
 
     if is_new_claim:
         st.markdown("### LOG NEW CLAIMANT PROFILE")
-        st.caption("Unlocked triage intake · live actuarial recalculation as fields change")
-        intake_col1, intake_col2, intake_col3 = st.columns(3)
-        with intake_col1:
+        st.caption("Unlocked triage intake · dossier recalculates live")
+        edit_c1, edit_c2, edit_c3 = st.columns(3)
+        with edit_c1:
             subject_token = st.text_input(
                 "Participant Identifier Token",
                 value="",
                 placeholder="e.g., AAT-Claimant-Theta-2026",
             )
             anatomy = st.selectbox(
-                "Anatomical Target Site (ICF Matrix)",
+                "Anatomy Target",
                 ANATOMY_OPTIONS,
                 index=0,
             )
-        with intake_col2:
+        with edit_c2:
             age = st.number_input(
                 "Actuarial Chronological Age",
                 min_value=18,
@@ -458,13 +399,8 @@ else:
                 DUTY_OPTIONS,
                 index=DUTY_OPTIONS.index("Sedentary Clerical"),
             )
-        with intake_col3:
-            st.markdown(
-                "<b style='font-size:0.85rem; color:#8b949e; font-family:monospace;'>"
-                "VOICE DICTATION NLP RECORD</b>",
-                unsafe_allow_html=True,
-            )
-            dictation = st.text_area(
+        with edit_c3:
+            dict_txt = st.text_area(
                 "Clinical Summary Ingest Log",
                 value="Type or dictate clinical triage notes here...",
             )
@@ -472,53 +408,17 @@ else:
         display_token = subject_token.strip() or "NEW-CLAIMANT-DRAFT"
     else:
         selected_row = df_master_ledger[
-            df_master_ledger["Claim_ID"] == view_selection
+            df_master_ledger["Claim ID"] == view_selection
         ].iloc[0]
 
-        subject_token = str(selected_row["Claim_ID"])
-        anatomy = str(selected_row["Anatomy"])
+        subject_token = str(selected_row["Claim ID"])
+        anatomy = str(selected_row["Anatomy Target"])
         age = int(selected_row["Age"])
         duty_tier = str(selected_row["Demands"])
         actual_rom = float(selected_row["ROM_Actual"])
         actual_spend = float(selected_row["Spend_To_Date"])
         display_token = subject_token
-
-        st.markdown(f"### INDIVIDUAL CLAIM AUDIT: `{subject_token}`")
-
-        intake_col1, intake_col2, intake_col3 = st.columns(3)
-        with intake_col1:
-            st.text_input(
-                "Participant Identifier Token",
-                value=subject_token,
-                disabled=True,
-            )
-            st.text_input(
-                "Anatomical Target Site (ICF Matrix)",
-                value=anatomy,
-                disabled=True,
-            )
-        with intake_col2:
-            st.number_input(
-                "Actuarial Chronological Age",
-                value=age,
-                disabled=True,
-            )
-            st.text_input(
-                "Occupational Demands Tier",
-                value=duty_tier,
-                disabled=True,
-            )
-        with intake_col3:
-            st.markdown(
-                "<b style='font-size:0.85rem; color:#8b949e; font-family:monospace;'>"
-                "VOICE DICTATION NLP RECORD</b>",
-                unsafe_allow_html=True,
-            )
-            dictation = st.text_area(
-                "Clinical Summary Ingest Log",
-                value=dictation_for_claim(subject_token),
-                disabled=True,
-            )
+        dict_txt = dictation_for_claim(subject_token)
 
     metrics = compute_claim_metrics(
         age=int(age),
@@ -527,24 +427,33 @@ else:
         actual_spend=float(actual_spend),
         cap_floor=int(cap_floor),
     )
-    st.session_state.functional_drift = metrics["functional_drift"]
-    st.session_state.ivc = metrics["ivc"]
     calibrated_base_cost = metrics["calibrated_base_cost"]
     calibrated_base_days = int(metrics["calibrated_base_days"])
+    functional_drift = metrics["functional_drift"]
+    ivc = metrics["ivc"]
     projected_final_cost = metrics["projected_final_cost"]
     mitigated_reserve_target = metrics["mitigated_reserve_target"]
     permanent_disability_prob = metrics["permanent_disability_prob"]
 
-    if is_new_claim:
-        st.info(
-            f"Live draft · `{display_token}` · {anatomy} · Age {int(age)} · {duty_tier} · "
-            f"ROM {actual_rom:.0f}% · Spend ${actual_spend:,.0f} NZD"
-        )
+    # Set Color Logic for Display Elements
+    if functional_drift > 15.0 or permanent_disability_prob > 0.50:
+        status_label = "CRITICAL PATHWAY DRIFT DETECTED"
+        status_color = "#ef4444"
+        impact_class = "critical-impact-value"
+    else:
+        status_label = "NOMINAL PATHWAY ALIGNMENT"
+        status_color = "#10b981"
+        impact_class = "nominal-impact-value"
 
-    st.markdown("---")
-    st.markdown("## PREVENTATIVE DRIFT RADAR DEEP-DIVE")
+    # Escape NLP text for HTML injection
+    dict_html = (
+        str(dict_txt)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
 
-    # Balanced structural split columns to guarantee zero wide clipping on iPad
+    # Balanced structural split layout
     table_col, metric_col = st.columns([1.1, 1.0])
 
     with table_col:
@@ -560,56 +469,84 @@ else:
                 "Validated Standard": [
                     f"{calibrated_base_days} Days",
                     f"${calibrated_base_cost:,.0f} NZD",
-                    "100% Path Arc",
+                    "100% Target",
                     "Nominal",
                 ],
                 "Live Ingest State": [
                     "Day 42",
                     f"${actual_spend:,.0f} NZD",
                     f"{actual_rom:.0f}% Flexion",
-                    "High Drift Flag"
-                    if st.session_state.functional_drift > 15
-                    else "Clear",
+                    "High Drift Flag" if functional_drift > 15 else "Clear",
                 ],
                 "Point of Drift Variance": [
-                    "On Track"
-                    if st.session_state.functional_drift <= 15
-                    else "Timeline Breach",
+                    "On Track" if functional_drift <= 15 else "Timeline Breach",
                     f"${actual_spend - calibrated_base_cost:+,.0f} NZD",
-                    f"-{st.session_state.functional_drift:.0f}% Dev",
-                    "Path B Trigger"
-                    if st.session_state.functional_drift > 15
-                    else "Clear",
+                    f"-{functional_drift:.0f}% Dev",
+                    "Path B Active" if functional_drift > 15 else "Clear",
                 ],
             }
         )
         st.table(df_vector)
 
     with metric_col:
-        st.markdown("#### Macro Financial Liability Ledger")
+        st.markdown("#### Comprehensive Scheme Ledger Dossier")
 
-        if (
-            st.session_state.functional_drift > 15.0
-            or permanent_disability_prob > 0.50
-        ):
-            status_label = "CRITICAL PATHWAY DRIFT DETECTED"
-            status_color = "#ef4444"
+        if role == SCHEME_DIRECTOR:
+            fee_line = f"""
+            <div class="metric-label" style="margin-top:0.4rem;">Dynamic Lookback Valuation Basis</div>
+            <div class="metric-value-green" style="font-size:1.3rem;">
+                ${(5000 + (projected_final_cost * 0.12)):,.2f} NZD
+            </div>
+            """
         else:
-            status_label = "NOMINAL PATHWAY ALIGNMENT"
-            status_color = "#10b981"
+            fee_line = """
+            <div class="metric-label" style="margin-top:0.4rem;">Dynamic Lookback Valuation Basis</div>
+            <div style="color:#8b949e; font-style:italic; font-size:0.95rem;">
+                🔒 SECURE LEDGER PROXIED TO EXECUTIVE SECTOR
+            </div>
+            """
 
-        # Entire dashboard workspace stays active for every role level
-        render_liability_ledger(
-            role=role,
-            cap_floor=int(cap_floor),
-            status_label=status_label,
-            status_color=status_color,
-            permanent_disability_prob=permanent_disability_prob,
-            projected_final_cost=projected_final_cost,
-            mitigated_reserve_target=mitigated_reserve_target,
-        )
+        # Unified Layout: participant metadata + clinical data injected into dossier
+        html_payload = f"""
+        <div class="metric-box" style="border-left: 4px solid {status_color}; padding: 1.5rem;">
+            <div class="metric-label">Scheme Alignment Status</div>
+            <div style="color:{status_color}; font-weight:700; font-size:1.1rem; margin-bottom:0.8rem;">
+                {status_label}
+            </div>
 
-    # Individual Cost Trajectory — fully open and active for all roles
+            <div style="background-color:#0c1017; padding:0.8rem; border-radius:4px; border:1px solid #30363d; margin-bottom:0.8rem;">
+                <div class="metric-label" style="color:#ffffff;">Claimant File Dossier Matrix</div>
+                <span style="font-size:0.9rem; color:#8b949e;">ID:</span>
+                <span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{display_token}</span><br/>
+                <span style="font-size:0.9rem; color:#8b949e;">Target Anatomy:</span>
+                <span style="font-size:0.9rem; color:#ffffff;">{anatomy}</span><br/>
+                <span style="font-size:0.9rem; color:#8b949e;">Demands / Age:</span>
+                <span style="font-size:0.9rem; color:#ffffff;">{duty_tier} (Age {int(age)})</span><br/>
+                <p style="font-size:0.85rem; color:#8b949e; font-style:italic; margin-top:0.4rem; margin-bottom:0;">
+                    <strong>NLP Ingest:</strong> {dict_html}
+                </p>
+            </div>
+
+            <div class="metric-label">Probability of Permanent Disability (PPD)</div>
+            <div class="{impact_class}">{permanent_disability_prob * 100:.1f}%</div>
+
+            <hr style="border:0; border-top:1px solid #30363d; margin: 0.8rem 0;"/>
+
+            <div class="metric-label">Total Absolute System Exposure (TASE)</div>
+            <div class="metric-value-silver" style="font-size:1.5rem; margin-bottom:0.3rem;">
+                ${projected_final_cost:,.2f} NZD
+            </div>
+
+            <div class="metric-label">Mitigated Capital Reserve Target ({cap_floor}% Floor Applied)</div>
+            <div class="metric-value-green" style="font-size:1.5rem; margin-bottom:0.3rem;">
+                ${mitigated_reserve_target:,.2f} NZD
+            </div>
+            {fee_line}
+        </div>
+        """
+        st.markdown(html_payload, unsafe_allow_html=True)
+
+    # Individual Cost Trajectory Trend Graph
     st.markdown("### INDIVIDUAL PERFORMANCE TIME-COST AXIS")
     days_series = np.arange(0, calibrated_base_days + 31, 10)
     standard_trajectory = np.array(
@@ -619,7 +556,7 @@ else:
         ]
     )
 
-    if st.session_state.functional_drift > 15:
+    if functional_drift > 15:
         actual_trajectory = np.array(
             [
                 (calibrated_base_cost / calibrated_base_days)
@@ -633,7 +570,7 @@ else:
             ]
         )
     else:
-        actual_trajectory = standard_trajectory * (1.0 + (st.session_state.ivc * 0.5))
+        actual_trajectory = standard_trajectory * (1.0 + (ivc * 0.5))
 
     df_chart = pd.DataFrame(
         {
@@ -644,8 +581,7 @@ else:
     )
     st.caption(
         f"{'Live draft' if is_new_claim else 'Individual'} axis · `{display_token}` · "
-        f"{duty_tier} · Age {int(age)} · {calibrated_base_days}-day horizon (NZD) · "
-        f"CapEx floor {cap_floor}%"
+        f"{calibrated_base_days}-day horizon (NZD)"
     )
     st.line_chart(
         df_chart,
