@@ -12,8 +12,11 @@ import streamlit as st
 
 LAYOUT_LOCKED = True
 SCHEME_DIRECTOR = "Scheme Director (GM)"
+CLAIMS_OFFICER = "Claims Officer / Analyst"
+REVIEWING_SPECIALIST = "Reviewing Specialist"
 GLOBAL_VIEW = "Global Scheme Portfolio (All Active Claims)"
 NEW_CLAIM_VIEW = "➕ Log New Claimant Profile"
+CO_TASK_ID = "CO-AAT-2026-031"
 DUTY_OPTIONS = [
     "Heavy Manual / Industrial",
     "Medium Logistics / Transport",
@@ -269,6 +272,143 @@ def compute_claim_metrics(
     }
 
 
+def enrich_ledger_with_metrics(
+    ledger: pd.DataFrame, cap_floor: int
+) -> pd.DataFrame:
+    rows: list[dict] = []
+    for _, row in ledger.iterrows():
+        m = compute_claim_metrics(
+            age=int(row["Age"]),
+            duty_tier=str(row["Demands"]),
+            actual_rom=float(row["ROM_Actual"]),
+            actual_spend=float(row["Spend_To_Date"]),
+            cap_floor=int(cap_floor),
+        )
+        rows.append(
+            {
+                **row.to_dict(),
+                "Functional Drift": m["functional_drift"],
+                "PPD": m["permanent_disability_prob"],
+                "TASE": m["projected_final_cost"],
+                "Reserve Target": m["mitigated_reserve_target"],
+                "Base Days": int(m["calibrated_base_days"]),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def render_claims_officer_action_task(
+    ledger_enriched: pd.DataFrame, cap_floor: int
+) -> None:
+    """Role-gated action board for Claims Officer / Analyst (CO-AAT-2026-031)."""
+    critical = ledger_enriched[
+        ledger_enriched["Status"].str.contains("CRITICAL", case=False, na=False)
+    ].sort_values("PPD", ascending=False)
+    watch = ledger_enriched[
+        ~ledger_enriched["Status"].str.contains("CRITICAL", case=False, na=False)
+    ].sort_values("PPD", ascending=False)
+
+    st.markdown("### CLAIMS OFFICER / ANALYST — ACTION TASK")
+    st.markdown(
+        f"<div class='metric-box' style='border-left:4px solid #ef4444;'>"
+        f"<div class='metric-label'>Task ID</div>"
+        f"<div class='metric-value-silver' style='font-size:1.35rem;'>{CO_TASK_ID}</div>"
+        f"<div class='metric-subtext'>Role: Claims Officer / Analyst · "
+        f"Mandate floor: {cap_floor}% CapEx mitigation</div>"
+        f"<p style='color:#e2e8f0; margin:0.75rem 0 0 0;'>"
+        f"Clear the CRITICAL DRIFT files before they harden into long-tail PPD exposure."
+        f"</p></div>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("#### Priority Queue")
+    queue_rows: list[dict] = []
+    for idx, (_, row) in enumerate(critical.iterrows()):
+        priority = "P0" if idx == 0 else f"P{idx}"
+        why = (
+            "Highest PPD + spend"
+            if idx == 0
+            else "Critical pathway escalation"
+        )
+        queue_rows.append(
+            {
+                "Priority": priority,
+                "Claim ID": row["Claim ID"],
+                "Why now": why,
+                "Key metrics": (
+                    f"Age {int(row['Age'])} · {row['Anatomy Target']} · "
+                    f"{row['Demands']} · ROM {row['ROM_Actual']:.0f}% · "
+                    f"Drift −{row['Functional Drift']:.0f}% · "
+                    f"Spend ${row['Spend_To_Date']:,.0f} · "
+                    f"PPD {row['PPD'] * 100:.1f}% · "
+                    f"TASE ${row['TASE']:,.0f} NZD · "
+                    f"Reserve ${row['Reserve Target']:,.0f} NZD"
+                ),
+            }
+        )
+    if not watch.empty:
+        watch_ids = " / ".join(
+            str(c).replace("AAT-Claimant-", "").replace("-2026", "")
+            for c in watch["Claim ID"].tolist()
+        )
+        watch_ppd = " / ".join(f"{p * 100:.1f}%" for p in watch["PPD"].tolist())
+        queue_rows.append(
+            {
+                "Priority": "Watch",
+                "Claim ID": " / ".join(watch["Claim ID"].tolist()),
+                "Why now": f"Nominal — no action this cycle ({watch_ids})",
+                "Key metrics": f"PPD {watch_ppd}",
+            }
+        )
+    st.table(pd.DataFrame(queue_rows))
+
+    if not critical.empty:
+        p0 = critical.iloc[0]
+        p1 = critical.iloc[1] if len(critical) > 1 else None
+        p0_short = str(p0["Claim ID"]).replace("AAT-Claimant-", "").replace("-2026", "")
+        actions = [
+            (
+                f"Open **AUDIT VIEW → {p0_short}**, confirm Path B trigger and "
+                "document NLP note (clinical compounding factors)."
+            ),
+            (
+                f"Escalate **{p0_short}** for accelerated rehabilitation pathway; "
+                f"log variance vs {int(p0['Base Days'])}-day recovery runway."
+            ),
+        ]
+        if p1 is not None:
+            p1_short = (
+                str(p1["Claim ID"]).replace("AAT-Claimant-", "").replace("-2026", "")
+            )
+            actions.append(
+                f"Open **{p1_short}**; schedule pathway review and psychosocial "
+                "barrier check from NLP ingest."
+            )
+        actions.extend(
+            [
+                "Update escalated files with intervention status in the Master "
+                "Claims Accountability Ledger.",
+                "Do **not** attempt Lookback Valuation edits — proxied to Scheme Director.",
+            ]
+        )
+        st.markdown("#### Required Actions (This Shift)")
+        for i, action in enumerate(actions, start=1):
+            st.markdown(f"{i}. {action}")
+
+        critical_names = " and ".join(
+            str(c).replace("AAT-Claimant-", "").replace("-2026", "")
+            for c in critical["Claim ID"].tolist()
+        )
+        st.markdown("#### Done When")
+        st.markdown(
+            f"- {critical_names} have dated remediation notes in-file\n"
+            "- Escalated claims flagged for Director lookback review if TASE "
+            "still rising after intervention\n"
+            "- Nominal files remain watch-only (no escalation)"
+        )
+    st.markdown("---")
+
+
 df_master_ledger = load_internal_portfolio_ledger()
 claim_ids = df_master_ledger["Claim ID"].tolist()
 
@@ -278,9 +418,9 @@ with st.sidebar:
     role = st.selectbox(
         "Active User Role Matrix",
         [
-            "Scheme Director (GM)",
-            "Claims Officer / Analyst",
-            "Reviewing Specialist",
+            SCHEME_DIRECTOR,
+            CLAIMS_OFFICER,
+            REVIEWING_SPECIALIST,
         ],
     )
     st.markdown("---")
@@ -337,6 +477,12 @@ if view_selection == GLOBAL_VIEW:
             '<div class="metric-subtext">Baseline Trajectory Alignment</div></div>',
             unsafe_allow_html=True,
         )
+
+    # Claims Officer / Analyst role surface — action task CO-AAT-2026-031
+    if role == CLAIMS_OFFICER:
+        st.markdown("---")
+        ledger_enriched = enrich_ledger_with_metrics(df_master_ledger, int(cap_floor))
+        render_claims_officer_action_task(ledger_enriched, int(cap_floor))
 
     st.markdown("### MASTER CLAIMS ACCOUNTABILITY LEDGER")
     # Sliced down strictly to core vectors to prevent page overflow
