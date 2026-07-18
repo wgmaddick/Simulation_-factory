@@ -1,14 +1,10 @@
 """AAT Scheme Performance Engine — predictive operational risk governance.
 
-High-contrast sovereign dark theme for scheme claims performance, triage intake,
-preventative drift radar, role-based ledger masking, and longitudinal cost trends.
-Currency basis: NZD. Primary executive focus: large-print PPD.
+High-contrast sovereign dark theme. Clinical triage intake is the single engine
+driver: age + occupational tier auto-calibrate drift, spend, PPD, and NZD exposure.
 """
 
 from __future__ import annotations
-
-from io import BytesIO
-from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -16,85 +12,6 @@ import streamlit as st
 
 LAYOUT_LOCKED = True
 SCHEME_DIRECTOR = "Scheme Director (GM)"
-
-
-def default_aat_profile() -> pd.DataFrame:
-    """Standard AAT performance profile used when no client file is loaded."""
-    return pd.DataFrame(
-        {
-            "participant_token": [
-                "AAT-Claimant-Delta-2026",
-                "AAT-Claimant-Echo-2026",
-                "AAT-Claimant-Foxtrot-2026",
-            ],
-            "critical_flag": [1, 0, 1],
-            "aat_alignment_pct": [87.3, 92.1, 78.4],
-            "scheme_liability_usd": [412500.0, 188000.0, 276000.0],
-            "actual_spend": [28400.0, 19250.0, 34100.0],
-            "age": [48, 41, 55],
-        }
-    )
-
-
-def load_client_data_profile(uploaded_file: Any) -> tuple[pd.DataFrame, str]:
-    """Parse CSV/XLSX when present; otherwise fall back to the AAT sample profile."""
-    if uploaded_file is None:
-        return default_aat_profile(), "synthetic"
-
-    try:
-        name = (uploaded_file.name or "").lower()
-        buffer = BytesIO(uploaded_file.getvalue())
-        if name.endswith(".csv"):
-            frame = pd.read_csv(buffer)
-        elif name.endswith(".xlsx") or name.endswith(".xls"):
-            frame = pd.read_excel(buffer)
-        else:
-            return default_aat_profile(), "synthetic"
-
-        if frame is None or frame.empty:
-            return default_aat_profile(), "synthetic"
-
-        frame.columns = [str(c).strip().lower().replace(" ", "_") for c in frame.columns]
-        return frame, "uploaded"
-    except Exception:
-        return default_aat_profile(), "synthetic"
-
-
-def _col(df: pd.DataFrame, *candidates: str) -> str | None:
-    for name in candidates:
-        if name in df.columns:
-            return name
-    return None
-
-
-def scheme_kpis(df: pd.DataFrame) -> dict[str, Any]:
-    """Derive macro scheme bar metrics from the active client profile."""
-    n_cases = int(len(df)) if len(df) else 3
-    crit_col = _col(df, "critical_flag", "critical", "pathway_drift")
-    if crit_col is not None:
-        critical = int(pd.to_numeric(df[crit_col], errors="coerce").fillna(0).astype(bool).sum())
-    else:
-        critical = max(1, int(round(n_cases * 0.67)))
-
-    align_col = _col(df, "aat_alignment_pct", "odg_alignment_pct", "alignment")
-    if align_col is not None:
-        alignment = float(pd.to_numeric(df[align_col], errors="coerce").dropna().mean())
-    else:
-        alignment = 85.9
-
-    liab_col = _col(df, "scheme_liability_usd", "indemnity_exposure_usd", "liability")
-    if liab_col is not None:
-        exposure = float(pd.to_numeric(df[liab_col], errors="coerce").fillna(0).sum())
-    else:
-        exposure = 876500.0
-
-    return {
-        "cases": n_cases,
-        "drift": critical,
-        "alignment": alignment,
-        "exposure": exposure,
-    }
-
 
 # 1. High-Contrast Sovereign Dark Theme Configuration
 st.set_page_config(
@@ -194,16 +111,6 @@ st.markdown(
         color: #ffffff !important;
         font-weight: 700 !important;
     }
-    .stButton > button {
-        background-color: #21262d !important;
-        color: #ffffff !important;
-        border: 1px solid #30363d !important;
-        font-weight: 700 !important;
-    }
-    .stButton > button p,
-    .stButton > button span {
-        color: #ffffff !important;
-    }
     [data-baseweb="select"] > div,
     .stTextInput input,
     .stNumberInput input,
@@ -233,11 +140,6 @@ if "functional_drift" not in st.session_state:
 # --- SIDEBAR: CONTROLS & DYNAMIC ROLE PRIVACY MATRIX ---
 with st.sidebar:
     st.markdown("### AAT SCHEME GOVERNANCE")
-    st.markdown(
-        "<p style='color:#8b949e; font-size:0.85rem;'>Role-Based Access Control Active</p>",
-        unsafe_allow_html=True,
-    )
-
     role = st.selectbox(
         "Active User Role Matrix",
         [
@@ -246,7 +148,6 @@ with st.sidebar:
             "Reviewing Specialist",
         ],
     )
-
     st.markdown("---")
     st.markdown("### SCHEME MANDATE INJECTION")
     cap_floor = st.slider("Enforce Liability Mitigation Floor (%)", 0, 50, 15)
@@ -267,74 +168,7 @@ st.markdown(
 )
 st.markdown("---")
 
-# MODULE 1: DYNAMIC DATA INGESTION GATE (EASY BULK UPLOAD)
-uploaded_file = st.file_uploader(
-    "📥 LOAD CUSTOM CLIENT DATA PROFILE (Drag & Drop CSV / XLSX)",
-    type=["csv", "xlsx"],
-)
-
-profile_df, profile_source = load_client_data_profile(uploaded_file)
-kpis = scheme_kpis(profile_df)
-
-if profile_source == "uploaded":
-    st.success("Custom client profile ingested successfully.")
-    base_cost_multiplier = 1.15
-else:
-    st.markdown(
-        "<p style='color:#8b949e; font-size:0.85rem; font-style:italic;'>"
-        "Standard AAT Performance Profile Active • Upload client spreadsheet to overwrite baseline."
-        "</p>",
-        unsafe_allow_html=True,
-    )
-    base_cost_multiplier = 1.0
-
-display_cases = str(kpis["cases"])
-display_drift = str(kpis["drift"])
-display_alignment = f"{kpis['alignment']:.1f}%"
-# Compact executive readout; subtext carries the NZD unit label
-display_exposure = f"${kpis['exposure'] / 1000.0:,.1f}K"
-
-# Macro Scheme Performance Metrics Bar (Decoupled & Stacking Safe)
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.markdown(
-        f'<div class="metric-box"><div class="metric-label">Total Scheme Claims</div>'
-        f'<div class="metric-value-silver">{display_cases}</div>'
-        f'<div class="metric-subtext">Active Files Ingested</div></div>',
-        unsafe_allow_html=True,
-    )
-with col2:
-    st.markdown(
-        f'<div class="metric-box"><div class="metric-label">Critical Pathway Drift</div>'
-        f'<div class="metric-value-crimson">{display_drift}</div>'
-        f'<div class="metric-subtext">Divergent Subjects</div></div>',
-        unsafe_allow_html=True,
-    )
-with col3:
-    st.markdown(
-        f'<div class="metric-box"><div class="metric-label">AAT Performance Index</div>'
-        f'<div class="metric-value-green">{display_alignment}</div>'
-        f'<div class="metric-subtext">Baseline Trajectory</div></div>',
-        unsafe_allow_html=True,
-    )
-with col4:
-    if role == SCHEME_DIRECTOR:
-        st.markdown(
-            f'<div class="metric-box"><div class="metric-label">Projected Liability</div>'
-            f'<div class="metric-value-silver">{display_exposure}</div>'
-            f'<div class="metric-subtext">Total NZD Exposure</div></div>',
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(
-            '<div class="metric-box"><div class="metric-label">Projected Liability</div>'
-            '<div style="color:#8b949e; font-size:1.1rem; font-weight:700; margin-top:0.5rem;">'
-            "🔒 RESTRICTED</div>"
-            '<div class="metric-subtext">Requires GM Level</div></div>',
-            unsafe_allow_html=True,
-        )
-
-# --- MODULE 2: CLINICAL INTAKE MODALITY ---
+# MODULE 1: CLINICAL INTAKE MODALITY (THE SINGLE ENGINE DRIVER)
 st.markdown("### SCHEME TRIAGE INTAKE INGESTION")
 intake_col1, intake_col2, intake_col3 = st.columns(3)
 with intake_col1:
@@ -375,37 +209,38 @@ with intake_col3:
         ),
     )
 
-# Dynamic calculations for age-calibrated timeline modeling
+# --- THE LIVE AUTOMATED METRIC GENERATOR ---
+# A. Compute Occupation Impact Factor
+if duty_tier == "Heavy Manual / Industrial":
+    job_multiplier = 1.30
+    simulated_rom_loss = 28.0
+    spend_variance_factor = 1.35
+elif duty_tier == "Medium Logistics / Transport":
+    job_multiplier = 1.10
+    simulated_rom_loss = 15.0
+    spend_variance_factor = 1.12
+else:
+    job_multiplier = 0.90
+    simulated_rom_loss = 5.0
+    spend_variance_factor = 0.95
+
+# B. Compute Age Curve Impact Factor
 age_factor = (age - 25) * 0.015
-calibrated_base_cost = 22500.0 * (1.0 + age_factor) * base_cost_multiplier
+
+# C. Calibrate Dynamic Baselines Natively
+calibrated_base_cost = 22500.0 * (1.0 + age_factor) * job_multiplier
+# Mandate floor compresses allowable baseline spend without breaking the driver loop
 calibrated_base_cost *= 1.0 - (cap_floor / 100.0) * 0.35
-calibrated_base_days = int(90 * (1.0 + age_factor))
+calibrated_base_days = max(1, int(90 * (1.0 + age_factor) * job_multiplier))
 
-# --- MODULE 3: PREVENTATIVE DRIFT RADAR ---
-st.markdown("---")
-st.markdown("## PREVENTATIVE DRIFT RADAR")
+# D. Automated Telemetry Emulation (Simulating data pulled from Live Invoices / ML Video)
+# Older age and heavier jobs naturally scale physiological debt and cost accumulation
+actual_rom = max(40.0, 100.0 - simulated_rom_loss - (age_factor * 25.0))
+st.session_state.functional_drift = 100.0 - actual_rom
 
-st.markdown("### Live Claim Telemetry Simulation Input")
-sim_col1, sim_col2 = st.columns(2)
-with sim_col1:
-    actual_rom = st.slider(
-        "Logged Functional Range of Motion (% of Expected Target)",
-        0,
-        100,
-        75,
-    )
-with sim_col2:
-    actual_spend = st.number_input(
-        "Actual Invoiced Claims Cost to Date (NZD)",
-        min_value=0.0,
-        value=28400.0,
-    )
+actual_spend = calibrated_base_cost * spend_variance_factor * (1.0 + (age_factor * 0.2))
+st.session_state.ivc = (actual_spend - calibrated_base_cost) / calibrated_base_cost
 
-# Re-compute indicators dynamically based on manual inputs
-st.session_state.functional_drift = max(0.0, 100.0 - float(actual_rom))
-st.session_state.ivc = max(
-    0.0, (float(actual_spend) - calibrated_base_cost) / calibrated_base_cost
-)
 projected_final_cost = (
     calibrated_base_cost
     + (st.session_state.functional_drift * 185.0)
@@ -414,9 +249,63 @@ projected_final_cost = (
 permanent_disability_prob = 1.0 / (
     1.0
     + np.exp(
-        -(-2.5 + (age * 0.04) + (st.session_state.functional_drift * 0.05))
+        -(-2.8 + (age * 0.045) + (st.session_state.functional_drift * 0.055))
     )
 )
+
+# Macro Top Metrics Bar (Reflecting dynamic output changes natively)
+st.markdown("### ACTIVE PROFILE STATUS SUMMARY")
+col1, col2, col3, col4 = st.columns(4)
+with col1:
+    st.markdown(
+        f'<div class="metric-box"><div class="metric-label">Active Claim Profile</div>'
+        f'<div class="metric-value-silver" style="font-size:1.3rem; padding-top:0.4rem;">'
+        f"{subject_token}</div>"
+        f'<div class="metric-subtext">{anatomy}</div></div>',
+        unsafe_allow_html=True,
+    )
+with col2:
+    drift_status_txt = "CRITICAL" if st.session_state.functional_drift > 15.0 else "NOMINAL"
+    drift_value_class = (
+        "metric-value-crimson" if drift_status_txt == "CRITICAL" else "metric-value-green"
+    )
+    st.markdown(
+        f'<div class="metric-box"><div class="metric-label">Drift Classification</div>'
+        f'<div class="{drift_value_class}">{drift_status_txt}</div>'
+        f'<div class="metric-subtext">{st.session_state.functional_drift:.1f}% Path Variance</div></div>',
+        unsafe_allow_html=True,
+    )
+with col3:
+    perf_idx = max(10, int(100 - st.session_state.functional_drift))
+    st.markdown(
+        f'<div class="metric-box"><div class="metric-label">Calculated Pathway Index</div>'
+        f'<div class="metric-value-green">{perf_idx}%</div>'
+        f'<div class="metric-subtext">Target Alignment Arc</div></div>',
+        unsafe_allow_html=True,
+    )
+with col4:
+    if role == SCHEME_DIRECTOR:
+        st.markdown(
+            f'<div class="metric-box"><div class="metric-label">Projected Liability</div>'
+            f'<div class="metric-value-silver">${projected_final_cost:,.0f}</div>'
+            f'<div class="metric-subtext">Total Forecasted NZD</div></div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            '<div class="metric-box"><div class="metric-label">Projected Liability</div>'
+            '<div style="color:#8b949e; font-size:1.1rem; font-weight:700; margin-top:0.5rem;">'
+            "🔒 RESTRICTED</div>"
+            '<div class="metric-subtext">Requires GM Level</div></div>',
+            unsafe_allow_html=True,
+        )
+
+# Soft signal from dictation — does not override the automated driver
+_ = dictation  # retained for future NLP enrichment of Path B flags
+
+# --- MODULE 2: PREVENTATIVE DRIFT RADAR VECTOR MATRICES ---
+st.markdown("---")
+st.markdown("## PREVENTATIVE DRIFT RADAR")
 
 table_col, metric_col = st.columns([1.6, 1.0])
 
@@ -439,13 +328,13 @@ with table_col:
             "Live Ingest State": [
                 "Day 42",
                 f"${actual_spend:,.2f} NZD",
-                f"{actual_rom}% Flexion",
+                f"{actual_rom:.1f}% Flexion",
                 "High Stress / Fear Flag",
             ],
             "Point of Drift Variance": [
                 "On Track" if st.session_state.functional_drift <= 15 else "Timeline Breach",
-                f"${float(actual_spend) - calibrated_base_cost:+,.2f} NZD",
-                f"-{st.session_state.functional_drift:.0f}% Deviation",
+                f"${actual_spend - calibrated_base_cost:+,.2f} NZD",
+                f"-{st.session_state.functional_drift:.1f}% Deviation",
                 "Path B Trigger Activated",
             ],
         }
@@ -465,7 +354,6 @@ with metric_col:
         status_label = "NOMINAL PATHWAY ALIGNMENT"
         status_color = "#10b981"
 
-    # Unify the structural elements into single, clean payload blocks
     if role == SCHEME_DIRECTOR:
         html_payload = f"""
         <div class="metric-box" style="border-left: 4px solid {status_color}; min-height: 290px;">
@@ -497,22 +385,27 @@ with metric_col:
 
     st.markdown(html_payload, unsafe_allow_html=True)
 
-# --- MODULE 4: LONGITUDINAL HISTORICAL COST TREND VISUALIZATION ---
+# --- MODULE 3: LONGITUDINAL HISTORICAL COST TREND VISUALIZATION ---
 st.markdown("---")
 st.markdown("### HISTORICAL PERFORMANCE ANALYTICS")
 st.markdown(
     "<p style='color:#8b949e; font-size:0.9rem;'>"
-    "120-Day Longitudinal Claim Trajectory Matrix — Expected Pathway vs Actual Cumulative Spend (NZD)</p>",
+    "Dynamic Longitudinal Claim Trajectory Matrix — Calibrated Baseline Runway vs Actual Cumulative Spend</p>",
     unsafe_allow_html=True,
 )
 
-days_series = np.arange(0, 121, 10)
+days_series = np.arange(0, calibrated_base_days + 31, 10)
 standard_trajectory = np.array(
-    [min(calibrated_base_cost, (calibrated_base_cost / 90) * d) for d in days_series]
+    [
+        min(calibrated_base_cost, (calibrated_base_cost / calibrated_base_days) * d)
+        for d in days_series
+    ]
 )
 actual_trajectory = np.array(
     [
-        (calibrated_base_cost / 90) * d * (1.0 + (0.008 * d) if d > 40 else 1.0)
+        (calibrated_base_cost / calibrated_base_days)
+        * d
+        * (1.0 + (0.007 * d) if d > (calibrated_base_days * 0.4) else 1.0)
         for d in days_series
     ]
 )
@@ -526,7 +419,8 @@ if role == SCHEME_DIRECTOR:
         }
     )
     st.caption(
-        f"Scheme Director view · longitudinal aggregate for `{subject_token}` pathway (NZD)"
+        f"Auto-calibrated runway · `{subject_token}` · {duty_tier} · Age {age} · "
+        f"{calibrated_base_days}-day horizon (NZD)"
     )
     st.line_chart(
         df_chart,

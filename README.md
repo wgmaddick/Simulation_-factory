@@ -2,16 +2,17 @@
 
 Streamlit executive surface for **predictive operational risk & long-tail claims governance** (NZD).
 
+Clinical triage intake is the **single engine driver** — age and occupational tier auto-calibrate drift, spend velocity, PPD, and liability without manual telemetry sliders.
+
 ## Surface
 
 | Module | Purpose |
 | --- | --- |
 | Scheme governance sidebar | Role matrix, liability mitigation floor, performance mandate |
-| Bulk ingestion gate | CSV / XLSX client profile upload with AAT sample fallback |
-| Macro metrics bar | Scheme claims, pathway drift, AAT performance index, liability (GM-only, NZD) |
-| Triage intake | Participant token, ICF anatomy, age, duty tier, clinical dictation NLP |
+| Triage intake (engine driver) | Participant token, ICF anatomy, age, duty tier, clinical dictation |
+| Active Profile Status Summary | Claim profile, drift classification, pathway index, projected NZD liability |
 | Preventative Drift Radar | Alignment vector + large-print PPD-first Macro Financial Liability Ledger |
-| Historical analytics | 120-day expected runway vs actual spend NZD (Scheme Director only) |
+| Historical analytics | Dynamic calibrated runway vs actual spend (Scheme Director only) |
 
 ## Role privacy
 
