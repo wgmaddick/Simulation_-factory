@@ -1,33 +1,17 @@
-# Sovereign Case Management Engine
+# AAT Scheme Performance Engine
 
-Streamlit executive dashboard for **operational risk governance** — portfolio metrics, hierarchical audit portals, clinical triage intake, and a Preventative Drift Radar with lookback fee basis.
+Portrait-tablet Streamlit surface for **predictive operational risk & long-tail claims governance** (NZD).
 
-## Surface
+## Views
 
-| Area | What it does |
+| View | Purpose |
 | --- | --- |
-| Governance sidebar | Role matrix, CapEx mitigation floor, strategic mandate injection |
-| Portfolio bar | Assets protected, critical drift, ODG alignment, indemnity exposure |
-| Audit Oracle | Operations & asset availability tranche drill-down |
-| Clinical Triage Intake | Anonymized subject token, ICF anatomy, age, occupation, ambient NLP notes |
-| Preventative Drift Radar | Asymmetrical `[1.6, 1.0]` layout — physical alignment table + TASE / PPD / lookback liability panel with remediate/escalate gate |
+| **Global Scheme Portfolio** | 3-column metrics, slim ledger (`Claim ID` / `Anatomy Target` / `Status`), CapEx velocity |
+| **Log New Claimant Profile** | Unlocked triage → live Comprehensive Scheme Ledger Dossier |
+| **Individual claim drill-down** | Consolidated dossier card (metadata + NLP + PPD/TASE/reserve) + alignment vector + time-cost axis |
 
-## Core math
+## Dossier
 
-- Age / occupation / anatomy modulate baseline cost and ODG timeline
-- CapEx mitigation floor compresses allowable baseline spend
-- Functional drift = `max(0, 100 − ROM%)`
-- IVC = spend variance vs modulated baseline
-- Projected TASE escalates with drift and IVC; PPD uses a logistic risk curve
-- Lookback license fee = `$5,000 + 12% × projected TASE`
-
-## Run
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-streamlit run app.py
-```
-
-Optional Kinetic Lab page remains under `pages/` for research-node acquisition demos.
+- Critical → crimson PPD · Nominal → green PPD  
+- CapEx floor drives Mitigated Capital Reserve Target  
+- Lookback valuation Director-only (others see executive proxy)  
