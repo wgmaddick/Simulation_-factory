@@ -2,23 +2,22 @@
 
 Streamlit executive surface for **predictive operational risk & long-tail claims governance** (NZD).
 
-Clinical triage intake is the **single engine driver** — age and occupational tier auto-calibrate drift, spend velocity, PPD, and liability without manual telemetry sliders.
+## Views
 
-## Surface
-
-| Module | Purpose |
+| View | Purpose |
 | --- | --- |
-| Scheme governance sidebar | Role matrix, liability mitigation floor, performance mandate |
-| Triage intake (engine driver) | Participant token, ICF anatomy, age, duty tier, clinical dictation |
-| Active Profile Status Summary | Claim profile, drift classification, pathway index, projected NZD liability |
-| Preventative Drift Radar | Alignment vector + large-print PPD-first Macro Financial Liability Ledger |
-| Historical analytics | Dynamic calibrated runway vs actual spend (Scheme Director only) |
+| **Global Scheme Portfolio** | Macro metrics, master claims accountability ledger, aggregate CapEx velocity chart |
+| **Individual claim drill-down** | Select a `Claim_ID` to hydrate locked clinical fields, Preventative Drift Radar, and individual time-cost axis |
+
+## Master ledger (sample)
+
+`AAT-Claimant-Delta-2026`, `Epsilon`, `Zeta`, `Eta` — cached via `@st.cache_data`.
 
 ## Role privacy
 
-| Role | Liability metric | Ledger (PPD / TASE / Lookback) | Cost chart |
+| Role | Scheme liability | Ledger (PPD / TASE / Lookback) | Charts |
 | --- | --- | --- | --- |
-| Scheme Director (GM) | Visible (NZD) | Large-print PPD + NZD dollars | Visible |
+| Scheme Director (GM) | Visible | Large-print PPD + NZD | Visible |
 | Claims Officer / Analyst | Restricted | Masked / Restricted / Access Denied | Masked |
 | Reviewing Specialist | Restricted | Masked / Restricted / Access Denied | Masked |
 
