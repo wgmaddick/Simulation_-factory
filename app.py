@@ -556,19 +556,21 @@ with metric_col:
     label_color = border
     ppd_color = "#ef4444" if permanent_disability_prob > 0.50 else "#e2e8f0"
 
-    # Role-based Privacy Enclave — redact ledger dollars unless GM
-    gm_clearance = is_general_manager(role)
-    if gm_clearance:
-        tase_display = f"${projected_final_cost:,.2f}"
-        lookback_display = f"${lookback_fee:,.2f}"
-        ledger_note = ""
+    # The dynamic privacy switch embedded within the financial summary box
+    if role == "General Manager":
+        privacy_ledger_html = f"""
+            <div class="metric-label">Projected Total Case Cost (TASE)</div>
+            <div class="metric-value-silver">${projected_final_cost:,.2f}</div>
+            <div class="metric-label" style="margin-top:0.8rem;">Dynamic Lookback License Premium Fee Basis</div>
+            <div class="metric-value-green">${(5000 + (projected_final_cost * 0.12)):,.2f}</div>
+        """
     else:
-        tase_display = LEDGER_MASK
-        lookback_display = LEDGER_MASK
-        ledger_note = (
-            f'<div style="margin-top:0.9rem; color:#fbbf24; font-weight:700; '
-            f'font-size:0.9rem;">{LEDGER_MASK}</div>'
-        )
+        privacy_ledger_html = """
+            <div class="metric-label">Projected Total Case Cost (TASE)</div>
+            <div style="color:#8b949e; font-style:italic; font-size:1.1rem; margin-bottom:0.8rem;">🔒 MASKED (Analyst Clearance Only)</div>
+            <div class="metric-label">Dynamic Lookback License Premium Fee Basis</div>
+            <div style="color:#8b949e; font-style:italic; font-size:1.1rem;">🔒 RESTRICTED: Requires GM Level</div>
+        """
 
     st.markdown(
         f"""
@@ -577,32 +579,19 @@ with metric_col:
             <div style="color:{label_color}; font-weight:700; font-size:1.1rem; margin-bottom:0.8rem;">
                 {status_label}
             </div>
-            <div class="metric-label">Projected Total Case Cost (TASE)</div>
-            <div class="metric-value-silver" style="font-size: {'1.0rem' if not gm_clearance else '2rem'};">
-                {tase_display}
-            </div>
+            {privacy_ledger_html}
             <div class="metric-label" style="margin-top:0.8rem;">
                 Probability of Permanent Disability (PPD)
             </div>
             <div class="metric-value-crimson" style="color: {ppd_color};">
                 {permanent_disability_prob * 100:.1f}%
             </div>
-            <div class="metric-label" style="margin-top:0.8rem;">
-                Dynamic Lookback License Premium Fee Basis
-            </div>
-            <div class="metric-value-green" style="font-size: {'1.0rem' if not gm_clearance else '2rem'};
-                 color: {'#fbbf24' if not gm_clearance else '#10b981'};">
-                {lookback_display}
-            </div>
             <div class="metric-label" style="margin-top:0.8rem;">Input Variance Coefficient (IVC)</div>
             <div class="metric-value-silver">{st.session_state.ivc * 100:.1f}%</div>
-            {ledger_note}
         </div>
         """,
         unsafe_allow_html=True,
     )
-    if not gm_clearance:
-        st.warning(LEDGER_MASK)
 
     # 4. Automated Remediate / Escalate Action Panel Gate
     if status_color == "crimson":
