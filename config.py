@@ -84,13 +84,13 @@ TENANT_CONFIG: dict[str, Any] = {
 }
 
 THEME: ThemeTokens = {
-    "bg": "#020617",  # slate-950
-    "card": "#0f172a",  # slate-900
-    "border": "#1e293b",  # slate-800
-    "accent": "#10b981",  # emerald-500
-    "accent_soft": "rgba(16, 185, 129, 0.15)",
-    "text": "#f8fafc",
-    "muted": "#94a3b8",
+    "bg": "#000000",
+    "card": "#0a0a0a",
+    "border": "#FFFFFF",
+    "accent": "#00FFCC",  # electric mint
+    "accent_soft": "rgba(0, 255, 204, 0.12)",
+    "text": "#FFFFFF",
+    "muted": "#E2E8F0",
 }
 
 

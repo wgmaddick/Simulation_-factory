@@ -7,9 +7,14 @@ import time
 import streamlit as st
 
 from config import TENANT_CONFIG, THEME, research_nodes
+from ledger import (
+    apply_path_selection_to_lab,
+    handle_timeline_divergence,
+)
 from kinetic_simulation import (
     AthleteState,
     KineticLabState,
+    attach_integrity_substrate,
     mean_asymmetry,
     mean_shear,
     readiness,
@@ -57,7 +62,10 @@ def init_lab() -> None:
     if "kinetic_lab" not in st.session_state:
         lab = KineticLabState()
         lab.reset(athlete_count=5)
+        attach_integrity_substrate(lab)
         st.session_state.kinetic_lab = lab
+    elif getattr(st.session_state.kinetic_lab, "circuit_breaker", None) is None:
+        attach_integrity_substrate(st.session_state.kinetic_lab)
 
 
 def render_athlete_card(athlete) -> None:
@@ -142,7 +150,100 @@ with st.sidebar:
         if st.button("Reset", use_container_width=True):
             lab.reset(athlete_count=athlete_count)
             lab.unlocked_nodes = set(unlocked)
+            if lab.circuit_breaker is None:
+                attach_integrity_substrate(lab)
             st.rerun()
+
+    if lab.integrity_override and lab.divergence_ledger is not None:
+        st.warning("Hard circuit breaker OVERRIDE — human governance window open.")
+        remaining = lab.divergence_ledger.governance_window_remaining_ms()
+        st.caption(f"Governance window remaining: {remaining} ms")
+        lab.divergence_ledger.register_operator("lab_operator")
+        intervention = st.text_input("Operator intervention directive", key="gov_input")
+        g1, g2 = st.columns(2)
+        with g1:
+            if st.button("Path A — Comply", use_container_width=True):
+                try:
+                    session_data = apply_path_selection_to_lab(
+                        lab,
+                        "PATH_A",
+                        operator_id="lab_operator",
+                        intervention=intervention or "Supervised load reduction",
+                    )
+                    result = handle_timeline_divergence(session_data, "PATH_A")
+                    st.session_state.column_3_status = result.ui_status.value
+                    st.session_state.last_divergence_result = {
+                        "path": result.path,
+                        "ui_status": result.ui_status.value,
+                        "notes": result.notes,
+                    }
+                    lab.log.append(
+                        "[GOV] Path A (Compliance) — COMPLIANT; awaiting manual UI."
+                    )
+                    st.rerun()
+                except Exception as exc:  # noqa: BLE001
+                    st.error(str(exc))
+        with g2:
+            if st.button("Path B — Override", use_container_width=True):
+                try:
+                    session_data = apply_path_selection_to_lab(
+                        lab,
+                        "PATH_B",
+                        operator_id="lab_operator",
+                        intervention=intervention,
+                    )
+                    result = handle_timeline_divergence(
+                        session_data,
+                        "PATH_B",
+                        ledger=lab.divergence_ledger,
+                    )
+                    st.session_state.column_3_status = result.ui_status.value
+                    st.session_state.last_divergence_result = {
+                        "path": result.path,
+                        "ui_status": result.ui_status.value,
+                        "background_export_started": result.background_export_started,
+                        "audit_filename": result.audit_filename,
+                        "notes": result.notes,
+                    }
+                    if result.audit_filename:
+                        st.session_state.last_audit_filename = result.audit_filename
+                    lab.log.append(
+                        "[GOV] Path B — OVERRIDE_HAZARD + silent audit export fired."
+                    )
+                    if result.audit_filename:
+                        lab.log.append(f"[AUDIT] {result.audit_filename}")
+                    st.rerun()
+                except Exception as exc:  # noqa: BLE001
+                    st.error(str(exc))
+        # Auto-expire window → Path B dual-tranche
+        expired = lab.divergence_ledger.tick_governance_window()
+        if (
+            expired is not None
+            and expired.path.value.startswith("Path B")
+            and expired.forked_reality_id is None
+        ):
+            session_data = apply_path_selection_to_lab(
+                lab, "PATH_B", operator_id="lab_operator"
+            )
+            result = handle_timeline_divergence(
+                session_data,
+                "PATH_B",
+                ledger=lab.divergence_ledger,
+            )
+            st.session_state.column_3_status = result.ui_status.value
+            if result.audit_filename:
+                st.session_state.last_audit_filename = result.audit_filename
+            lab.log.append(
+                "[GOV] Path B (Failure to Act) — governance window closed; "
+                "silent audit export dispatched."
+            )
+            st.rerun()
+
+    col3_status = st.session_state.get("column_3_status")
+    if col3_status:
+        st.caption(f"Column 3 status: {col3_status}")
+        if st.session_state.get("last_audit_filename"):
+            st.caption(f"Audit seal: {st.session_state.last_audit_filename}")
 
 if not unlocked:
     st.info(
@@ -161,8 +262,16 @@ k5.metric(
 )
 
 status = "RUNNING" if lab.running else "PAUSED"
+if lab.integrity_override:
+    status = "OVERRIDE"
+breaker = lab.circuit_breaker
+breaker_label = (
+    f"{breaker.system_state.value} ({breaker.binary})"
+    if breaker is not None
+    else "UNBOUND"
+)
 st.caption(
-    f"Status: {status} · Speed: {lab.speed}s/tick · "
+    f"Status: {status} · Breaker: {breaker_label} · Speed: {lab.speed}s/tick · "
     f"Channels: {len(unlocked)}/{len(nodes)} · "
     f"Recovery clears: {lab.recovery_clears}"
 )

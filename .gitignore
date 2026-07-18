@@ -17,3 +17,9 @@ node_modules/
 .DS_Store
 .idea/
 .vscode/
+
+# Isolated sovereign audit seals (local storage node mirror)
+secure/audit/log/
+secure_audit_vault/
+
+
