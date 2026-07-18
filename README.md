@@ -7,6 +7,7 @@ Streamlit executive surface for **predictive operational risk & long-tail claims
 | View | Purpose |
 | --- | --- |
 | **Global Scheme Portfolio** | Macro metrics, master claims accountability ledger, aggregate CapEx velocity chart |
+| **Log New Claimant Profile** | Unlocked triage intake (age 25 / Sedentary defaults) with live PPD, TASE, and trajectory recalculation |
 | **Individual claim drill-down** | Select a `Claim_ID` to hydrate locked clinical fields, Preventative Drift Radar, and individual time-cost axis |
 
 ## Master ledger (sample)

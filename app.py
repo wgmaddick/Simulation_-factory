@@ -13,6 +13,17 @@ import streamlit as st
 LAYOUT_LOCKED = True
 SCHEME_DIRECTOR = "Scheme Director (GM)"
 GLOBAL_VIEW = "Global Scheme Portfolio (All Active Claims)"
+NEW_CLAIM_VIEW = "➕ Log New Claimant Profile"
+DUTY_OPTIONS = [
+    "Heavy Manual / Industrial",
+    "Medium Logistics / Transport",
+    "Sedentary Clerical",
+]
+ANATOMY_OPTIONS = [
+    "Glenohumeral Joint (Shoulder)",
+    "Lumbar Spine",
+    "Lower Extremity (Knee)",
+]
 
 # 1. High-Contrast Sovereign Dark Theme Configuration
 st.set_page_config(
@@ -200,6 +211,25 @@ def dictation_for_claim(claim_id: str) -> str:
     )
 
 
+def _job_params(duty_tier: str) -> tuple[float, float, float]:
+    if "Heavy" in duty_tier:
+        return 1.30, 28.0, 1.35
+    if "Medium" in duty_tier:
+        return 1.10, 15.0, 1.12
+    return 0.90, 5.0, 0.95
+
+
+def emulate_live_telemetry(age: int, duty_tier: str, cap_floor: int) -> tuple[float, float]:
+    """Derive ROM + spend from age/duty for new claimant live editing."""
+    job_multiplier, rom_loss, spend_variance = _job_params(duty_tier)
+    age_factor = (age - 25) * 0.015
+    base_cost = 22500.0 * (1.0 + age_factor) * job_multiplier
+    base_cost *= 1.0 - (cap_floor / 100.0) * 0.35
+    actual_rom = max(40.0, 100.0 - rom_loss - (age_factor * 25.0))
+    actual_spend = base_cost * spend_variance * (1.0 + (age_factor * 0.2))
+    return float(actual_rom), float(actual_spend)
+
+
 def compute_claim_metrics(
     *,
     age: int,
@@ -208,9 +238,7 @@ def compute_claim_metrics(
     actual_spend: float,
     cap_floor: int,
 ) -> dict[str, float]:
-    job_multiplier = (
-        1.30 if "Heavy" in duty_tier else (1.10 if "Medium" in duty_tier else 0.90)
-    )
+    job_multiplier, _, _ = _job_params(duty_tier)
     age_factor = (age - 25) * 0.015
     calibrated_base_cost = 22500.0 * (1.0 + age_factor) * job_multiplier
     calibrated_base_cost *= 1.0 - (cap_floor / 100.0) * 0.35
@@ -276,10 +304,10 @@ selector_col1, selector_col2 = st.columns([2, 1])
 with selector_col1:
     view_selection = st.selectbox(
         "AUDIT VIEW COMMAND SECTOR",
-        [GLOBAL_VIEW, *claim_ids],
+        [GLOBAL_VIEW, NEW_CLAIM_VIEW, *claim_ids],
     )
 with selector_col2:
-    st.caption("Select Global Portfolio or a Claim_ID token to deep-dive.")
+    st.caption("Portfolio · new claimant log · or Claim_ID deep-dive.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -385,49 +413,122 @@ if view_selection == GLOBAL_VIEW:
         )
 
 # ==============================================================================
-# INTERFACE LAYER B: INDIVIDUAL DRILL-DOWN VIEW (THE CHOSEN CLINICAL PROFILE)
+# INTERFACE LAYER B/C: INDIVIDUAL DRILL-DOWN OR NEW CLAIMANT LOG
 # ==============================================================================
 else:
-    selected_row = df_master_ledger[
-        df_master_ledger["Claim_ID"] == view_selection
-    ].iloc[0]
+    is_new_claim = view_selection == NEW_CLAIM_VIEW
 
-    subject_token = str(selected_row["Claim_ID"])
-    anatomy = str(selected_row["Anatomy"])
-    age = int(selected_row["Age"])
-    duty_tier = str(selected_row["Demands"])
-    actual_rom = float(selected_row["ROM_Actual"])
-    actual_spend = float(selected_row["Spend_To_Date"])
-    claim_status = str(selected_row["Status"])
-
-    st.markdown(f"### INDIVIDUAL CLAIM AUDIT: `{subject_token}`")
-    st.caption(f"Ledger status: **{claim_status}** · hydrated from master portfolio core")
-
-    intake_col1, intake_col2, intake_col3 = st.columns(3)
-    with intake_col1:
-        st.text_input("Participant Identifier Token", value=subject_token, disabled=True)
-        st.text_input("Anatomical Target Site (ICF Matrix)", value=anatomy, disabled=True)
-    with intake_col2:
-        st.number_input("Actuarial Chronological Age", value=age, disabled=True)
-        st.text_input("Occupational Demands Tier", value=duty_tier, disabled=True)
-    with intake_col3:
-        st.markdown(
-            "<b style='font-size:0.85rem; color:#8b949e; font-family:monospace;'>"
-            "VOICE DICTATION NLP RECORD</b>",
-            unsafe_allow_html=True,
+    if is_new_claim:
+        st.markdown("### LOG NEW CLAIMANT PROFILE")
+        st.caption(
+            "Unlocked triage intake · live actuarial recalculation as fields change"
         )
-        st.text_area(
-            "Clinical Summary Dictation Ingest",
-            value=dictation_for_claim(subject_token),
-            disabled=True,
+        claim_status = "DRAFT — UNSAVED"
+        intake_col1, intake_col2, intake_col3 = st.columns(3)
+        with intake_col1:
+            subject_token = st.text_input(
+                "Participant Identifier Token",
+                value="",
+                placeholder="e.g., AAT-Claimant-Theta-2026",
+            )
+            anatomy = st.selectbox(
+                "Anatomical Target Site (ICF Matrix)",
+                ANATOMY_OPTIONS,
+                index=0,
+            )
+        with intake_col2:
+            age = st.number_input(
+                "Actuarial Chronological Age",
+                min_value=18,
+                max_value=75,
+                value=25,
+            )
+            duty_tier = st.selectbox(
+                "Occupational Demands Tier",
+                DUTY_OPTIONS,
+                index=DUTY_OPTIONS.index("Sedentary Clerical"),
+            )
+        with intake_col3:
+            st.markdown(
+                "<b style='font-size:0.85rem; color:#8b949e; font-family:monospace;'>"
+                "VOICE DICTATION NLP RECORD</b>",
+                unsafe_allow_html=True,
+            )
+            dictation = st.text_area(
+                "Clinical Summary Dictation Ingest",
+                value="Type or dictate clinical triage notes here...",
+            )
+        # Live telemetry emulation from unlocked age / duty inputs
+        actual_rom, actual_spend = emulate_live_telemetry(
+            int(age), str(duty_tier), int(cap_floor)
         )
+        display_token = subject_token.strip() or "NEW-CLAIMANT-DRAFT"
+    else:
+        selected_row = df_master_ledger[
+            df_master_ledger["Claim_ID"] == view_selection
+        ].iloc[0]
+
+        subject_token = str(selected_row["Claim_ID"])
+        anatomy = str(selected_row["Anatomy"])
+        age = int(selected_row["Age"])
+        duty_tier = str(selected_row["Demands"])
+        actual_rom = float(selected_row["ROM_Actual"])
+        actual_spend = float(selected_row["Spend_To_Date"])
+        claim_status = str(selected_row["Status"])
+        display_token = subject_token
+
+        st.markdown(f"### INDIVIDUAL CLAIM AUDIT: `{subject_token}`")
+        st.caption(
+            f"Ledger status: **{claim_status}** · hydrated from master portfolio core"
+        )
+
+        intake_col1, intake_col2, intake_col3 = st.columns(3)
+        with intake_col1:
+            st.text_input(
+                "Participant Identifier Token",
+                value=subject_token,
+                disabled=True,
+            )
+            st.text_input(
+                "Anatomical Target Site (ICF Matrix)",
+                value=anatomy,
+                disabled=True,
+            )
+        with intake_col2:
+            st.number_input(
+                "Actuarial Chronological Age",
+                value=age,
+                disabled=True,
+            )
+            st.text_input(
+                "Occupational Demands Tier",
+                value=duty_tier,
+                disabled=True,
+            )
+        with intake_col3:
+            st.markdown(
+                "<b style='font-size:0.85rem; color:#8b949e; font-family:monospace;'>"
+                "VOICE DICTATION NLP RECORD</b>",
+                unsafe_allow_html=True,
+            )
+            dictation = st.text_area(
+                "Clinical Summary Dictation Ingest",
+                value=dictation_for_claim(subject_token),
+                disabled=True,
+            )
+
+    # Optional: enrich barrier flag from live/new dictation text
+    barrier_hot = any(
+        k in str(dictation).lower()
+        for k in ("fear", "stress", "barrier", "tear", "damage", "risk")
+    )
 
     metrics = compute_claim_metrics(
-        age=age,
-        duty_tier=duty_tier,
-        actual_rom=actual_rom,
-        actual_spend=actual_spend,
-        cap_floor=cap_floor,
+        age=int(age),
+        duty_tier=str(duty_tier),
+        actual_rom=float(actual_rom),
+        actual_spend=float(actual_spend),
+        cap_floor=int(cap_floor),
     )
     st.session_state.functional_drift = metrics["functional_drift"]
     st.session_state.ivc = metrics["ivc"]
@@ -436,6 +537,12 @@ else:
     projected_final_cost = metrics["projected_final_cost"]
     permanent_disability_prob = metrics["permanent_disability_prob"]
 
+    if is_new_claim:
+        st.info(
+            f"Live draft · `{display_token}` · {anatomy} · Age {int(age)} · {duty_tier} · "
+            f"ROM {actual_rom:.1f}% · Spend ${actual_spend:,.0f} NZD (auto-calibrated)"
+        )
+
     st.markdown("---")
     st.markdown("## PREVENTATIVE DRIFT RADAR DEEP-DIVE")
 
@@ -443,6 +550,16 @@ else:
 
     with table_col:
         st.markdown("#### Operational Pathway Alignment Vector")
+        barrier_label = (
+            "High Stress / Fear Flag"
+            if (st.session_state.functional_drift > 10 or barrier_hot)
+            else "Nominal"
+        )
+        path_label = (
+            "Path B Trigger Activated"
+            if st.session_state.functional_drift > 15
+            else "Clear"
+        )
         df_vector = pd.DataFrame(
             {
                 "Performance Dimension": [
@@ -461,9 +578,7 @@ else:
                     "Day 42",
                     f"${actual_spend:,.2f} NZD",
                     f"{actual_rom:.1f}% Flexion",
-                    "High Stress / Fear Flag"
-                    if st.session_state.functional_drift > 10
-                    else "Nominal",
+                    barrier_label,
                 ],
                 "Point of Drift Variance": [
                     "On Track"
@@ -471,9 +586,7 @@ else:
                     else "Timeline Breach",
                     f"${actual_spend - calibrated_base_cost:+,.2f} NZD",
                     f"-{st.session_state.functional_drift:.1f}% Deviation",
-                    "Path B Trigger Activated"
-                    if st.session_state.functional_drift > 15
-                    else "Clear",
+                    path_label,
                 ],
             }
         )
@@ -555,7 +668,8 @@ else:
             }
         )
         st.caption(
-            f"Individual axis · `{subject_token}` · {duty_tier} · Age {age} · "
+            f"{'Live draft' if is_new_claim else 'Individual'} axis · "
+            f"`{display_token}` · {duty_tier} · Age {int(age)} · "
             f"{calibrated_base_days}-day horizon (NZD)"
         )
         st.line_chart(
