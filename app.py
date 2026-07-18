@@ -22,9 +22,6 @@ RESTRICTED_ROLES = {
     "Caseworker / Analyst",
     "Technical Expert ('Docteur')",
 }
-LEDGER_MASK = (
-    "🔒 SECURE LEDGER MASKED: Requires General Manager Clearance"
-)
 
 
 def default_corporate_profile() -> pd.DataFrame:
@@ -125,6 +122,95 @@ def is_general_manager(active_role: str) -> bool:
 def can_view_indemnity(active_role: str) -> bool:
     """Indemnity card is GM-only; Caseworker / Docteur are explicitly masked."""
     return active_role not in RESTRICTED_ROLES and is_general_manager(active_role)
+
+
+def build_clinical_timeline(
+    *,
+    odg_target_cost: float,
+    actual_cumulative_at_day: float,
+    observed_day: int = 42,
+    horizon_days: int = 120,
+    odg_horizon_days: int = 90,
+) -> pd.DataFrame:
+    """Structure a standard 120-day clinical cost runway vs spend-velocity loop."""
+    days = np.arange(0, horizon_days + 1, dtype=float)
+    odg_days = max(float(odg_horizon_days), 1.0)
+    observe = max(int(observed_day), 1)
+
+    # Standard ODG Cost Runway — linear to target by ODG horizon, then plateau
+    odg_runway = np.clip(days / odg_days, 0.0, 1.0) * float(odg_target_cost)
+
+    # Actual Cumulative Spend Velocity — constant velocity through observed day,
+    # then mild post-observation acceleration when spend outpaces the ODG path.
+    daily_velocity = float(actual_cumulative_at_day) / observe
+    actual_spend = days * daily_velocity
+    odg_at_observe = min(1.0, observe / odg_days) * float(odg_target_cost)
+    overshoot = max(0.0, float(actual_cumulative_at_day) - odg_at_observe)
+    if overshoot > 0:
+        post = np.maximum(days - observe, 0.0)
+        actual_spend = actual_spend + post * (overshoot / 40.0)
+
+    return pd.DataFrame(
+        {
+            "Days Elapsed": days.astype(int),
+            "Standard ODG Cost Runway": odg_runway,
+            "Actual Cumulative Spend Velocity": actual_spend,
+        }
+    )
+
+
+def build_portfolio_timeline(
+    portfolio: pd.DataFrame,
+    *,
+    observed_day: int = 42,
+    horizon_days: int = 120,
+) -> pd.DataFrame:
+    """Aggregate cumulative spending across the full portfolio matrix (GM view)."""
+    if portfolio is None or portfolio.empty:
+        return build_clinical_timeline(
+            odg_target_cost=22500.0 * 3,
+            actual_cumulative_at_day=28400.0 * 3,
+            observed_day=observed_day,
+            horizon_days=horizon_days,
+        )
+
+    spend_col = _col(portfolio, "actual_spend", "spend", "cumulative_spend")
+    age_col = _col(portfolio, "age")
+    n = max(len(portfolio), 1)
+
+    if spend_col is not None:
+        spends = pd.to_numeric(portfolio[spend_col], errors="coerce").fillna(28400.0)
+    else:
+        spends = pd.Series([28400.0] * n)
+
+    if age_col is not None:
+        ages = pd.to_numeric(portfolio[age_col], errors="coerce").fillna(48.0)
+        odg_targets = 22500.0 * (1.0 + (ages - 25.0) * 0.015)
+    else:
+        odg_targets = pd.Series([22500.0] * n)
+
+    # Sum independent subject runways into one portfolio curve
+    aggregate = None
+    for odg_target, spend in zip(odg_targets.tolist(), spends.tolist()):
+        curve = build_clinical_timeline(
+            odg_target_cost=float(odg_target),
+            actual_cumulative_at_day=float(spend),
+            observed_day=observed_day,
+            horizon_days=horizon_days,
+        )
+        if aggregate is None:
+            aggregate = curve
+        else:
+            aggregate["Standard ODG Cost Runway"] += curve["Standard ODG Cost Runway"]
+            aggregate["Actual Cumulative Spend Velocity"] += curve[
+                "Actual Cumulative Spend Velocity"
+            ]
+    return aggregate if aggregate is not None else build_clinical_timeline(
+        odg_target_cost=22500.0,
+        actual_cumulative_at_day=28400.0,
+        observed_day=observed_day,
+        horizon_days=horizon_days,
+    )
 
 
 # 1. Stark Executive Dark Theme & Contrast UI Rig
@@ -250,6 +336,14 @@ st.markdown(
     [data-baseweb="menu"] li,
     [data-baseweb="menu"] li span {
         color: #ffffff !important;
+    }
+    /* Historical cost trend chart — high-contrast on dark deck */
+    [data-testid="stVegaLiteChart"],
+    [data-testid="stLineChart"] {
+        background-color: #161b22 !important;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        padding: 0.75rem 0.5rem 0.25rem 0.5rem;
     }
     </style>
     """,
@@ -628,3 +722,45 @@ with metric_col:
             )
     else:
         st.success("Drift within governance envelope. No remediation gate required.")
+
+# --- HISTORICAL COST TREND (beneath Preventative Drift Radar) ---
+st.markdown("---")
+st.markdown("## HISTORICAL COST TREND")
+st.markdown(
+    "<p style='color:#8b949e; font-size:0.9rem;'>"
+    "120-Day Clinical Timeline — Standard ODG Cost Runway vs Actual Cumulative Spend Velocity</p>",
+    unsafe_allow_html=True,
+)
+
+observed_day = 42
+if role == "General Manager":
+    df_timeline = build_portfolio_timeline(
+        portfolio_df,
+        observed_day=observed_day,
+        horizon_days=120,
+    )
+    trend_scope = (
+        f"Portfolio aggregate · {len(portfolio_df)} subjects · "
+        "global financial matrix visible"
+    )
+else:
+    # Caseworker / Analyst (and Docteur): subject-scoped only — mask portfolio totals
+    df_timeline = build_clinical_timeline(
+        odg_target_cost=float(base_cost),
+        actual_cumulative_at_day=float(actual_spend),
+        observed_day=observed_day,
+        horizon_days=120,
+        odg_horizon_days=max(int(base_days), 1),
+    )
+    trend_scope = (
+        f"Subject-scoped trajectory · `{subject_id}` · "
+        "portfolio-wide spend records masked"
+    )
+
+st.caption(trend_scope)
+st.line_chart(
+    data=df_timeline,
+    x="Days Elapsed",
+    y=["Standard ODG Cost Runway", "Actual Cumulative Spend Velocity"],
+    color=["#10b981", "#ef4444"],
+)
