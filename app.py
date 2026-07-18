@@ -3,6 +3,10 @@
 Stark dark-theme portfolio surface with Clinical Triage Intake, Preventative
 Drift Radar (asymmetrical high-real-estate layout), and Lookback License Fee
 basis.
+
+Layout contract: the dynamic case-management composition below is permanently
+locked for production demos — portfolio bar, triage intake, drift radar,
+privacy enclave, and historical cost trend.
 """
 
 from __future__ import annotations
@@ -13,6 +17,9 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import streamlit as st
+
+# Permanently lock the executive case-management layout composition.
+LAYOUT_LOCKED = True
 
 # ---------------------------------------------------------------------------
 # Bulk Data Ingestion Gate + synthetic fallback (never blank the deck)
