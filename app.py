@@ -1,1938 +1,487 @@
-"""University Operations Vault — Preventative Drift Radar console.
+"""Sovereign Case Management Engine — executive operational risk governance.
 
-Unified physical telemetry + macro financial impact surface. Hosts the
-Preventative Drift Radar, Lookback License Fee Basis panel, Column 3 timeline
-divergence UI, and Path A / Path B dual-tranche handling via ledger.
+Stark dark-theme portfolio surface with Clinical Triage Intake, Preventative
+Drift Radar (asymmetrical high-real-estate layout), and Lookback License Fee
+basis. Vault session keys remain initialized for Kinetic Lab continuity.
 """
 
 from __future__ import annotations
 
-from typing import Any, Mapping, MutableMapping
-
+import numpy as np
+import pandas as pd
 import streamlit as st
 
 from capital_market import (
-    DEFAULT_CONSORTIUM_SEED_USD,
-    DEFAULT_EARLY_OPS_RISK_CAPITAL_USD,
     DEFAULT_LOOKBACK_BASE_FEE_USD,
-    HERO_BASELINE,
-    build_capital_pro_forma,
-    compute_financial_liability_variance,
     compute_lookback_license_fee,
-    compute_physical_drift_index,
 )
-from config import TENANT_CONFIG, THEME, research_nodes, total_unlock_cost
-from ledger import (
-    DivergenceUIStatus,
-    TimelineDivergenceResult,
-    export_sovereign_pdf_bytes,
-    export_sovereign_report_sync,
-    format_sovereign_intelligence_report,
-    generate_sovereign_intelligence_segment,
-    handle_timeline_divergence as _ledger_handle_timeline_divergence,
-)
+from config import TENANT_CONFIG
 
 st.set_page_config(
-    page_title="Preventative Drift Radar",
-    page_icon="⬡",
     layout="wide",
+    page_title="Sovereign Case Management Engine",
+    page_icon="⬡",
     initial_sidebar_state="expanded",
 )
 
-# Anonymized asset tokens — raw biometric / medical identity never surfaces.
-_ASSET_TOKEN_POOL = (
-    "Crypt_Alpha_2026",
-    "Crypt_Beta_2026",
-    "Crypt_Gamma_2026",
-    "Crypt_Delta_2026",
-    "Crypt_Epsilon_2026",
-)
-
-
 # ---------------------------------------------------------------------------
-# Timeline divergence — Column 3 UI + Path A / Path B dispatch
+# 1. Stark Executive Dark Theme & Contrast UI Rig
 # ---------------------------------------------------------------------------
-
-
-def update_column_3_ui(
-    session_data: MutableMapping[str, Any] | Mapping[str, Any],
-    status: str = "PENDING",
-) -> None:
-    """Update foreground Column 3 to reflect timeline-divergence status.
-
-    Path A → COMPLIANT (standard loop; await manual UI request)
-    Path B → OVERRIDE_HAZARD (mutated reality readout)
+st.markdown(
     """
-    normalized = str(status).strip().upper()
-    try:
-        ui_status = DivergenceUIStatus(normalized)
-    except ValueError:
-        ui_status = DivergenceUIStatus.PENDING
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap');
 
-    st.session_state.column_3_status = ui_status.value
-    st.session_state.divergence_session = dict(session_data)
-    ui_bucket = st.session_state.divergence_session.setdefault("ui", {})
-    ui_bucket["column_3_status"] = ui_status.value
-
-    if isinstance(session_data, dict):
-        session_data.setdefault("ui", {})["column_3_status"] = ui_status.value
-
-
-def handle_timeline_divergence(
-    session_data: MutableMapping[str, Any] | Mapping[str, Any],
-    path_selection: str,
-) -> TimelineDivergenceResult:
-    """Conceptual architecture entry-point for Path A / Path B divergence.
-
-    PATH_A — keep process in the standard loop; Column 3 → COMPLIANT.
-    PATH_B — dual-tranche: Column 3 → OVERRIDE_HAZARD, then fire
-    ``execute_silent_background_export`` for absolute system protection.
-    """
-    result = _ledger_handle_timeline_divergence(
-        session_data,
-        path_selection,
-        ui_updater=update_column_3_ui,
-        start_background_export=True,
-    )
-    st.session_state.column_3_status = result.ui_status.value
-    st.session_state.last_divergence_result = {
-        "path": result.path,
-        "ui_status": result.ui_status.value,
-        "fork_id": result.fork_id,
-        "background_export_started": result.background_export_started,
-        "audit_filename": result.audit_filename,
-        "notes": result.notes,
+    .reportview-container, .main {
+        background-color: #0c1017;
+        color: #f8fafc;
+        font-family: "IBM Plex Sans", sans-serif;
     }
-    if result.audit_filename:
-        st.session_state.last_audit_filename = result.audit_filename
-    return result
-
-
-def _live_session_frame() -> dict[str, Any]:
-    """Deterministically assemble the current live frame for manual export."""
-    base = dict(st.session_state.get("divergence_session") or {})
-    status = st.session_state.get(
-        "column_3_status", DivergenceUIStatus.PENDING.value
-    )
-    path = "PATH_A" if status == DivergenceUIStatus.COMPLIANT.value else (
-        "PATH_B" if status == DivergenceUIStatus.OVERRIDE_HAZARD.value else "PENDING"
-    )
-    # Overlay live vault session signals so Path A / Path B both map current state.
-    base.setdefault("user_input", {})
-    base["user_input"] = {
-        **dict(base.get("user_input") or {}),
-        "manual_export": True,
-        "path_selection": path,
-        "credits": int(st.session_state.get("credits", 0)),
-        "unlocked_nodes": sorted(
-            str(n) for n in (st.session_state.get("unlocked_nodes") or set())
-        ),
-        "conversation": (
-            (base.get("user_input") or {}).get("conversation")
-            or f"Manual Column-3 export during {path}"
-        ),
+    .stApp {
+        background-color: #0c1017;
+        color: #f8fafc;
+        font-family: "IBM Plex Sans", sans-serif;
     }
-    base.setdefault("system_context", {})
-    base["system_context"] = {
-        **dict(base.get("system_context") or {}),
-        "tenant": TENANT_CONFIG.get("tenant_identity"),
-        "sector": TENANT_CONFIG.get("active_sector_code"),
-        "column_3_status": status,
-        "nodes_online": len(st.session_state.get("unlocked_nodes") or set()),
+    [data-testid="stSidebar"] {
+        background-color: #0c1017;
+        border-right: 1px solid #30363d;
     }
-    base.setdefault("avatar_output", {})
-    base["avatar_output"] = {
-        **dict(base.get("avatar_output") or {}),
-        "verbal_declaration": (
-            (base.get("avatar_output") or {}).get("verbal_declaration")
-            or "Sentinel & Advisory Panel — manual sovereign diagnostic requested."
-        ),
-        "directive": path,
+    [data-testid="stSidebar"] *,
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {
+        color: #f8fafc !important;
     }
-    base.setdefault("systemic_interpretation", {})
-    base["systemic_interpretation"] = {
-        **dict(base.get("systemic_interpretation") or {}),
-        "path": path,
-        "manual_frame": True,
-        "credit_burn": int(TENANT_CONFIG["initial_credits"])
-        - int(st.session_state.get("credits", 0)),
+    h1, h2, h3, h4 {
+        color: #ffffff !important;
+        font-weight: 700 !important;
     }
-    base.setdefault("ui", {})["column_3_status"] = status
-    return base
-
-
-def render_column_3_divergence_panel() -> None:
-    """Column 3 — The Sentinel & Advisory Panel (timeline + manual export)."""
-    status = st.session_state.get("column_3_status", DivergenceUIStatus.PENDING.value)
-    last = st.session_state.get("last_divergence_result") or {}
-    audit_file = st.session_state.get("last_audit_filename")
-
-    if status == DivergenceUIStatus.COMPLIANT.value:
-        accent = THEME["accent"]
-        label = "COMPLIANT · Path A"
-        detail = "Standard loop active. Awaiting manual UI request."
-    elif status == DivergenceUIStatus.OVERRIDE_HAZARD.value:
-        accent = "#ef4444"
-        label = "OVERRIDE_HAZARD · Path B"
-        detail = "Mutated reality engaged. Silent audit export dispatched."
-    else:
-        accent = THEME["muted"]
-        label = "PENDING · No divergence"
-        detail = "Sentinel idle until a Moment of Drift is resolved."
-
-    st.markdown(
-        f"""
-        <div class="node-card" style="border-left-color:{accent};">
-          <div class="node-meta">COLUMN 3 · THE SENTINEL &amp; ADVISORY PANEL</div>
-          <div class="node-title" style="color:{accent};">{label}</div>
-          <div class="node-body">{detail}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    if last:
-        st.caption(
-            f"Last path: `{last.get('path', '—')}` · "
-            f"export: {'yes' if last.get('background_export_started') else 'no'}"
-        )
-    if audit_file:
-        st.code(audit_file, language=None)
-
-    # Low-profile utility block — manual foreground printing / export.
-    st.markdown(
-        f"""
-        <div class="node-card" style="border-left-color:{THEME["border"]};padding:0.85rem 1rem;">
-          <div class="node-meta">UTILITY · SOVEREIGN REPORTING</div>
-          <div class="node-body" style="margin:0;">
-            View the live Holistic Audit Segment or export a stamped Sovereign
-            Intelligence Report for save / print on demand. Independent of the
-            Path B black-box vault writer.
-          </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    b1, b2 = st.columns(2)
-    with b1:
-        view_clicked = st.button(
-            "View Sovereign Diagnostic",
-            key="col3_view_sovereign",
-            use_container_width=True,
-        )
-    with b2:
-        export_clicked = st.button(
-            "Export Stamped Audit Record",
-            key="col3_export_sovereign",
-            type="primary",
-            use_container_width=True,
-        )
-
-    if view_clicked:
-        frame = _live_session_frame()
-        segment = generate_sovereign_intelligence_segment(frame)
-        report = format_sovereign_intelligence_report(segment)
-        st.session_state.sovereign_diagnostic_text = report
-        st.session_state.sovereign_diagnostic_hash = segment.block_hash
-        st.success("Sovereign diagnostic compiled from live frame.")
-
-    if export_clicked:
-        frame = _live_session_frame()
-        # On-the-fly PDF from live frame memory — no tracking-engine reload.
-        pdf_bytes, sealed, segment = export_sovereign_pdf_bytes(frame)
-        text_report = format_sovereign_intelligence_report(segment)
-        st.session_state.sovereign_diagnostic_text = text_report
-        st.session_state.sovereign_diagnostic_hash = sealed
-        st.session_state.last_manual_export_hash = sealed
-        st.session_state.sovereign_pdf_bytes = pdf_bytes
-        st.success("Stamped audit PDF compiled — hash sealed below.")
-
-    sealed_hash = st.session_state.get("sovereign_diagnostic_hash")
-    if sealed_hash:
-        st.markdown("**Un-alterable SHA-256 seal**")
-        st.code(sealed_hash, language=None)
-
-    report_text = st.session_state.get("sovereign_diagnostic_text")
-    if report_text:
-        with st.expander("Sovereign Intelligence Report", expanded=bool(view_clicked)):
-            st.text(report_text)
-
-    pdf_bytes = st.session_state.get("sovereign_pdf_bytes")
-    if pdf_bytes:
-        st.download_button(
-            label="Download / Print Sovereign Intelligence Report (PDF)",
-            data=pdf_bytes,
-            file_name=f"AUDIT_{sealed_hash or 'PENDING'}.pdf",
-            mime="application/pdf",
-            key="col3_download_sir_pdf",
-            use_container_width=True,
-        )
-    elif report_text:
-        st.download_button(
-            label="Download Sovereign Intelligence Report (TXT)",
-            data=report_text,
-            file_name=f"AUDIT_{sealed_hash or 'PENDING'}.txt",
-            mime="text/plain",
-            key="col3_download_sir_txt",
-            use_container_width=True,
-        )
-
-
-def _inject_theme() -> None:
-    st.markdown(
-        f"""
-        <style>
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
-
-        .stApp {{
-            background:
-              linear-gradient(180deg, #0a0a0a 0%, #000000 40%, #001a14 100%),
-              repeating-linear-gradient(
-                0deg, transparent, transparent 47px, rgba(255,255,255,0.03) 48px
-              );
-            color: #FFFFFF;
-            font-family: "IBM Plex Sans", sans-serif;
-        }}
-        [data-testid="stSidebar"] {{
-            background: {THEME["card"]};
-            border-right: 1px solid {THEME["border"]};
-        }}
-        [data-testid="stSidebar"] * {{
-            color: {THEME["text"]};
-        }}
-        h1, h2, h3, h4 {{
-            font-family: "IBM Plex Sans", sans-serif !important;
-            letter-spacing: -0.02em;
-        }}
-        .vault-brand {{
-            font-size: clamp(1.8rem, 3vw, 2.6rem);
-            font-weight: 700;
-            color: {THEME["text"]};
-            margin: 0 0 0.25rem 0;
-            line-height: 1.15;
-        }}
-        .vault-brand span {{
-            color: {THEME["accent"]};
-        }}
-        .vault-sub {{
-            color: {THEME["muted"]};
-            font-size: 0.95rem;
-            margin-bottom: 1.25rem;
-        }}
-        .sector-chip {{
-            display: inline-block;
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.75rem;
-            letter-spacing: 0.08em;
-            color: {THEME["accent"]};
-            border: 1px solid {THEME["accent"]};
-            background: {THEME["accent_soft"]};
-            padding: 0.35rem 0.7rem;
-            margin-bottom: 0.75rem;
-        }}
-        .node-card {{
-            border: 1px solid {THEME["border"]};
-            background: {THEME["card"]};
-            padding: 1.1rem 1.2rem;
-            margin-bottom: 0.85rem;
-            border-left: 4px solid {THEME["border"]};
-        }}
-        .node-card.unlocked {{
-            border-left-color: {THEME["accent"]};
-            box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.25);
-        }}
-        .node-card.locked {{
-            opacity: 0.92;
-        }}
-        .node-meta {{
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.78rem;
-            color: {THEME["muted"]};
-            margin-bottom: 0.35rem;
-        }}
-        .node-title {{
-            font-size: 1.05rem;
-            font-weight: 600;
-            margin-bottom: 0.45rem;
-            color: {THEME["text"]};
-        }}
-        .node-body {{
-            font-size: 0.9rem;
-            color: {THEME["muted"]};
-            line-height: 1.45;
-        }}
-        .yield-line {{
-            margin-top: 0.85rem;
-            padding: 0.55rem 0.7rem;
-            font-size: 1.15rem;
-            font-weight: 700;
-            letter-spacing: 0.01em;
-            line-height: 1.4;
-            color: #00FFCC;
-            background: rgba(0, 255, 204, 0.08);
-            border-left: 3px solid #00FFCC;
-            text-shadow: 0 0 12px rgba(0, 255, 204, 0.45), 0 1px 0 rgba(0, 0, 0, 0.85);
-        }}
-        .credit-panel {{
-            border: 1px solid {THEME["border"]};
-            background: linear-gradient(160deg, {THEME["card"]} 0%, #022c22 140%);
-            padding: 1rem 1.15rem;
-            margin-bottom: 1rem;
-        }}
-        .credit-value {{
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 2rem;
-            font-weight: 500;
-            color: {THEME["accent"]};
-            line-height: 1;
-        }}
-        div[data-testid="stMetricValue"] {{
-            color: {THEME["accent"]} !important;
-            font-size: 1.55rem !important;
-            font-weight: 700 !important;
-        }}
-
-        /* ---- Global legibility: metric titles (Credits / Nodes / Sector / Domain) ---- */
-        div[data-testid="stMetricLabel"],
-        div[data-testid="stMetricLabel"] *,
-        label[data-testid="stMetricLabel"],
-        [data-testid="stMetricLabel"] p {{
-            color: #E2E8F0 !important;
-            font-size: 1rem !important;
-            font-weight: 600 !important;
-            letter-spacing: 0.02em !important;
-            opacity: 1 !important;
-        }}
-        div[data-testid="stMetricDelta"] {{
-            font-size: 0.95rem !important;
-            font-weight: 600 !important;
-        }}
-
-        /* ---- Global legibility: slider / number / text input labels ---- */
-        .stSlider label,
-        .stNumberInput label,
-        .stTextInput label,
-        .stSelectbox label,
-        .stTextArea label,
-        [data-testid="stWidgetLabel"],
-        [data-testid="stWidgetLabel"] p,
-        [data-testid="stWidgetLabel"] span,
-        [data-testid="stSlider"] label,
-        [data-testid="stNumberInput"] label,
-        label[data-testid="stWidgetLabel"] {{
-            color: #FFFFFF !important;
-            font-size: 1.05rem !important;
-            font-weight: 700 !important;
-            letter-spacing: 0.01em !important;
-            opacity: 1 !important;
-            line-height: 1.35 !important;
-        }}
-        /* Slider help / tick annotations stay readable */
-        [data-testid="stSlider"] [data-testid="stTickBarMin"],
-        [data-testid="stSlider"] [data-testid="stTickBarMax"],
-        [data-testid="stSliderTickBarMin"],
-        [data-testid="stSliderTickBarMax"] {{
-            color: #CBD5E1 !important;
-            font-size: 0.9rem !important;
-            font-weight: 600 !important;
-            opacity: 1 !important;
-        }}
-
-        /* ---- Sidebar + utility subheaders / captions ---- */
-        [data-testid="stSidebar"] {{
-            background: {THEME["card"]};
-            border-right: 1px solid {THEME["border"]};
-        }}
-        [data-testid="stSidebar"] * {{
-            color: #F1F5F9 !important;
-        }}
-        [data-testid="stSidebar"] h1,
-        [data-testid="stSidebar"] h2,
-        [data-testid="stSidebar"] h3,
-        [data-testid="stSidebar"] h4,
-        [data-testid="stSidebar"] .stMarkdown p,
-        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
-        [data-testid="stSidebar"] [data-testid="stCaptionContainer"],
-        [data-testid="stSidebar"] [data-testid="stCaptionContainer"] * {{
-            color: #F8FAFC !important;
-            font-size: 1.05rem !important;
-            font-weight: 600 !important;
-            line-height: 1.4 !important;
-            opacity: 1 !important;
-        }}
-        [data-testid="stSidebar"] strong {{
-            color: #FFFFFF !important;
-            font-weight: 700 !important;
-            font-size: 1.1rem !important;
-        }}
-        [data-testid="stSidebar"] .sector-chip {{
-            font-size: 0.9rem !important;
-            color: #00FFCC !important;
-            border-color: #00FFCC !important;
-        }}
-
-        /* Main-pane captions, helper lines, and Streamlit subheaders */
-        [data-testid="stCaptionContainer"],
-        [data-testid="stCaptionContainer"] *,
-        .stCaption,
-        .stCaption * {{
-            color: #E2E8F0 !important;
-            font-size: 1rem !important;
-            font-weight: 600 !important;
-            opacity: 1 !important;
-        }}
-        h2, h3, h4,
-        [data-testid="stHeadingWithActionElements"] h2,
-        [data-testid="stHeadingWithActionElements"] h3 {{
-            color: #F8FAFC !important;
-            font-weight: 700 !important;
-        }}
-        h2 {{ font-size: 1.45rem !important; }}
-        h3 {{ font-size: 1.25rem !important; }}
-        h4 {{ font-size: 1.1rem !important; }}
-
-        /* Custom deck text blocks used across Operational + Capital views */
-        .vault-sub {{
-            color: #E2E8F0 !important;
-            font-size: 1.1rem !important;
-            font-weight: 600 !important;
-            margin-bottom: 1.25rem;
-            line-height: 1.45;
-        }}
-        .node-meta {{
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.95rem !important;
-            font-weight: 600 !important;
-            color: #CBD5E1 !important;
-            margin-bottom: 0.35rem;
-            letter-spacing: 0.04em;
-        }}
-        .node-body {{
-            font-size: 1.02rem !important;
-            font-weight: 500 !important;
-            color: #E2E8F0 !important;
-            line-height: 1.5;
-        }}
-        .node-title {{
-            font-size: 1.2rem !important;
-            font-weight: 700 !important;
-            margin-bottom: 0.45rem;
-            color: #F8FAFC !important;
-        }}
-        .capital-bar {{
-            background: #0a0a0a;
-            color: #FFFFFF !important;
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 1rem !important;
-            font-weight: 700 !important;
-            letter-spacing: 0.06em;
-            padding: 0.7rem 0.95rem;
-            margin: 1.25rem 0 0.85rem 0;
-        }}
-        /* Light capital cards keep dark ink for contrast on white panels */
-        .capital-panel .cap-meta {{
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.9rem !important;
-            font-weight: 700 !important;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: #171717 !important;
-            margin-bottom: 0.4rem;
-        }}
-        .capital-panel .cap-title {{
-            font-family: "IBM Plex Sans", sans-serif;
-            font-size: 1.2rem !important;
-            font-weight: 700 !important;
-            color: #0a0a0a !important;
-            margin-bottom: 0.35rem;
-        }}
-        .capital-panel .cap-body {{
-            font-size: 1.02rem !important;
-            font-weight: 500 !important;
-            color: #171717 !important;
-            line-height: 1.5;
-        }}
-        .capital-metric .lbl {{
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.85rem !important;
-            font-weight: 700 !important;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            color: #262626 !important;
-        }}
-        .capital-metric .val {{
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 1.25rem !important;
-            font-weight: 700 !important;
-            color: #0a0a0a !important;
-            margin-top: 0.15rem;
-        }}
-        .proforma-box .cap-meta,
-        .proforma-box .cap-title,
-        .proforma-box .cap-body {{
-            color: #0a0a0a !important;
-        }}
-        .proforma-box .cap-meta {{
-            font-size: 0.9rem !important;
-            font-weight: 700 !important;
-        }}
-        .proforma-box .cap-title {{
-            font-size: 1.2rem !important;
-            font-weight: 700 !important;
-        }}
-        .proforma-box .cap-body {{
-            font-size: 1.02rem !important;
-            font-weight: 500 !important;
-        }}
-        .capital-panel {{
-            border: 1px solid #e5e5e5;
-            background: #fafafa;
-            color: #0a0a0a;
-            padding: 1rem 1.1rem;
-            margin-bottom: 0.85rem;
-        }}
-        .capital-metric-grid {{
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.55rem;
-            margin-top: 0.65rem;
-        }}
-        .capital-metric {{
-            border: 1px solid #0a0a0a;
-            padding: 0.55rem 0.65rem;
-            background: #fff;
-        }}
-        .proforma-box {{
-            border: 2px solid #0a0a0a;
-            background: #fff;
-            padding: 0.85rem 1rem;
-            margin-top: 0.75rem;
-        }}
-        .credit-panel {{
-            border: 1px solid {THEME["border"]};
-            background: linear-gradient(160deg, {THEME["card"]} 0%, #022c22 140%);
-            padding: 1rem 1.15rem;
-            margin-bottom: 1rem;
-        }}
-        .credit-value {{
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 2rem;
-            font-weight: 500;
-            color: {THEME["accent"]};
-            line-height: 1;
-        }}
-        .yield-line {{
-            margin-top: 0.85rem;
-            padding: 0.55rem 0.7rem;
-            font-size: 1.15rem;
-            font-weight: 700;
-            letter-spacing: 0.01em;
-            line-height: 1.4;
-            color: #00FFCC;
-            background: rgba(0, 255, 204, 0.08);
-            border-left: 3px solid #00FFCC;
-            text-shadow: 0 0 12px rgba(0, 255, 204, 0.45), 0 1px 0 rgba(0, 0, 0, 0.85);
-        }}
-
-        /* ---- Preventative Drift Radar · monochrome + electric mint ---- */
-        .radar-shell {{
-            border: 2px solid #FFFFFF;
-            background: #000000;
-            padding: 1.15rem 1.25rem 1.35rem 1.25rem;
-            margin: 0.5rem 0 1.25rem 0;
-        }}
-        .radar-kicker {{
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.85rem;
-            font-weight: 700;
-            letter-spacing: 0.16em;
-            color: #00FFCC;
-            margin-bottom: 0.35rem;
-        }}
-        .radar-title {{
-            font-family: "IBM Plex Sans", sans-serif;
-            font-size: clamp(1.55rem, 3.2vw, 2.35rem);
-            font-weight: 700;
-            color: #FFFFFF;
-            letter-spacing: 0.04em;
-            margin: 0 0 0.4rem 0;
-            line-height: 1.15;
-        }}
-        .radar-sub {{
-            color: #E2E8F0;
-            font-size: 1.02rem;
-            font-weight: 500;
-            margin-bottom: 1rem;
-            line-height: 1.45;
-            max-width: 62rem;
-        }}
-        .radar-panel {{
-            border: 1px solid #FFFFFF;
-            background: #0a0a0a;
-            padding: 0.95rem 1rem;
-            width: 100%;
-            max-width: 100%;
-            overflow: visible;
-            box-sizing: border-box;
-        }}
-        .radar-panel .cap-meta {{
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.82rem !important;
-            font-weight: 700 !important;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            color: #00FFCC !important;
-            margin-bottom: 0.35rem;
-        }}
-        .radar-panel .cap-title {{
-            font-size: 1.2rem !important;
-            font-weight: 700 !important;
-            color: #FFFFFF !important;
-            margin-bottom: 0.55rem;
-        }}
-        .radar-grid {{
-            width: 100%;
-            max-width: 100%;
-            table-layout: auto;
-            border-collapse: collapse;
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.95rem;
-            margin-top: 0.35rem;
-        }}
-        .radar-grid th,
-        .radar-grid td {{
-            border: 1px solid #FFFFFF;
-            padding: 0.65rem 0.75rem;
-            text-align: left;
-            color: #FFFFFF;
-            background: #000000;
-            white-space: normal !important;
-            overflow-wrap: anywhere;
-            word-break: break-word;
-            overflow: visible !important;
-            text-overflow: clip !important;
-            max-width: none;
-            line-height: 1.4;
-            vertical-align: top;
-        }}
-        .radar-grid th {{
-            color: #00FFCC;
-            font-weight: 700;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            font-size: 0.8rem;
-            background: #0a0a0a;
-            white-space: normal !important;
-        }}
-        .radar-grid td.mint {{
-            color: #00FFCC;
-            font-weight: 700;
-        }}
-        .radar-grid td.alert {{
-            color: #FFFFFF;
-            font-weight: 700;
-            background: #1a0505;
-        }}
-        .radar-track-rule {{
-            border: 0;
-            border-top: 3px solid #FFFFFF;
-            margin: 1.35rem 0 0.65rem 0;
-            background: transparent;
-            height: 0;
-        }}
-        .radar-track-label {{
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.78rem;
-            font-weight: 700;
-            letter-spacing: 0.14em;
-            color: #00FFCC;
-            text-transform: uppercase;
-            margin: 0 0 0.85rem 0;
-        }}
-        /* Prevent Streamlit/Baseweb truncation on radar surfaces */
-        .radar-panel *,
-        .radar-grid * {{
-            text-overflow: clip !important;
-            overflow: visible !important;
-        }}
-        .token-chip {{
-            white-space: normal !important;
-            overflow-wrap: anywhere;
-            word-break: break-word;
-            max-width: 100%;
-        }}
-        .token-chip {{
-            display: inline-block;
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #00FFCC;
-            border: 1px solid #00FFCC;
-            padding: 0.2rem 0.55rem;
-            margin: 0.15rem 0.25rem 0.15rem 0;
-            background: rgba(0, 255, 204, 0.06);
-        }}
-        .fee-panel {{
-            border: 2px solid #00FFCC;
-            background: #000000;
-            padding: 1rem 1.15rem;
-            margin: 0.85rem 0 1.35rem 0;
-        }}
-        .fee-panel .cap-meta {{
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.85rem !important;
-            font-weight: 700 !important;
-            letter-spacing: 0.12em;
-            color: #00FFCC !important;
-            text-transform: uppercase;
-        }}
-        .fee-value {{
-            font-family: "IBM Plex Mono", monospace;
-            font-size: clamp(1.8rem, 3.5vw, 2.6rem);
-            font-weight: 700;
-            color: #00FFCC;
-            line-height: 1.1;
-            margin: 0.35rem 0;
-            text-shadow: 0 0 14px rgba(0, 255, 204, 0.35);
-        }}
-        .fee-grid {{
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 0.55rem;
-            margin-top: 0.75rem;
-        }}
-        @media (max-width: 900px) {{
-            .fee-grid {{ grid-template-columns: 1fr 1fr; }}
-        }}
-        .fee-cell {{
-            border: 1px solid #FFFFFF;
-            padding: 0.55rem 0.65rem;
-            background: #0a0a0a;
-        }}
-        .fee-cell .lbl {{
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.75rem;
-            font-weight: 700;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            color: #E2E8F0;
-        }}
-        .fee-cell .val {{
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 1.15rem;
-            font-weight: 700;
-            color: #FFFFFF;
-            margin-top: 0.2rem;
-        }}
-        .fee-cell .val.mint {{ color: #00FFCC; }}
-        .privacy-bar {{
-            border: 1px solid #FFFFFF;
-            border-left: 4px solid #00FFCC;
-            background: #0a0a0a;
-            padding: 0.7rem 0.95rem;
-            margin: 0.75rem 0 0.25rem 0;
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.88rem;
-            color: #FFFFFF;
-            font-weight: 600;
-        }}
-
-        /* ---- Governance drill-down matrix · Level 1–3 ---- */
-        .gov-shell {{
-            border: 2px solid #FFFFFF;
-            background: #000000;
-            padding: 1rem 1.15rem 1.15rem 1.15rem;
-            margin: 0.35rem 0 1.1rem 0;
-        }}
-        .gov-kicker {{
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.82rem;
-            font-weight: 700;
-            letter-spacing: 0.14em;
-            color: #00FFCC;
-            margin-bottom: 0.3rem;
-        }}
-        .gov-title {{
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: #FFFFFF;
-            letter-spacing: 0.03em;
-            margin: 0 0 0.35rem 0;
-        }}
-        .gov-sub {{
-            color: #E2E8F0;
-            font-size: 1rem;
-            font-weight: 600;
-            margin-bottom: 0.85rem;
-            line-height: 1.4;
-        }}
-        .gov-scope-chip {{
-            display: inline-block;
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.85rem;
-            font-weight: 700;
-            color: #00FFCC;
-            border: 1px solid #00FFCC;
-            padding: 0.25rem 0.6rem;
-            margin: 0.55rem 0 0.35rem 0;
-            background: rgba(0, 255, 204, 0.08);
-        }}
-        .radar-grid tr.isolated td {{
-            background: rgba(0, 255, 204, 0.20) !important;
-            color: #FFFFFF !important;
-            border-color: #00FFCC !important;
-            font-weight: 700 !important;
-            box-shadow: inset 0 0 0 1px #00FFCC;
-        }}
-        .radar-grid tr.isolated td.mint {{
-            color: #00FFCC !important;
-        }}
-        .ivc-panel {{
-            border: 2px solid #00FFCC;
-            background: #000000;
-            padding: 0.9rem 1rem;
-            margin-top: 0.75rem;
-        }}
-        .ivc-panel .cap-meta {{
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.8rem;
-            font-weight: 700;
-            letter-spacing: 0.1em;
-            color: #00FFCC;
-            text-transform: uppercase;
-        }}
-        .ivc-panel .cap-title {{
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #FFFFFF;
-            margin: 0.3rem 0 0.55rem 0;
-        }}
-        .audit-note {{
-            border: 1px solid #FFFFFF;
-            background: #0a0a0a;
-            padding: 0.7rem 0.85rem;
-            margin: 0.45rem 0;
-            color: #FFFFFF;
-            font-size: 0.98rem;
-            font-weight: 600;
-            line-height: 1.45;
-        }}
-        .audit-note strong {{
-            color: #00FFCC;
-            font-weight: 700;
-        }}
-        /* Expander / selectbox frames — bold white labels for iPad scan */
-        [data-testid="stExpander"] {{
-            border: 1px solid #FFFFFF !important;
-            background: #0a0a0a !important;
-            margin-bottom: 0.55rem;
-        }}
-        [data-testid="stExpander"] details {{
-            border: none !important;
-            background: #0a0a0a !important;
-        }}
-        [data-testid="stExpander"] summary,
-        [data-testid="stExpander"] summary span,
-        [data-testid="stExpander"] summary p,
-        [data-testid="stExpander"] label,
-        [data-testid="stExpander"] [data-testid="stMarkdownContainer"] p {{
-            color: #FFFFFF !important;
-            font-weight: 700 !important;
-            font-size: 1.05rem !important;
-        }}
-        [data-testid="stSelectbox"] label,
-        [data-testid="stSelectbox"] [data-testid="stWidgetLabel"],
-        [data-testid="stSelectbox"] [data-testid="stWidgetLabel"] p,
-        [data-testid="stSelectbox"] [data-testid="stWidgetLabel"] span {{
-            color: #FFFFFF !important;
-            font-weight: 700 !important;
-            font-size: 1.08rem !important;
-            letter-spacing: 0.01em !important;
-            opacity: 1 !important;
-        }}
-        [data-testid="stSelectbox"] div[data-baseweb="select"] > div {{
-            background: #000000 !important;
-            border: 1px solid #FFFFFF !important;
-            color: #FFFFFF !important;
-            font-weight: 700 !important;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def _init_session() -> None:
-    if "credits" not in st.session_state:
-        st.session_state.credits = int(TENANT_CONFIG["initial_credits"])
-    if "unlocked_nodes" not in st.session_state:
-        st.session_state.unlocked_nodes = set()
-    if "unlock_log" not in st.session_state:
-        st.session_state.unlock_log = []
-    if "column_3_status" not in st.session_state:
-        st.session_state.column_3_status = DivergenceUIStatus.PENDING.value
-    if "divergence_session" not in st.session_state:
-        st.session_state.divergence_session = {}
-    if "last_divergence_result" not in st.session_state:
-        st.session_state.last_divergence_result = None
-    if "last_audit_filename" not in st.session_state:
-        st.session_state.last_audit_filename = None
-    if "sovereign_diagnostic_text" not in st.session_state:
-        st.session_state.sovereign_diagnostic_text = None
-    if "sovereign_diagnostic_hash" not in st.session_state:
-        st.session_state.sovereign_diagnostic_hash = None
-    if "last_manual_export_hash" not in st.session_state:
-        st.session_state.last_manual_export_hash = None
-    if "sovereign_pdf_bytes" not in st.session_state:
-        st.session_state.sovereign_pdf_bytes = None
-    if "consortium_seed_usd" not in st.session_state:
-        st.session_state.consortium_seed_usd = DEFAULT_CONSORTIUM_SEED_USD
-    if "early_ops_risk_capital_usd" not in st.session_state:
-        st.session_state.early_ops_risk_capital_usd = DEFAULT_EARLY_OPS_RISK_CAPITAL_USD
-    if "radar_drift_intensity" not in st.session_state:
-        st.session_state.radar_drift_intensity = 0.35
-    if "isolated_asset_token" not in st.session_state:
-        st.session_state.isolated_asset_token = "Asset_ID: Crypt_Alpha_2026"
-    if "governance_scope" not in st.session_state:
-        st.session_state.governance_scope = "Global Portfolio Substrate"
-
-
-def _money(value: float) -> str:
-    return f"${value:,.0f}"
-
-
-def _money_precise(value: float) -> str:
-    return f"${value:,.2f}"
-
-
-GOVERNANCE_SCOPE_OPTIONS = (
-    "Global Portfolio Substrate",
-    "Regional SPV Capital Matrix",
-    "Audit Disbursal Ledger",
-)
-
-ASSET_INSTANCE_CODES = (
-    "Asset_ID: Crypt_Alpha_2026",
-    "Asset_ID: Crypt_Beta_2026",
-    "Asset_ID: Crypt_Gamma_2026",
-)
-
-
-def anonymized_asset_token(index: int = 0) -> str:
-    """Map a research/asset channel to a privacy token — never raw biometrics."""
-    token = _ASSET_TOKEN_POOL[int(index) % len(_ASSET_TOKEN_POOL)]
-    return f"Asset_ID: {token}"
-
-
-def _ivc_history_for_token(
-    asset_token: str,
-    *,
-    intensity: float,
-    metric_key: str = "asymmetry_pct",
-) -> list[dict[str, Any]]:
-    """Deterministic Input Variance Coefficient history for an isolated asset."""
-    seed = sum(ord(c) for c in asset_token) % 97
-    t = min(1.0, max(0.0, float(intensity)))
-    base_ivc = 0.12 + 0.08 * (seed % 5) + 0.55 * t
-    # Metric channel slightly shifts the series shape.
-    channel_bias = {
-        "shear_n": 0.04,
-        "asymmetry_pct": 0.0,
-        "tissue_debt": 0.06,
-    }.get(metric_key, 0.0)
-    history: list[dict[str, Any]] = []
-    for week in range(1, 7):
-        wave = 0.035 * ((week + seed % 3) % 4) - 0.02
-        ivc = round(max(0.02, base_ivc + channel_bias + wave - 0.01 * (6 - week)), 4)
-        history.append(
-            {
-                "window": f"W-{7 - week}",
-                "ivc": ivc,
-                "status": "ELEVATED" if ivc >= 0.45 else ("WATCH" if ivc >= 0.28 else "NOMINAL"),
-            }
-        )
-    return history
-
-
-def render_governance_audit_matrix() -> dict[str, str]:
-    """Level 1–3 hierarchical dropdown navigation above the Drift Radar."""
-    st.markdown(
-        """
-        <div class="gov-shell">
-          <div class="gov-kicker">MULTI-LAYER DRILL-DOWN · AUDITING LAYER</div>
-          <div class="gov-title">GOVERNANCE NAVIGATION MATRIX</div>
-          <div class="gov-sub">
-            Study organizational depth independently — Macro Industry Ledger →
-            Departmental Audit Oracle hoods → Deep Technical Sandbox asset isolation.
-          </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # ------------------------------------------------------------------
-    # LEVEL 1 — Macro Industry Selector
-    # ------------------------------------------------------------------
-    scope = st.selectbox(
-        "Select Governance Scope / Industry Ledger",
-        list(GOVERNANCE_SCOPE_OPTIONS),
-        key="governance_scope",
-        help="Macro organizational track that frames all subordinate audit hoods.",
-    )
-    st.markdown(
-        f'<div class="gov-scope-chip">LEVEL 1 · ACTIVE SCOPE · {scope}</div>',
-        unsafe_allow_html=True,
-    )
-
-    scope_briefs = {
-        "Global Portfolio Substrate": (
-            "Cross-entity portfolio controls, consolidated availability floors, "
-            "and sovereign lookback fee aggregation across all SPVs."
-        ),
-        "Regional SPV Capital Matrix": (
-            "Regional special-purpose vehicle capital sleeves, local reserve "
-            "thresholds, and consortium cost-offset recognition."
-        ),
-        "Audit Disbursal Ledger": (
-            "Disbursal authorization trails, tranche release gates, and "
-            "immutable fee-basis attestations for external auditors."
-        ),
+    /* Industry Metric Card Highlights */
+    .metric-box {
+        background-color: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
     }
-    st.markdown(
-        f'<div class="audit-note"><strong>Ledger frame:</strong> '
-        f"{scope_briefs.get(scope, '')}</div>",
-        unsafe_allow_html=True,
-    )
-
-    isolated_token = st.session_state.get(
-        "isolated_asset_token", ASSET_INSTANCE_CODES[0]
-    )
-
-    # ------------------------------------------------------------------
-    # LEVEL 2 — Expandable Departmental Audit Hoods
-    # ------------------------------------------------------------------
-    with st.expander(
-        "[ ▶ AUDIT ORACLE: Operations & Asset Availability Tranche ]",
-        expanded=True,
-    ):
-        st.markdown(
-            f"""
-            <div class="audit-note">
-              <strong>Operations hood · {scope}</strong><br/>
-              Asset availability tranche, Point-of-Drift channel health, and
-              Lookback License Fee exposure for anonymized kinetic assets.
-              Use Level 3 to isolate a single Asset Instance Code.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        # --------------------------------------------------------------
-        # LEVEL 3 — Deep Technical Sandbox Drill-Down
-        # --------------------------------------------------------------
-        isolated_token = st.selectbox(
-            "Isolate Asset Instance Code",
-            list(ASSET_INSTANCE_CODES),
-            key="isolated_asset_token",
-            help=(
-                "Highlights the matching Point of Drift row and reveals that "
-                "asset's Input Variance Coefficient (IVC) history."
-            ),
-        )
-        st.markdown(
-            f"""
-            <div class="audit-note">
-              <strong>LEVEL 3 · SANDBOX LOCK</strong> — dashboard isolation armed for
-              <span class="token-chip">{isolated_token}</span>
-              Physical drift table will highlight this token; IVC history unlocks below the radar grid.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    with st.expander(
-        "[ ▶ AUDIT ORACLE: R&D Funding & Intellectual Property Allocations ]",
-        expanded=False,
-    ):
-        st.markdown(
-            f"""
-            <div class="audit-note">
-              <strong>R&amp;D / IP hood · {scope}</strong><br/>
-              Research-node credit burn, unlock-yield IP claims, and kinetic
-              methodology allocations remain ledger-visible without exposing
-              raw biometric source logs.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        c1, c2, c3 = st.columns(3)
-        c1.metric("R&D Credit Burn", f"{int(TENANT_CONFIG['initial_credits']) - int(st.session_state.get('credits', 0))}")
-        c2.metric("Nodes Online", f"{len(st.session_state.get('unlocked_nodes') or set())}")
-        c3.metric("IP Tranche", "KINETIC")
-
-    with st.expander(
-        "[ ▶ AUDIT ORACLE: Marketing & Localized Consortium Cost-Offsets ]",
-        expanded=False,
-    ):
-        seed = float(st.session_state.get("consortium_seed_usd", DEFAULT_CONSORTIUM_SEED_USD))
-        risk = float(
-            st.session_state.get(
-                "early_ops_risk_capital_usd", DEFAULT_EARLY_OPS_RISK_CAPITAL_USD
-            )
-        )
-        offset_pct = min(100.0, 100.0 * seed / max(risk, 1.0))
-        st.markdown(
-            f"""
-            <div class="audit-note">
-              <strong>Consortium / marketing hood · {scope}</strong><br/>
-              Localized cost-offsets and early-adopter skin-in-the-game tracers
-              for the Strategic Consortium Anchor — display-only, vault intact.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Consortium Seed", _money(seed))
-        m2.metric("Ops Risk Capital", _money(risk))
-        m3.metric("Cost-Offset", f"{offset_pct:.2f}%")
-
-    return {
-        "governance_scope": str(scope),
-        "isolated_asset_token": str(isolated_token),
+    .metric-label {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        color: #8b949e;
+        letter-spacing: 0.05em;
     }
-
-
-def _live_telemetry_from_intensity(intensity: float) -> dict[str, float]:
-    """Project live Point-of-Drift readings from operator drift intensity (0–1)."""
-    t = min(1.0, max(0.0, float(intensity)))
-    hero = HERO_BASELINE
-    # Peak envelope aligns with breaker trip bands used in kinetic research.
-    return {
-        "shear_n": round(hero["shear_n"] + t * 220.0, 1),
-        "asymmetry_pct": round(hero["asymmetry_pct"] + t * 14.0, 2),
-        "tissue_debt": round(hero["tissue_debt"] + t * 16.0, 2),
+    .metric-value-green {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #10b981;
     }
-
-
-def _active_drift_nodes(unlocked: set[str]) -> list[dict[str, str]]:
-    """Research nodes that feed the radar Point of Drift (anonymized labels)."""
-    catalog = {
-        "node_1_1": {
-            "channel": "INTERFACE_SHEAR",
-            "signal": "Shear Stress Vector",
-            "metric_key": "shear_n",
-            "unit": "N",
-        },
-        "node_1_2": {
-            "channel": "PELVIC_TILT_ASYMMETRY",
-            "signal": "Pelvic Tilt Asymmetry",
-            "metric_key": "asymmetry_pct",
-            "unit": "%",
-        },
-        "node_1_3": {
-            "channel": "TISSUE_DEBT",
-            "signal": "Tissue Debt",
-            "metric_key": "tissue_debt",
-            "unit": "idx",
-        },
+    .metric-value-crimson {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #ef4444;
     }
-    active_ids = [n["id"] for n in research_nodes() if n["id"] in unlocked]
-    if not active_ids:
-        # Demo surface: show full sector map even before unlock so the radar
-        # remains the primary consolidated view.
-        active_ids = list(catalog.keys())
-    rows: list[dict[str, str]] = []
-    for i, nid in enumerate(active_ids):
-        meta = catalog[nid]
-        rows.append(
-            {
-                "token": anonymized_asset_token(i),
-                "node_id": nid,
-                **meta,
-            }
-        )
-    return rows
-
-
-def render_preventative_drift_radar(
-    *,
-    selected_asset_token: str | None = None,
-) -> dict[str, Any]:
-    """Primary dashboard — unified physical + financial Preventative Drift Radar."""
-    isolated = selected_asset_token or st.session_state.get(
-        "isolated_asset_token", ASSET_INSTANCE_CODES[0]
-    )
-
-    st.markdown(
-        """
-        <div class="radar-shell">
-          <div class="radar-kicker">UNIFIED OPERATIONS SURFACE</div>
-          <div class="radar-title">PREVENTATIVE DRIFT RADAR</div>
-          <div class="radar-sub">
-            Maps live physical Point of Drift from active biometric research nodes
-            beside the immediate Financial Liability Variance it causes — both
-            measured as divergence from the established Hero Baseline. Raw medical
-            logs remain structurally hidden behind anonymized asset tokens.
-          </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    intensity = st.slider(
-        "Live drift vector intensity (physical indicators)",
-        min_value=0.0,
-        max_value=1.0,
-        value=0.35,
-        step=0.01,
-        format="%.2f",
-        key="radar_drift_intensity",
-        help=(
-            "Climbing physical drift (shear / pelvic asymmetry / tissue debt) "
-            "instantly projects upward Lookback License Fee premium."
-        ),
-    )
-
-    live = _live_telemetry_from_intensity(intensity)
-    drift = compute_physical_drift_index(**live)
-    liability = compute_financial_liability_variance(drift)
-    fee = compute_lookback_license_fee(
-        drift, base_fee_usd=DEFAULT_LOOKBACK_BASE_FEE_USD
-    )
-    hero = drift["hero_baseline"]
-    unlocked = st.session_state.get("unlocked_nodes") or set()
-    channels = _active_drift_nodes(set(unlocked))
-
-    # Privacy tier notice
-    tokens_html = " ".join(
-        f'<span class="token-chip">{c["token"]}</span>' for c in channels
-    )
-    st.markdown(
-        f"""
-        <div class="privacy-bar">
-          TIERED ACCESS · PRIVACY RULES ENFORCED — biometric / medical source logs
-          redacted. Active research channels resolve only as anonymized tokens:
-          {tokens_html}
-          · ISOLATED: <span class="token-chip">{isolated}</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # ------------------------------------------------------------------
-    # Stacked high-real-estate layout — full-width Physical, then Financial
-    # (avoids iPad side-by-side compression of data grids)
-    # ------------------------------------------------------------------
-    isolated_channel: dict[str, str] | None = None
-    phys_rows = []
-    for c in channels:
-        key = c["metric_key"]
-        live_v = live[key]
-        base_v = hero[key]
-        delta = live_v - base_v
-        alert = "alert" if delta > 0 else ""
-        mint = "mint" if delta > 0 else ""
-        is_isolated = c["token"] == isolated
-        if is_isolated:
-            isolated_channel = c
-        row_class = "isolated" if is_isolated else ""
-        phys_rows.append(
-            f"<tr class='{row_class}'>"
-            f"<td>{c['token']}</td>"
-            f"<td>{c['signal']}</td>"
-            f"<td>{base_v:g} {c['unit']}</td>"
-            f"<td class='{mint}'>{live_v:g} {c['unit']}</td>"
-            f"<td class='{alert}'>{delta:+.2f}</td>"
-            "</tr>"
-        )
-    st.markdown(
-        f"""
-        <div class="radar-panel">
-          <div class="cap-meta">PHYSICAL · POINT OF DRIFT</div>
-          <div class="cap-title">Live divergence from Hero Baseline</div>
-          <table class="radar-grid">
-            <thead>
-              <tr>
-                <th>Asset Token</th>
-                <th>Signal</th>
-                <th>Hero Baseline</th>
-                <th>Live</th>
-                <th>Δ Path</th>
-              </tr>
-            </thead>
-            <tbody>
-              {"".join(phys_rows)}
-            </tbody>
-          </table>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        """
-        <hr class="radar-track-rule" />
-        <div class="radar-track-label">── Financial Tracking Environment ──</div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.markdown("---")
-
-    idx = drift["composite_drift_index"]
-    fin_rows = [
-        (
-            "Composite Drift Index",
-            f"{idx:.3f}",
-            "unitless",
-        ),
-        (
-            "Financial Liability Variance",
-            _money_precise(liability["financial_liability_variance_usd"]),
-            "USD",
-        ),
-        (
-            "Path A Cost Avoidance at Risk",
-            _money_precise(liability["path_a_cost_avoidance_at_risk_usd"]),
-            "USD",
-        ),
-        (
-            "Unaddressed Drift Bleed",
-            _money_precise(liability["unaddressed_drift_bleed_usd"]),
-            "USD",
-        ),
-        (
-            "Shear Divergence",
-            f"{drift['shear_divergence']*100:.1f}%",
-            "vs Hero",
-        ),
-        (
-            "Asymmetry Divergence",
-            f"{drift['asymmetry_divergence']*100:.1f}%",
-            "vs Hero",
-        ),
-        (
-            "Tissue Debt Divergence",
-            f"{drift['tissue_debt_divergence']*100:.1f}%",
-            "vs Hero",
-        ),
-    ]
-    body = "".join(
-        f"<tr><td>{label}</td><td class='mint'>{value}</td><td>{unit}</td></tr>"
-        for label, value, unit in fin_rows
-    )
-    st.markdown(
-        f"""
-        <div class="radar-panel">
-          <div class="cap-meta">MACRO · FINANCIAL LIABILITY VARIANCE</div>
-          <div class="cap-title">Causal premium from unaddressed drift</div>
-          <table class="radar-grid">
-            <thead>
-              <tr>
-                <th>Liability Path</th>
-                <th>Live Value</th>
-                <th>Basis</th>
-              </tr>
-            </thead>
-            <tbody>{body}</tbody>
-          </table>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # ------------------------------------------------------------------
-    # Lookback License Fee Basis — real-time tracking panel
-    # ------------------------------------------------------------------
-    premium_delta = fee["drift_driven_premium_usd"]
-    st.markdown(
-        f"""
-        <div class="fee-panel">
-          <div class="cap-meta">{fee["fee_basis_label"]} · REAL-TIME TRACKING</div>
-          <div style="color:#E2E8F0;font-size:0.95rem;font-weight:600;margin-top:0.25rem;">
-            Performance valuation · {fee["valuation_formula"]}
-          </div>
-          <div class="fee-value">{_money_precise(fee["live_lookback_license_fee_usd"])}</div>
-          <div style="color:#FFFFFF;font-size:1rem;font-weight:600;">
-            Live operational lookback licensing premium
-            <span style="color:#00FFCC;">
-              ({_money_precise(premium_delta)} above base
-              {_money_precise(fee["lookback_base_fee_usd"])})
-            </span>
-          </div>
-          <div class="fee-grid">
-            <div class="fee-cell">
-              <div class="lbl">Base Fee Basis</div>
-              <div class="val">{_money_precise(fee["lookback_base_fee_usd"])}</div>
-            </div>
-            <div class="fee-cell">
-              <div class="lbl">Premium Factor</div>
-              <div class="val mint">{fee["premium_factor"]:.3f}×</div>
-            </div>
-            <div class="fee-cell">
-              <div class="lbl">Drift Index</div>
-              <div class="val mint">{idx:.3f}</div>
-            </div>
-            <div class="fee-cell">
-              <div class="lbl">Drift-Driven Premium</div>
-              <div class="val mint">{_money_precise(premium_delta)}</div>
-            </div>
-          </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # ------------------------------------------------------------------
-    # Level 3 reveal — Input Variance Coefficient history for isolated asset
-    # ------------------------------------------------------------------
-    metric_key = (
-        isolated_channel["metric_key"]
-        if isolated_channel is not None
-        else "asymmetry_pct"
-    )
-    signal_label = (
-        isolated_channel["signal"]
-        if isolated_channel is not None
-        else "Isolated Asset Channel"
-    )
-    ivc_history = _ivc_history_for_token(
-        isolated, intensity=intensity, metric_key=metric_key
-    )
-    ivc_row_parts: list[str] = []
-    for row in ivc_history:
-        cls = "isolated" if row["status"] == "ELEVATED" else ""
-        ivc_row_parts.append(
-            f"<tr class='{cls}'>"
-            f"<td>{row['window']}</td>"
-            f"<td class='mint'>{row['ivc']:.4f}</td>"
-            f"<td>{row['status']}</td>"
-            "</tr>"
-        )
-    ivc_rows = "".join(ivc_row_parts)
-    live_ivc = ivc_history[-1]["ivc"] if ivc_history else 0.0
-    st.markdown(
-        f"""
-        <div class="ivc-panel">
-          <div class="cap-meta">DEEP TECHNICAL SANDBOX · INPUT VARIANCE COEFFICIENT</div>
-          <div class="cap-title">{isolated} · {signal_label}</div>
-          <div style="color:#E2E8F0;font-weight:600;margin-bottom:0.55rem;">
-            Hidden IVC history unlocked by Level 3 asset isolation.
-            Live IVC <span style="color:#00FFCC;font-weight:700;">{live_ivc:.4f}</span>
-            · intensity {intensity:.2f} · governance
-            {st.session_state.get("governance_scope", GOVERNANCE_SCOPE_OPTIONS[0])}
-          </div>
-          <table class="radar-grid">
-            <thead>
-              <tr>
-                <th>Lookback Window</th>
-                <th>IVC</th>
-                <th>Band</th>
-              </tr>
-            </thead>
-            <tbody>{ivc_rows}</tbody>
-          </table>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    return {
-        "live": live,
-        "drift": drift,
-        "liability": liability,
-        "fee": fee,
-        "channels": channels,
-        "isolated_asset_token": isolated,
-        "ivc_history": ivc_history,
+    .metric-value-silver {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #e2e8f0;
     }
-
-
-def render_capital_market_dashboard() -> None:
-    """Sovereign Capital Ledger — multi-tier Capital Market Dashboard."""
-    st.markdown(
-        '<div class="capital-bar">SOVEREIGN CAPITAL LEDGER · CAPITAL MARKET DASHBOARD</div>',
-        unsafe_allow_html=True,
-    )
-    st.caption(
-        "Multi-tier capital structure controls. Adjusting reserves and instrument "
-        "weights recalculates pro-forma WACC, stability, and market-player attraction "
-        "without mutating the kinetic integrity vault."
-    )
-
-    col1, col2, col3 = st.columns(3)
-
-    # ------------------------------------------------------------------
-    # Column 1 — Reserve threshold sliding scale
-    # ------------------------------------------------------------------
-    with col1:
-        st.markdown(
-            """
-            <div class="capital-panel">
-              <div class="cap-meta">TIER I · CAPITAL RESERVES</div>
-              <div class="cap-title">Minimum Capital Reserve Threshold</div>
-              <div class="cap-body">
-                Interactive sliding scale. Raising the reserve ratio compresses WACC
-                and lifts the Operational Stability Index.
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        reserve_ratio = st.slider(
-            "Minimum Capital Reserve Threshold Ratio",
-            min_value=0.05,
-            max_value=0.50,
-            value=0.18,
-            step=0.01,
-            format="%.2f",
-            key="reserve_ratio",
-            help="Institutional floor reference: 0.12. Fortified band typically ≥ 0.25.",
-        )
-
-    # ------------------------------------------------------------------
-    # Column 2 — Instrument Allocation Matrix
-    # ------------------------------------------------------------------
-    with col2:
-        st.markdown(
-            """
-            <div class="capital-panel">
-              <div class="cap-meta">TIER II · INSTRUMENT ALLOCATION MATRIX</div>
-              <div class="cap-title">Funding Mix Parameters</div>
-              <div class="cap-body">
-                Convertible Notes versus Direct Equity Injections. Weights feed the
-                dynamic pro-forma without altering vault mathematics.
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        convertible_weight = st.slider(
-            "Convertible Notes weight",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.40,
-            step=0.01,
-            format="%.2f",
-            key="convertible_notes_weight",
-        )
-        equity_weight = round(1.0 - convertible_weight, 2)
-        st.metric(
-            "Direct Equity Injections weight",
-            f"{equity_weight:.2f}",
-        )
-        st.caption("Complement of Convertible Notes weight (always sums to 1.00).")
-
-    # ------------------------------------------------------------------
-    # Column 3 — Strategic Consortium Anchor Tracer
-    # ------------------------------------------------------------------
-    with col3:
-        st.markdown(
-            """
-            <div class="capital-panel">
-              <div class="cap-meta">TIER III · STRATEGIC CONSORTIUM ANCHOR</div>
-              <div class="cap-title">Early-Adopter Skin in the Game</div>
-              <div class="cap-body">
-                Tracks seed funding committed by early adopters and the exact
-                percentage of early operational risk offset by this anchor.
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        seed = st.number_input(
-            "Consortium seed commitment (USD)",
-            min_value=0,
-            max_value=50_000_000,
-            value=int(st.session_state.consortium_seed_usd),
-            step=100_000,
-            key="consortium_seed_input",
-        )
-        risk_cap = st.number_input(
-            "Early operational risk capital (USD)",
-            min_value=1,
-            max_value=100_000_000,
-            value=int(st.session_state.early_ops_risk_capital_usd),
-            step=250_000,
-            key="early_ops_risk_input",
-        )
-        st.session_state.consortium_seed_usd = float(seed)
-        st.session_state.early_ops_risk_capital_usd = float(risk_cap)
-
-    # Dynamic pro-forma (pure display — vault untouched)
-    pro_forma = build_capital_pro_forma(
-        reserve_ratio=reserve_ratio,
-        convertible_notes_weight=convertible_weight,
-        consortium_seed_usd=float(seed),
-        early_ops_risk_capital_usd=float(risk_cap),
-    )
-    anchor = pro_forma["consortium_anchor"]
-    reserves = pro_forma["reserve_metrics"]
-    instruments = pro_forma["instrument_allocation"]
-
-    m1, m2, m3 = st.columns(3)
-    with m1:
-        st.markdown(
-            f"""
-            <div class="capital-panel">
-              <div class="cap-meta">Projected Operational Stability Index</div>
-              <div class="cap-title">{reserves["operational_stability_index"]:.1f}
-                <span style="font-size:0.85rem;color:#525252;">/ 100 · {reserves["stability_band"]}</span>
-              </div>
-              <div class="capital-metric-grid">
-                <div class="capital-metric">
-                  <div class="lbl">WACC</div>
-                  <div class="val">{reserves["wacc"]:.2f}%</div>
-                </div>
-                <div class="capital-metric">
-                  <div class="lbl">Cost of Equity</div>
-                  <div class="val">{reserves["cost_of_equity"]:.2f}%</div>
-                </div>
-                <div class="capital-metric">
-                  <div class="lbl">After-Tax Hybrid</div>
-                  <div class="val">{reserves["after_tax_cost_of_hybrid"]:.2f}%</div>
-                </div>
-                <div class="capital-metric">
-                  <div class="lbl">Reserve Gap vs 12% Floor</div>
-                  <div class="val">{reserves["reserve_surplus_gap"]:+.2f} pp</div>
-                </div>
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with m2:
-        attraction = instruments["player_attraction"]
-        rows = "".join(
-            f'<div class="capital-metric"><div class="lbl">{k}</div>'
-            f'<div class="val">{v:.1f}</div></div>'
-            for k, v in attraction.items()
-        )
-        st.markdown(
-            f"""
-            <div class="proforma-box">
-              <div class="cap-meta" style="font-family:IBM Plex Mono,monospace;font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;color:#525252;">
-                DYNAMIC PRO-FORMA · MARKET PLAYER ATTRACTION
-              </div>
-              <div class="cap-title" style="font-weight:700;margin:0.35rem 0;">
-                Capital Efficiency Rating · {instruments["capital_efficiency_rating"]:.1f}
-              </div>
-              <div class="cap-body" style="font-size:0.88rem;color:#262626;margin-bottom:0.55rem;">
-                Primary sleeve: <strong>{instruments["primary_market_player"]}</strong>
-                · Secondary: <strong>{instruments["secondary_market_player"]}</strong><br/>
-                CN {instruments["convertible_notes_weight"]*100:.0f}% /
-                Equity {instruments["direct_equity_weight"]*100:.0f}% ·
-                Dilution pressure {instruments["implied_dilution_pressure"]:.1f} ·
-                Liquidity preference {instruments["liquidity_preference_score"]:.1f}
-              </div>
-              <div class="capital-metric-grid">{rows}</div>
-              <div class="cap-body" style="font-size:0.82rem;color:#404040;margin-top:0.65rem;">
-                {instruments["narrative"]}
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with m3:
-        st.markdown(
-            f"""
-            <div class="capital-panel">
-              <div class="cap-meta">Strategic Consortium Anchor · Tracer</div>
-              <div class="cap-title">{anchor["status"]}</div>
-              <div class="capital-metric-grid">
-                <div class="capital-metric">
-                  <div class="lbl">Seed Commitment</div>
-                  <div class="val">{_money(anchor["seed_commitment_usd"])}</div>
-                </div>
-                <div class="capital-metric">
-                  <div class="lbl">Early Ops Risk Capital</div>
-                  <div class="val">{_money(anchor["early_ops_risk_capital_usd"])}</div>
-                </div>
-                <div class="capital-metric">
-                  <div class="lbl">Risk Offset (Skin in Game)</div>
-                  <div class="val">{anchor["risk_offset_pct"]:.2f}%</div>
-                </div>
-                <div class="capital-metric">
-                  <div class="lbl">Skin-in-Game Multiple</div>
-                  <div class="val">{anchor["skin_in_game_multiple"]:.2f}x</div>
-                </div>
-              </div>
-              <div class="cap-body" style="margin-top:0.65rem;font-size:0.82rem;color:#404040;">
-                Exact percentage of early operational risk offset by consortium
-                seed: <strong>{anchor["risk_offset_pct"]:.2f}%</strong>.
-                Target enterprise value reference {_money(pro_forma["enterprise_value_usd"])}.
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-
-def unlock_node(node_id: str, cost: int, label: str) -> tuple[bool, str]:
-    if node_id in st.session_state.unlocked_nodes:
-        return False, "Already unlocked."
-    if st.session_state.credits < cost:
-        return False, f"Insufficient credits ({st.session_state.credits} < {cost})."
-    st.session_state.credits -= cost
-    st.session_state.unlocked_nodes.add(node_id)
-    st.session_state.unlock_log.append(
-        f"Unlocked {label} (−{cost} credits). Balance: {st.session_state.credits}."
-    )
-    return True, f"Unlocked. {cost} credits spent."
-
-
-_inject_theme()
-_init_session()
-
-domain = TENANT_CONFIG["target_domain"]
-tenant = TENANT_CONFIG["tenant_identity"]
-sector = TENANT_CONFIG["active_sector_code"]
-nodes = research_nodes()
-unlocked = st.session_state.unlocked_nodes
-credits = st.session_state.credits
-
-with st.sidebar:
-    st.markdown(f"**{tenant}**")
-    st.caption(domain.title())
-    st.markdown(
-        f'<div class="sector-chip">{sector}</div>',
-        unsafe_allow_html=True,
-    )
-    st.divider()
-    st.markdown("**Research budget**")
-    st.metric("Credits remaining", f"{credits:,}")
-    st.progress(
-        min(1.0, len(unlocked) / max(len(nodes), 1)),
-        text=f"{len(unlocked)} / {len(nodes)} nodes online",
-    )
-    st.caption(f"Full sector unlock cost: {total_unlock_cost()} credits")
-    if st.button("Reset vault session", use_container_width=True):
-        st.session_state.credits = int(TENANT_CONFIG["initial_credits"])
-        st.session_state.unlocked_nodes = set()
-        st.session_state.unlock_log = ["Session reset to initial credit grant."]
-        st.rerun()
-    st.divider()
-    st.caption("Open **Kinetic Lab** in the sidebar pages to run live acquisition on unlocked nodes.")
-
-st.markdown(
-    f'<div class="sector-chip">{sector} · PREVENTATIVE DRIFT RADAR</div>',
-    unsafe_allow_html=True,
-)
-st.markdown(
-    f'<p class="vault-brand">Preventative '
-    f'<span>Drift Radar</span></p>',
-    unsafe_allow_html=True,
-)
-st.markdown(
-    f'<p class="vault-sub">{tenant} · {domain.title()}. '
-    "Physical Point of Drift and Financial Liability Variance on one screen — "
-    "Hero Baseline divergence, live Lookback License Fee, anonymized asset tokens.</p>",
-    unsafe_allow_html=True,
-)
-
-top1, top2, top3, top4 = st.columns(4)
-top1.metric("Credits", f"{credits:,}")
-top2.metric("Nodes online", f"{len(unlocked)}/{len(nodes)}")
-top3.metric("Sector", "KINETIC")
-top4.metric("Domain", "Athletics")
-
-# Hierarchical governance drill-down (Levels 1–3) sits above the radar
-governance = render_governance_audit_matrix()
-st.session_state.last_governance_matrix = governance
-
-# Primary consolidated view — asset isolation drives row highlight + IVC panel
-radar_snapshot = render_preventative_drift_radar(
-    selected_asset_token=governance["isolated_asset_token"],
-)
-st.session_state.last_radar_snapshot = radar_snapshot
-
-st.markdown(
-    f"""
-    <div class="credit-panel">
-      <div style="color:#E2E8F0;font-size:0.85rem;letter-spacing:0.06em;text-transform:uppercase;font-weight:700;">
-        Operations credit ledger
-      </div>
-      <div class="credit-value">{credits:,}</div>
-      <div style="color:#FFFFFF;font-size:0.95rem;margin-top:0.35rem;font-weight:600;">
-        Initial grant {TENANT_CONFIG["initial_credits"]:,} · spent
-        {TENANT_CONFIG["initial_credits"] - credits:,}
-      </div>
-    </div>
+    /* Table Accessibility Wrap Overrides — no truncation on iPad */
+    th, td,
+    [data-testid="stTable"] th,
+    [data-testid="stTable"] td,
+    [data-testid="stTable"] table {
+        color: #ffffff !important;
+        font-size: 0.95rem !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
+        text-overflow: clip !important;
+        overflow: visible !important;
+        line-height: 1.4 !important;
+        vertical-align: top !important;
+    }
+    [data-testid="stTable"] {
+        width: 100% !important;
+    }
+    [data-testid="stTable"] table {
+        width: 100% !important;
+        table-layout: auto !important;
+    }
+    label, [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] {
+        color: #ffffff !important;
+        font-weight: 700 !important;
+    }
+    [data-testid="stExpander"] summary,
+    [data-testid="stExpander"] summary span {
+        color: #ffffff !important;
+        font-weight: 700 !important;
+    }
+    div[data-testid="stMetricValue"] {
+        color: #e2e8f0 !important;
+    }
+    </style>
     """,
     unsafe_allow_html=True,
 )
 
-render_capital_market_dashboard()
 
-st.subheader("Research nodes")
-st.caption(
-    "Unlock in any order. Each node feeds anonymized Point-of-Drift channels "
-    "on the Preventative Drift Radar and Kinetic Lab acquisition."
+# ---------------------------------------------------------------------------
+# 2. Dynamic Variable Ingestion Layer (State Initialization)
+# ---------------------------------------------------------------------------
+def _init_session() -> None:
+    if "ivc" not in st.session_state:
+        st.session_state.ivc = 0.0
+    if "functional_drift" not in st.session_state:
+        st.session_state.functional_drift = 0.0
+    # Kinetic Lab / vault continuity
+    if "credits" not in st.session_state:
+        st.session_state.credits = int(TENANT_CONFIG["initial_credits"])
+    if "unlocked_nodes" not in st.session_state:
+        st.session_state.unlocked_nodes = set()
+
+
+_init_session()
+
+# --- SIDEBAR: CONTROLS & DYNAMIC PARAMETER INJECTION ---
+with st.sidebar:
+    st.markdown("### GOVERNANCE LAYER")
+    st.markdown(
+        "<p style='color:#8b949e; font-size:0.85rem;'>"
+        "Tiered Access Enforced • Secure Executive Vault</p>",
+        unsafe_allow_html=True,
+    )
+
+    role = st.selectbox(
+        "Active User Role Matrix",
+        [
+            "General Manager",
+            "Caseworker / Analyst",
+            "Technical Expert ('Docteur')",
+        ],
+    )
+
+    st.markdown("---")
+    st.markdown("### DYNAMIC MANDATE INJECTION")
+    st.markdown(
+        "<p style='color:#8b949e; font-size:0.85rem;'>"
+        "Uncodified Parameter Override</p>",
+        unsafe_allow_html=True,
+    )
+
+    target_reduction = st.slider("Enforce CapEx Mitigation Floor (%)", 0, 50, 15)
+    custom_mandate = st.text_input(
+        "Disseminate Strategic Mandate",
+        placeholder="e.g., Prioritize Conservative Therapy Paths",
+    )
+
+    st.markdown("---")
+    st.caption(
+        f"Role: **{role}** · CapEx floor {target_reduction}% · "
+        f"Vault credits {st.session_state.credits:,}"
+    )
+    if custom_mandate:
+        st.caption(f"Active mandate: {custom_mandate}")
+    st.caption("Open **Kinetic Lab** for live acquisition on unlocked research nodes.")
+
+
+# --- MAIN EXECUTIVE VIEW: PORTFOLIO & ASSET LIFE RUNWAY ---
+st.title("SOVEREIGN CASE MANAGEMENT ENGINE")
+st.markdown(
+    "<p style='color:#8b949e; margin-top:-10px;'>"
+    "Sophisticated Operational Risk Governance in Simple Terms</p>",
+    unsafe_allow_html=True,
+)
+st.markdown("---")
+
+# Global Portfolio Layer 1 Widgets (The Top Metrics Bar)
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    st.markdown(
+        '<div class="metric-box"><div class="metric-label">Total Assets Protected</div>'
+        '<div class="metric-value-silver">142 Cases</div></div>',
+        unsafe_allow_html=True,
+    )
+with col2:
+    st.markdown(
+        '<div class="metric-box"><div class="metric-label">Critical Point of Drift</div>'
+        '<div class="metric-value-crimson">18 Subjects</div></div>',
+        unsafe_allow_html=True,
+    )
+with col3:
+    st.markdown(
+        '<div class="metric-box"><div class="metric-label">ODG Timeline Baseline Alignment</div>'
+        '<div class="metric-value-green">87.3%</div></div>',
+        unsafe_allow_html=True,
+    )
+with col4:
+    st.markdown(
+        '<div class="metric-box"><div class="metric-label">Projected Indemnity Exposure</div>'
+        '<div class="metric-value-silver">$412.5K</div></div>',
+        unsafe_allow_html=True,
+    )
+
+# --- NESTED AUDIT ORACLE MATRIX (Drill-Down Framework) ---
+st.markdown("### HIERARCHICAL AUDIT PORTALS")
+with st.expander("AUDIT ORACLE: Operations & Asset Availability Tranche"):
+    st.markdown("#### Dynamic Allocation Router (Central Funding Ledger)")
+    st.info(
+        "Central Capital approved. Current allocations meticulously tagged: "
+        "[TARGET: Rehabilitation Substrate] - [SOURCE: Corporate Reserves] - "
+        "[STATUS: Audited]"
+    )
+
+with st.expander("AUDIT ORACLE: R&D Funding & Intellectual Property Allocations"):
+    st.info(
+        "Research-node credit burn and kinetic methodology IP claims remain "
+        "ledger-visible without exposing raw biometric source logs."
+    )
+    r1, r2 = st.columns(2)
+    r1.metric("R&D Credit Burn", f"{int(TENANT_CONFIG['initial_credits']) - int(st.session_state.credits)}")
+    r2.metric("Nodes Online", f"{len(st.session_state.unlocked_nodes)}")
+
+with st.expander("AUDIT ORACLE: Marketing & Localized Consortium Cost-Offsets"):
+    st.info(
+        "Localized cost-offsets and early-adopter skin-in-the-game tracers for "
+        "the Strategic Consortium Anchor — display-only, vault intact."
+    )
+
+# --- CLINICAL TRIAGE INTAKE (Multi-Modal Ingestion Gate) ---
+st.markdown("### MODULE 1: CLINICAL TRIAGE INTAKE")
+st.markdown(
+    "<p style='color:#8b949e; font-size:0.9rem;'>"
+    "Clinician Zero-Friction Capture (Video, Photographic & Speech NLP Pipeline)</p>",
+    unsafe_allow_html=True,
 )
 
-for node in nodes:
-    is_open = node["id"] in unlocked
-    status = "ONLINE" if is_open else "LOCKED"
-    card_class = "unlocked" if is_open else "locked"
+intake_col1, intake_col2, intake_col3 = st.columns(3)
+with intake_col1:
+    subject_id = st.text_input(
+        "Anonymized Subject Token",
+        value="Asset_ID_Crypt_Delta_2026",
+    )
+    anatomy = st.selectbox(
+        "Anatomical Target Site (ICF Matrix)",
+        [
+            "Glenohumeral Joint (Shoulder)",
+            "Lumbar Spine",
+            "Knee Extensor Mechanism",
+        ],
+    )
+with intake_col2:
+    age = st.number_input(
+        "Actuarial Chronological Age",
+        min_value=18,
+        max_value=75,
+        value=48,
+    )
+    occupation = st.selectbox(
+        "Occupational Duty Tier",
+        [
+            "Heavy Industrial Laborer",
+            "Medium Logistics / Operator",
+            "Sedentary / Administrative",
+        ],
+    )
+with intake_col3:
+    st.markdown(
+        "<b style='font-size:0.85rem; color:#8b949e; font-family:monospace;'>"
+        "VOICE DICTATION NLP INGESTION</b>",
+        unsafe_allow_html=True,
+    )
+    dictation = st.text_area(
+        "Ambient Speech Notes",
+        value=(
+            "Patient exhibits partial thickness tear of the supraspinatus tendon. "
+            "Chronological age capacity inflates baseline time metrics. High fear "
+            "of re-injury noted, cognitive resilience score tracking low."
+        ),
+    )
+
+# Dynamically modulate baseline cost and timeline using the core logic formulas
+age_factor = (age - 25) * 0.015
+base_cost = 22500.0 * (1.0 + age_factor)
+base_days = int(90 * (1.0 + age_factor))
+
+# Occupation duty multiplier for indemnity path pressure
+occupation_mult = {
+    "Heavy Industrial Laborer": 1.18,
+    "Medium Logistics / Operator": 1.08,
+    "Sedentary / Administrative": 1.0,
+}.get(occupation, 1.0)
+base_cost *= occupation_mult
+
+# --- THE PREVENTATIVE DRIFT RADAR (High Real-Estate Vertical Realignment) ---
+st.markdown("---")
+st.markdown("## PREVENTATIVE DRIFT RADAR")
+st.markdown(
+    "<p style='color:#8b949e; font-size:0.9rem;'>"
+    "Live Divergence Mapping and Retrospective Lookback Allocation Controls · "
+    f"Subject <code>{subject_id}</code> · {anatomy}</p>",
+    unsafe_allow_html=True,
+)
+
+# Interactive simulation controls mimicking the caseworker input loops
+st.markdown("### Live Telemetry Simulation Overrides")
+sim_col1, sim_col2 = st.columns(2)
+with sim_col1:
+    actual_rom = st.slider(
+        "Current Functional Range of Motion (% of Expected)",
+        0,
+        100,
+        75,
+    )
+with sim_col2:
+    actual_spend = st.number_input(
+        "Actual Invoiced Expense to Date (USD)",
+        min_value=0.0,
+        value=28400.0,
+    )
+
+# Calculate live functional drift and input variance metrics
+st.session_state.functional_drift = max(0.0, 100.0 - float(actual_rom))
+st.session_state.ivc = max(0.0, (float(actual_spend) - base_cost) / base_cost)
+
+# Dynamic cost escalation math projection
+projected_final_cost = (
+    base_cost
+    + (st.session_state.functional_drift * 185.0)
+    + (st.session_state.ivc * base_cost)
+)
+permanent_disability_prob = 1.0 / (
+    1.0
+    + np.exp(
+        -(
+            -2.5
+            + (float(age) * 0.04)
+            + (st.session_state.functional_drift * 0.05)
+        )
+    )
+)
+
+# Lookback License Fee — performance valuation (drift index from IVC + functional drift)
+composite_drift_index = min(
+    3.0,
+    (st.session_state.ivc * 0.55)
+    + (st.session_state.functional_drift / 100.0 * 0.90),
+)
+lookback = compute_lookback_license_fee(
+    {"composite_drift_index": composite_drift_index},
+    base_fee_usd=max(DEFAULT_LOOKBACK_BASE_FEE_USD * 0.04, 5000.0),
+)
+# Presentation fee also tracks TASE premium path from the executive brief
+lookback_display = 5000.0 + (projected_final_cost * 0.12)
+
+# CapEx mitigation floor from sidebar mandate
+mitigated_exposure = projected_final_cost * (1.0 - target_reduction / 100.0)
+
+# The Asymmetrical Layout Matrix to maximize iPad readability
+table_col, metric_col = st.columns([1.6, 1.0])
+
+with table_col:
+    st.markdown("#### Physical Alignment Vector vs. Expected Target")
+    df_physical = pd.DataFrame(
+        {
+            "Metric Dimension": [
+                "ODG Timeline Envelope",
+                "Expected Base Cost",
+                "Functional Range of Motion",
+                "Biopsychosocial Risk (ICF)",
+            ],
+            "Validated Baseline": [
+                f"{base_days} Days",
+                f"${base_cost:,.2f}",
+                "100% Target Arc",
+                "Nominal Resilience",
+            ],
+            "Live Ingestion State": [
+                "Day 42",
+                f"${actual_spend:,.2f}",
+                f"{actual_rom}% Flexion",
+                "High Fear/Stress Flag",
+            ],
+            "Point of Drift Delta": [
+                "On Track",
+                f"${float(actual_spend) - base_cost:+,.2f}",
+                f"-{st.session_state.functional_drift}% Variance",
+                "Path B Trigger Alert",
+            ],
+        }
+    )
+    st.table(df_physical)
+    if dictation:
+        with st.expander("Ambient Speech Notes (NLP capture)", expanded=False):
+            st.text(dictation)
+
+with metric_col:
+    st.markdown("#### Macro Financial Liability & Lookback Valuation")
+
+    # Check conditional severity to alter lookback warnings
+    if st.session_state.functional_drift > 15.0 or permanent_disability_prob > 0.50:
+        status_color = "crimson"
+        status_label = "CRITICAL PATHWAY DRIFT WARNING"
+    else:
+        status_color = "green"
+        status_label = "NOMINAL SYSTEMIC ALIGNMENT"
+
+    border = "#ef4444" if status_color == "crimson" else "#10b981"
+    label_color = border
+    ppd_color = "#ef4444" if permanent_disability_prob > 0.50 else "#e2e8f0"
+
     st.markdown(
         f"""
-        <div class="node-card {card_class}">
-          <div class="node-meta">{node["id"].upper()} · {status} · COST {node["credit_cost"]} CR</div>
-          <div class="node-title">{node["label"]}</div>
-          <div class="node-body">{node["summary"]}</div>
-          {"<div class='yield-line'>Yield: " + node["unlock_yield"] + "</div>" if is_open else ""}
+        <div class="metric-box" style="border-left: 4px solid {border};">
+            <div class="metric-label">Platform Governance Status</div>
+            <div style="color:{label_color}; font-weight:700; font-size:1.1rem; margin-bottom:0.8rem;">
+                {status_label}
+            </div>
+            <div class="metric-label">Projected Total Case Cost (TASE)</div>
+            <div class="metric-value-silver">${projected_final_cost:,.2f}</div>
+            <div class="metric-label" style="margin-top:0.8rem;">
+                CapEx-Mitigated Exposure ({target_reduction}% floor)
+            </div>
+            <div class="metric-value-silver" style="font-size:1.35rem;">
+                ${mitigated_exposure:,.2f}
+            </div>
+            <div class="metric-label" style="margin-top:0.8rem;">
+                Probability of Permanent Disability (PPD)
+            </div>
+            <div class="metric-value-crimson" style="color: {ppd_color};">
+                {permanent_disability_prob * 100:.1f}%
+            </div>
+            <div class="metric-label" style="margin-top:0.8rem;">
+                Dynamic Lookback License Premium Fee Basis
+            </div>
+            <div class="metric-value-green">${lookback_display:,.2f}</div>
+            <div class="metric-label" style="margin-top:0.55rem;">
+                Valuation Engine Fee (drift index {composite_drift_index:.3f})
+            </div>
+            <div style="color:#10b981; font-weight:700; font-size:1.1rem;">
+                ${lookback["live_lookback_license_fee_usd"]:,.2f}
+            </div>
+            <div class="metric-label" style="margin-top:0.55rem;">Input Variance Coefficient (IVC)</div>
+            <div style="color:#e2e8f0; font-weight:700; font-size:1.2rem;">
+                {st.session_state.ivc:.4f}
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
-    cols = st.columns([1, 1, 4])
-    with cols[0]:
-        if is_open:
-            st.success("Unlocked")
-        else:
-            if st.button(
-                f"Unlock ({node['credit_cost']} cr)",
-                key=f"unlock_{node['id']}",
-                type="primary",
-                use_container_width=True,
-            ):
-                ok, message = unlock_node(node["id"], node["credit_cost"], node["label"])
-                if ok:
-                    st.toast(message)
-                    st.rerun()
-                else:
-                    st.error(message)
-    with cols[1]:
-        st.caption(node["short_name"])
 
-st.divider()
-left, mid, right = st.columns(3)
-with left:
-    st.subheader("Session unlock log")
-    if st.session_state.unlock_log:
-        for line in reversed(st.session_state.unlock_log[-12:]):
-            st.text(f"· {line}")
-    else:
-        st.caption("No unlocks yet. Activate a research node to begin.")
-
-with mid:
-    st.subheader("Sector brief")
-    st.markdown(
-        f"""
-        **Tenant:** {tenant}  
-        **Domain:** {domain}  
-        **Active sector:** `{sector}`  
-        **Theme:** monochrome `#000` / `#FFF` · electric mint `#00FFCC`  
-        **Privacy:** Asset tokens only (e.g. `Asset_ID: Crypt_Alpha_2026`)
-
-        Kinetic research covers interface shear, pelvic/deceleration asymmetry,
-        and micro-tear chronology — projected as Point of Drift vs Hero Baseline
-        with Lookback License Fee basis on the unified radar.
-        """
-    )
-
-with right:
-    st.subheader("Sentinel & Advisory")
-    render_column_3_divergence_panel()
-    st.caption(
-        "Path A → COMPLIANT (manual export on demand). Path B → OVERRIDE_HAZARD "
-        "+ silent `secure_audit_vault/AUDIT_[SHA256].txt|.pdf` black-box writer."
-    )
+    # 4. Automated Remediate / Escalate Action Panel Gate
+    if status_color == "crimson":
+        st.error(
+            "SYSTEMIC DRIFT THRESHOLD BREACHED: Unaddressed drift is inflating "
+            "long-tail capital liabilities."
+        )
+        btn_col1, btn_col2 = st.columns(2)
+        with btn_col1:
+            if st.button("Initiate Pathway Acceleration", use_container_width=True):
+                st.success(
+                    "Authorized: Swapping to dynamic ODG rehabilitation sub-pathway."
+                )
+        with btn_col2:
+            if st.button("Log Mandate Compliance Exception", use_container_width=True):
+                st.info(
+                    "Cryptographic data provenance receipt stamped into vault."
+                )
