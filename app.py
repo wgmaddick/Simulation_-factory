@@ -491,59 +491,40 @@ else:
     with metric_col:
         st.markdown("#### Comprehensive Scheme Ledger Dossier")
 
+        # Security firewall switch — left-aligned strings force pure HTML rendering
         if role == SCHEME_DIRECTOR:
-            fee_line = f"""
-            <div class="metric-label" style="margin-top:0.4rem;">Dynamic Lookback Valuation Basis</div>
-            <div class="metric-value-green" style="font-size:1.3rem;">
-                ${(5000 + (projected_final_cost * 0.12)):,.2f} NZD
-            </div>
-            """
+            fee_line = (
+                f'<div class="metric-label" style="margin-top:0.4rem;">Dynamic Lookback Valuation Basis</div>\n'
+                f'<div class="metric-value-green" style="font-size:1.3rem;">'
+                f"${(5000 + (projected_final_cost * 0.12)):,.2f} NZD</div>"
+            )
         else:
-            fee_line = """
-            <div class="metric-label" style="margin-top:0.4rem;">Dynamic Lookback Valuation Basis</div>
-            <div style="color:#8b949e; font-style:italic; font-size:0.95rem;">
-                🔒 SECURE LEDGER PROXIED TO EXECUTIVE SECTOR
-            </div>
-            """
+            fee_line = (
+                '<div class="metric-label" style="margin-top:0.4rem;">Dynamic Lookback Valuation Basis</div>\n'
+                '<div style="color:#8b949e; font-style:italic; font-size:0.95rem;">'
+                "🔒 SECURE LEDGER PROXIED TO EXECUTIVE SECTOR</div>"
+            )
 
-        # Unified Layout: participant metadata + clinical data injected into dossier
-        html_payload = f"""
-        <div class="metric-box" style="border-left: 4px solid {status_color}; padding: 1.5rem;">
-            <div class="metric-label">Scheme Alignment Status</div>
-            <div style="color:{status_color}; font-weight:700; font-size:1.1rem; margin-bottom:0.8rem;">
-                {status_label}
-            </div>
-
-            <div style="background-color:#0c1017; padding:0.8rem; border-radius:4px; border:1px solid #30363d; margin-bottom:0.8rem;">
-                <div class="metric-label" style="color:#ffffff;">Claimant File Dossier Matrix</div>
-                <span style="font-size:0.9rem; color:#8b949e;">ID:</span>
-                <span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{display_token}</span><br/>
-                <span style="font-size:0.9rem; color:#8b949e;">Target Anatomy:</span>
-                <span style="font-size:0.9rem; color:#ffffff;">{anatomy}</span><br/>
-                <span style="font-size:0.9rem; color:#8b949e;">Demands / Age:</span>
-                <span style="font-size:0.9rem; color:#ffffff;">{duty_tier} (Age {int(age)})</span><br/>
-                <p style="font-size:0.85rem; color:#8b949e; font-style:italic; margin-top:0.4rem; margin-bottom:0;">
-                    <strong>NLP Ingest:</strong> {dict_html}
-                </p>
-            </div>
-
-            <div class="metric-label">Probability of Permanent Disability (PPD)</div>
-            <div class="{impact_class}">{permanent_disability_prob * 100:.1f}%</div>
-
-            <hr style="border:0; border-top:1px solid #30363d; margin: 0.8rem 0;"/>
-
-            <div class="metric-label">Total Absolute System Exposure (TASE)</div>
-            <div class="metric-value-silver" style="font-size:1.5rem; margin-bottom:0.3rem;">
-                ${projected_final_cost:,.2f} NZD
-            </div>
-
-            <div class="metric-label">Mitigated Capital Reserve Target ({cap_floor}% Floor Applied)</div>
-            <div class="metric-value-green" style="font-size:1.5rem; margin-bottom:0.3rem;">
-                ${mitigated_reserve_target:,.2f} NZD
-            </div>
-            {fee_line}
-        </div>
-        """
+        # Left-aligned HTML payload block to force pure HTML engine processing
+        html_payload = f"""<div class="metric-box" style="border-left: 4px solid {status_color}; padding: 1.5rem;">
+<div class="metric-label">Scheme Alignment Status</div>
+<div style="color:{status_color}; font-weight:700; font-size:1.1rem; margin-bottom:0.8rem;">{status_label}</div>
+<div style="background-color:#0c1017; padding:0.8rem; border-radius:4px; border:1px solid #30363d; margin-bottom:0.8rem;">
+<div class="metric-label" style="color:#ffffff;">Claimant File Dossier Matrix</div>
+<span style="font-size:0.9rem; color:#8b949e;">ID:</span> <span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{display_token}</span><br/>
+<span style="font-size:0.9rem; color:#8b949e;">Target Anatomy:</span> <span style="font-size:0.9rem; color:#ffffff;">{anatomy}</span><br/>
+<span style="font-size:0.9rem; color:#8b949e;">Demands / Age:</span> <span style="font-size:0.9rem; color:#ffffff;">{duty_tier} (Age {int(age)})</span><br/>
+<p style="font-size:0.85rem; color:#8b949e; font-style:italic; margin-top:0.4rem; margin-bottom:0;"><strong>NLP Ingest:</strong> {dict_html}</p>
+</div>
+<div class="metric-label">Probability of Permanent Disability (PPD)</div>
+<div class="{impact_class}">{permanent_disability_prob * 100:.1f}%</div>
+<hr style="border:0; border-top:1px solid #30363d; margin: 0.8rem 0;"/>
+<div class="metric-label">Total Absolute System Exposure (TASE)</div>
+<div class="metric-value-silver" style="font-size:1.5rem; margin-bottom:0.3rem;">${projected_final_cost:,.2f} NZD</div>
+<div class="metric-label">Mitigated Capital Reserve Target ({cap_floor}% Floor Applied)</div>
+<div class="metric-value-green" style="font-size:1.5rem; margin-bottom:0.3rem;">${mitigated_reserve_target:,.2f} NZD</div>
+{fee_line}
+</div>"""
         st.markdown(html_payload, unsafe_allow_html=True)
 
     # Individual Cost Trajectory Trend Graph
