@@ -794,6 +794,126 @@ def _inject_theme() -> None:
             color: #FFFFFF;
             font-weight: 600;
         }}
+
+        /* ---- Governance drill-down matrix · Level 1–3 ---- */
+        .gov-shell {{
+            border: 2px solid #FFFFFF;
+            background: #000000;
+            padding: 1rem 1.15rem 1.15rem 1.15rem;
+            margin: 0.35rem 0 1.1rem 0;
+        }}
+        .gov-kicker {{
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            color: #00FFCC;
+            margin-bottom: 0.3rem;
+        }}
+        .gov-title {{
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #FFFFFF;
+            letter-spacing: 0.03em;
+            margin: 0 0 0.35rem 0;
+        }}
+        .gov-sub {{
+            color: #E2E8F0;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.85rem;
+            line-height: 1.4;
+        }}
+        .gov-scope-chip {{
+            display: inline-block;
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #00FFCC;
+            border: 1px solid #00FFCC;
+            padding: 0.25rem 0.6rem;
+            margin: 0.55rem 0 0.35rem 0;
+            background: rgba(0, 255, 204, 0.08);
+        }}
+        .radar-grid tr.isolated td {{
+            background: rgba(0, 255, 204, 0.20) !important;
+            color: #FFFFFF !important;
+            border-color: #00FFCC !important;
+            font-weight: 700 !important;
+            box-shadow: inset 0 0 0 1px #00FFCC;
+        }}
+        .radar-grid tr.isolated td.mint {{
+            color: #00FFCC !important;
+        }}
+        .ivc-panel {{
+            border: 2px solid #00FFCC;
+            background: #000000;
+            padding: 0.9rem 1rem;
+            margin-top: 0.75rem;
+        }}
+        .ivc-panel .cap-meta {{
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            color: #00FFCC;
+            text-transform: uppercase;
+        }}
+        .ivc-panel .cap-title {{
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #FFFFFF;
+            margin: 0.3rem 0 0.55rem 0;
+        }}
+        .audit-note {{
+            border: 1px solid #FFFFFF;
+            background: #0a0a0a;
+            padding: 0.7rem 0.85rem;
+            margin: 0.45rem 0;
+            color: #FFFFFF;
+            font-size: 0.98rem;
+            font-weight: 600;
+            line-height: 1.45;
+        }}
+        .audit-note strong {{
+            color: #00FFCC;
+            font-weight: 700;
+        }}
+        /* Expander / selectbox frames — bold white labels for iPad scan */
+        [data-testid="stExpander"] {{
+            border: 1px solid #FFFFFF !important;
+            background: #0a0a0a !important;
+            margin-bottom: 0.55rem;
+        }}
+        [data-testid="stExpander"] details {{
+            border: none !important;
+            background: #0a0a0a !important;
+        }}
+        [data-testid="stExpander"] summary,
+        [data-testid="stExpander"] summary span,
+        [data-testid="stExpander"] summary p,
+        [data-testid="stExpander"] label,
+        [data-testid="stExpander"] [data-testid="stMarkdownContainer"] p {{
+            color: #FFFFFF !important;
+            font-weight: 700 !important;
+            font-size: 1.05rem !important;
+        }}
+        [data-testid="stSelectbox"] label,
+        [data-testid="stSelectbox"] [data-testid="stWidgetLabel"],
+        [data-testid="stSelectbox"] [data-testid="stWidgetLabel"] p,
+        [data-testid="stSelectbox"] [data-testid="stWidgetLabel"] span {{
+            color: #FFFFFF !important;
+            font-weight: 700 !important;
+            font-size: 1.08rem !important;
+            letter-spacing: 0.01em !important;
+            opacity: 1 !important;
+        }}
+        [data-testid="stSelectbox"] div[data-baseweb="select"] > div {{
+            background: #000000 !important;
+            border: 1px solid #FFFFFF !important;
+            color: #FFFFFF !important;
+            font-weight: 700 !important;
+        }}
         </style>
         """,
         unsafe_allow_html=True,
@@ -829,6 +949,10 @@ def _init_session() -> None:
         st.session_state.early_ops_risk_capital_usd = DEFAULT_EARLY_OPS_RISK_CAPITAL_USD
     if "radar_drift_intensity" not in st.session_state:
         st.session_state.radar_drift_intensity = 0.35
+    if "isolated_asset_token" not in st.session_state:
+        st.session_state.isolated_asset_token = "Asset_ID: Crypt_Alpha_2026"
+    if "governance_scope" not in st.session_state:
+        st.session_state.governance_scope = "Global Portfolio Substrate"
 
 
 def _money(value: float) -> str:
@@ -839,10 +963,200 @@ def _money_precise(value: float) -> str:
     return f"${value:,.2f}"
 
 
+GOVERNANCE_SCOPE_OPTIONS = (
+    "Global Portfolio Substrate",
+    "Regional SPV Capital Matrix",
+    "Audit Disbursal Ledger",
+)
+
+ASSET_INSTANCE_CODES = (
+    "Asset_ID: Crypt_Alpha_2026",
+    "Asset_ID: Crypt_Beta_2026",
+    "Asset_ID: Crypt_Gamma_2026",
+)
+
+
 def anonymized_asset_token(index: int = 0) -> str:
     """Map a research/asset channel to a privacy token — never raw biometrics."""
     token = _ASSET_TOKEN_POOL[int(index) % len(_ASSET_TOKEN_POOL)]
     return f"Asset_ID: {token}"
+
+
+def _ivc_history_for_token(
+    asset_token: str,
+    *,
+    intensity: float,
+    metric_key: str = "asymmetry_pct",
+) -> list[dict[str, Any]]:
+    """Deterministic Input Variance Coefficient history for an isolated asset."""
+    seed = sum(ord(c) for c in asset_token) % 97
+    t = min(1.0, max(0.0, float(intensity)))
+    base_ivc = 0.12 + 0.08 * (seed % 5) + 0.55 * t
+    # Metric channel slightly shifts the series shape.
+    channel_bias = {
+        "shear_n": 0.04,
+        "asymmetry_pct": 0.0,
+        "tissue_debt": 0.06,
+    }.get(metric_key, 0.0)
+    history: list[dict[str, Any]] = []
+    for week in range(1, 7):
+        wave = 0.035 * ((week + seed % 3) % 4) - 0.02
+        ivc = round(max(0.02, base_ivc + channel_bias + wave - 0.01 * (6 - week)), 4)
+        history.append(
+            {
+                "window": f"W-{7 - week}",
+                "ivc": ivc,
+                "status": "ELEVATED" if ivc >= 0.45 else ("WATCH" if ivc >= 0.28 else "NOMINAL"),
+            }
+        )
+    return history
+
+
+def render_governance_audit_matrix() -> dict[str, str]:
+    """Level 1–3 hierarchical dropdown navigation above the Drift Radar."""
+    st.markdown(
+        """
+        <div class="gov-shell">
+          <div class="gov-kicker">MULTI-LAYER DRILL-DOWN · AUDITING LAYER</div>
+          <div class="gov-title">GOVERNANCE NAVIGATION MATRIX</div>
+          <div class="gov-sub">
+            Study organizational depth independently — Macro Industry Ledger →
+            Departmental Audit Oracle hoods → Deep Technical Sandbox asset isolation.
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ------------------------------------------------------------------
+    # LEVEL 1 — Macro Industry Selector
+    # ------------------------------------------------------------------
+    scope = st.selectbox(
+        "Select Governance Scope / Industry Ledger",
+        list(GOVERNANCE_SCOPE_OPTIONS),
+        key="governance_scope",
+        help="Macro organizational track that frames all subordinate audit hoods.",
+    )
+    st.markdown(
+        f'<div class="gov-scope-chip">LEVEL 1 · ACTIVE SCOPE · {scope}</div>',
+        unsafe_allow_html=True,
+    )
+
+    scope_briefs = {
+        "Global Portfolio Substrate": (
+            "Cross-entity portfolio controls, consolidated availability floors, "
+            "and sovereign lookback fee aggregation across all SPVs."
+        ),
+        "Regional SPV Capital Matrix": (
+            "Regional special-purpose vehicle capital sleeves, local reserve "
+            "thresholds, and consortium cost-offset recognition."
+        ),
+        "Audit Disbursal Ledger": (
+            "Disbursal authorization trails, tranche release gates, and "
+            "immutable fee-basis attestations for external auditors."
+        ),
+    }
+    st.markdown(
+        f'<div class="audit-note"><strong>Ledger frame:</strong> '
+        f"{scope_briefs.get(scope, '')}</div>",
+        unsafe_allow_html=True,
+    )
+
+    isolated_token = st.session_state.get(
+        "isolated_asset_token", ASSET_INSTANCE_CODES[0]
+    )
+
+    # ------------------------------------------------------------------
+    # LEVEL 2 — Expandable Departmental Audit Hoods
+    # ------------------------------------------------------------------
+    with st.expander(
+        "[ ▶ AUDIT ORACLE: Operations & Asset Availability Tranche ]",
+        expanded=True,
+    ):
+        st.markdown(
+            f"""
+            <div class="audit-note">
+              <strong>Operations hood · {scope}</strong><br/>
+              Asset availability tranche, Point-of-Drift channel health, and
+              Lookback License Fee exposure for anonymized kinetic assets.
+              Use Level 3 to isolate a single Asset Instance Code.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        # --------------------------------------------------------------
+        # LEVEL 3 — Deep Technical Sandbox Drill-Down
+        # --------------------------------------------------------------
+        isolated_token = st.selectbox(
+            "Isolate Asset Instance Code",
+            list(ASSET_INSTANCE_CODES),
+            key="isolated_asset_token",
+            help=(
+                "Highlights the matching Point of Drift row and reveals that "
+                "asset's Input Variance Coefficient (IVC) history."
+            ),
+        )
+        st.markdown(
+            f"""
+            <div class="audit-note">
+              <strong>LEVEL 3 · SANDBOX LOCK</strong> — dashboard isolation armed for
+              <span class="token-chip">{isolated_token}</span>
+              Physical drift table will highlight this token; IVC history unlocks below the radar grid.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with st.expander(
+        "[ ▶ AUDIT ORACLE: R&D Funding & Intellectual Property Allocations ]",
+        expanded=False,
+    ):
+        st.markdown(
+            f"""
+            <div class="audit-note">
+              <strong>R&amp;D / IP hood · {scope}</strong><br/>
+              Research-node credit burn, unlock-yield IP claims, and kinetic
+              methodology allocations remain ledger-visible without exposing
+              raw biometric source logs.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        c1, c2, c3 = st.columns(3)
+        c1.metric("R&D Credit Burn", f"{int(TENANT_CONFIG['initial_credits']) - int(st.session_state.get('credits', 0))}")
+        c2.metric("Nodes Online", f"{len(st.session_state.get('unlocked_nodes') or set())}")
+        c3.metric("IP Tranche", "KINETIC")
+
+    with st.expander(
+        "[ ▶ AUDIT ORACLE: Marketing & Localized Consortium Cost-Offsets ]",
+        expanded=False,
+    ):
+        seed = float(st.session_state.get("consortium_seed_usd", DEFAULT_CONSORTIUM_SEED_USD))
+        risk = float(
+            st.session_state.get(
+                "early_ops_risk_capital_usd", DEFAULT_EARLY_OPS_RISK_CAPITAL_USD
+            )
+        )
+        offset_pct = min(100.0, 100.0 * seed / max(risk, 1.0))
+        st.markdown(
+            f"""
+            <div class="audit-note">
+              <strong>Consortium / marketing hood · {scope}</strong><br/>
+              Localized cost-offsets and early-adopter skin-in-the-game tracers
+              for the Strategic Consortium Anchor — display-only, vault intact.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Consortium Seed", _money(seed))
+        m2.metric("Ops Risk Capital", _money(risk))
+        m3.metric("Cost-Offset", f"{offset_pct:.2f}%")
+
+    return {
+        "governance_scope": str(scope),
+        "isolated_asset_token": str(isolated_token),
+    }
 
 
 def _live_telemetry_from_intensity(intensity: float) -> dict[str, float]:
@@ -897,8 +1211,15 @@ def _active_drift_nodes(unlocked: set[str]) -> list[dict[str, str]]:
     return rows
 
 
-def render_preventative_drift_radar() -> dict[str, Any]:
+def render_preventative_drift_radar(
+    *,
+    selected_asset_token: str | None = None,
+) -> dict[str, Any]:
     """Primary dashboard — unified physical + financial Preventative Drift Radar."""
+    isolated = selected_asset_token or st.session_state.get(
+        "isolated_asset_token", ASSET_INSTANCE_CODES[0]
+    )
+
     st.markdown(
         """
         <div class="radar-shell">
@@ -949,6 +1270,7 @@ def render_preventative_drift_radar() -> dict[str, Any]:
           TIERED ACCESS · PRIVACY RULES ENFORCED — biometric / medical source logs
           redacted. Active research channels resolve only as anonymized tokens:
           {tokens_html}
+          · ISOLATED: <span class="token-chip">{isolated}</span>
         </div>
         """,
         unsafe_allow_html=True,
@@ -957,8 +1279,9 @@ def render_preventative_drift_radar() -> dict[str, Any]:
     left, right = st.columns(2, gap="medium")
 
     # ------------------------------------------------------------------
-    # Left — Physical Point of Drift
+    # Left — Physical Point of Drift (row highlight from Level 3 isolate)
     # ------------------------------------------------------------------
+    isolated_channel: dict[str, str] | None = None
     with left:
         phys_rows = []
         for c in channels:
@@ -968,8 +1291,12 @@ def render_preventative_drift_radar() -> dict[str, Any]:
             delta = live_v - base_v
             alert = "alert" if delta > 0 else ""
             mint = "mint" if delta > 0 else ""
+            is_isolated = c["token"] == isolated
+            if is_isolated:
+                isolated_channel = c
+            row_class = "isolated" if is_isolated else ""
             phys_rows.append(
-                "<tr>"
+                f"<tr class='{row_class}'>"
                 f"<td>{c['token']}</td>"
                 f"<td>{c['signal']}</td>"
                 f"<td>{base_v:g} {c['unit']}</td>"
@@ -1109,12 +1436,68 @@ def render_preventative_drift_radar() -> dict[str, Any]:
         unsafe_allow_html=True,
     )
 
+    # ------------------------------------------------------------------
+    # Level 3 reveal — Input Variance Coefficient history for isolated asset
+    # ------------------------------------------------------------------
+    metric_key = (
+        isolated_channel["metric_key"]
+        if isolated_channel is not None
+        else "asymmetry_pct"
+    )
+    signal_label = (
+        isolated_channel["signal"]
+        if isolated_channel is not None
+        else "Isolated Asset Channel"
+    )
+    ivc_history = _ivc_history_for_token(
+        isolated, intensity=intensity, metric_key=metric_key
+    )
+    ivc_row_parts: list[str] = []
+    for row in ivc_history:
+        cls = "isolated" if row["status"] == "ELEVATED" else ""
+        ivc_row_parts.append(
+            f"<tr class='{cls}'>"
+            f"<td>{row['window']}</td>"
+            f"<td class='mint'>{row['ivc']:.4f}</td>"
+            f"<td>{row['status']}</td>"
+            "</tr>"
+        )
+    ivc_rows = "".join(ivc_row_parts)
+    live_ivc = ivc_history[-1]["ivc"] if ivc_history else 0.0
+    st.markdown(
+        f"""
+        <div class="ivc-panel">
+          <div class="cap-meta">DEEP TECHNICAL SANDBOX · INPUT VARIANCE COEFFICIENT</div>
+          <div class="cap-title">{isolated} · {signal_label}</div>
+          <div style="color:#E2E8F0;font-weight:600;margin-bottom:0.55rem;">
+            Hidden IVC history unlocked by Level 3 asset isolation.
+            Live IVC <span style="color:#00FFCC;font-weight:700;">{live_ivc:.4f}</span>
+            · intensity {intensity:.2f} · governance
+            {st.session_state.get("governance_scope", GOVERNANCE_SCOPE_OPTIONS[0])}
+          </div>
+          <table class="radar-grid">
+            <thead>
+              <tr>
+                <th>Lookback Window</th>
+                <th>IVC</th>
+                <th>Band</th>
+              </tr>
+            </thead>
+            <tbody>{ivc_rows}</tbody>
+          </table>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     return {
         "live": live,
         "drift": drift,
         "liability": liability,
         "fee": fee,
         "channels": channels,
+        "isolated_asset_token": isolated,
+        "ivc_history": ivc_history,
     }
 
 
@@ -1406,8 +1789,14 @@ top2.metric("Nodes online", f"{len(unlocked)}/{len(nodes)}")
 top3.metric("Sector", "KINETIC")
 top4.metric("Domain", "Athletics")
 
-# Primary consolidated view
-radar_snapshot = render_preventative_drift_radar()
+# Hierarchical governance drill-down (Levels 1–3) sits above the radar
+governance = render_governance_audit_matrix()
+st.session_state.last_governance_matrix = governance
+
+# Primary consolidated view — asset isolation drives row highlight + IVC panel
+radar_snapshot = render_preventative_drift_radar(
+    selected_asset_token=governance["isolated_asset_token"],
+)
 st.session_state.last_radar_snapshot = radar_snapshot
 
 st.markdown(
