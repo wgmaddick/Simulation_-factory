@@ -7,9 +7,125 @@ basis.
 
 from __future__ import annotations
 
+from io import BytesIO
+from typing import Any
+
 import numpy as np
 import pandas as pd
 import streamlit as st
+
+# ---------------------------------------------------------------------------
+# Bulk Data Ingestion Gate + synthetic fallback (never blank the deck)
+# ---------------------------------------------------------------------------
+GM_ROLE = "General Manager"
+RESTRICTED_ROLES = {
+    "Caseworker / Analyst",
+    "Technical Expert ('Docteur')",
+}
+LEDGER_MASK = (
+    "🔒 SECURE LEDGER MASKED: Requires General Manager Clearance"
+)
+
+
+def default_corporate_profile() -> pd.DataFrame:
+    """Baseline synthetic portfolio used when no corporate file is loaded."""
+    return pd.DataFrame(
+        {
+            "subject_token": [
+                "Asset_ID_Crypt_Delta_2026",
+                "Asset_ID_Crypt_Echo_2026",
+                "Asset_ID_Crypt_Foxtrot_2026",
+            ],
+            "anatomy": [
+                "Glenohumeral Joint (Shoulder)",
+                "Lumbar Spine",
+                "Knee Extensor Mechanism",
+            ],
+            "age": [48, 41, 55],
+            "occupation": [
+                "Heavy Industrial Laborer",
+                "Medium Logistics / Operator",
+                "Sedentary / Administrative",
+            ],
+            "rom_pct": [75, 88, 62],
+            "actual_spend": [28400.0, 19250.0, 34100.0],
+            "critical_flag": [1, 0, 1],
+            "odg_alignment_pct": [87.3, 92.1, 78.4],
+            "indemnity_exposure_usd": [412500.0, 188000.0, 276000.0],
+        }
+    )
+
+
+def load_corporate_data_profile(uploaded_file: Any) -> tuple[pd.DataFrame, str]:
+    """Parse CSV/XLSX when present; otherwise fall back to synthetic defaults."""
+    if uploaded_file is None:
+        return default_corporate_profile(), "synthetic"
+
+    try:
+        name = (uploaded_file.name or "").lower()
+        raw = uploaded_file.getvalue()
+        buffer = BytesIO(raw)
+        if name.endswith(".csv"):
+            frame = pd.read_csv(buffer)
+        elif name.endswith(".xlsx") or name.endswith(".xls"):
+            frame = pd.read_excel(buffer)
+        else:
+            return default_corporate_profile(), "synthetic"
+
+        if frame is None or frame.empty:
+            return default_corporate_profile(), "synthetic"
+
+        frame.columns = [str(c).strip().lower().replace(" ", "_") for c in frame.columns]
+        return frame, "uploaded"
+    except Exception:
+        # Never surface a hard failure — keep the executive deck operational.
+        return default_corporate_profile(), "synthetic"
+
+
+def _col(df: pd.DataFrame, *candidates: str) -> str | None:
+    for name in candidates:
+        if name in df.columns:
+            return name
+    return None
+
+
+def portfolio_summary(df: pd.DataFrame) -> dict[str, Any]:
+    """Derive Layer-1 portfolio KPIs from the active corporate profile."""
+    n_cases = int(len(df)) if len(df) else 142
+    crit_col = _col(df, "critical_flag", "critical", "point_of_drift")
+    if crit_col is not None:
+        critical = int(pd.to_numeric(df[crit_col], errors="coerce").fillna(0).astype(bool).sum())
+    else:
+        critical = max(1, int(round(n_cases * 0.13)))
+
+    odg_col = _col(df, "odg_alignment_pct", "odg_alignment", "odg")
+    if odg_col is not None:
+        odg = float(pd.to_numeric(df[odg_col], errors="coerce").dropna().mean())
+    else:
+        odg = 87.3
+
+    ind_col = _col(df, "indemnity_exposure_usd", "indemnity_exposure", "indemnity")
+    if ind_col is not None:
+        indemnity = float(pd.to_numeric(df[ind_col], errors="coerce").fillna(0).sum())
+    else:
+        indemnity = 412500.0
+
+    return {
+        "total_assets": n_cases,
+        "critical_drift": critical,
+        "odg_alignment": odg,
+        "indemnity_exposure": indemnity,
+    }
+
+
+def is_general_manager(active_role: str) -> bool:
+    return active_role == GM_ROLE
+
+
+def can_view_indemnity(active_role: str) -> bool:
+    """Indemnity card is GM-only; Caseworker / Docteur are explicitly masked."""
+    return active_role not in RESTRICTED_ROLES and is_general_manager(active_role)
+
 
 # 1. Stark Executive Dark Theme & Contrast UI Rig
 st.set_page_config(
@@ -197,33 +313,52 @@ st.markdown(
 )
 st.markdown("---")
 
-# Global Portfolio Layer 1 Widgets (The Top Metrics Bar)
-col1, col2, col3, col4 = st.columns(4)
+# Bulk Data Ingestion Gate — corporate CSV / XLSX with synthetic fallback
+uploaded_file = st.file_uploader(
+    "📥 LOAD CORPORATE DATA PROFILE (Drag & Drop CSV / XLSX)",
+    type=["csv", "xlsx"],
+)
+portfolio_df, portfolio_source = load_corporate_data_profile(uploaded_file)
+kpis = portfolio_summary(portfolio_df)
+if portfolio_source == "uploaded":
+    st.caption(
+        f"Corporate profile loaded · {len(portfolio_df)} rows · "
+        f"{uploaded_file.name if uploaded_file else 'workbook'}"
+    )
+else:
+    st.caption("Synthetic corporate profile active · upload CSV / XLSX to override.")
 
-with col1:
+# Global Portfolio Layer 1 Widgets (The Top Metrics Bar)
+# Dynamic Privacy Filtering Engine — hide indemnity for non-GM roles
+show_indemnity = can_view_indemnity(role)
+metric_cols = st.columns(4 if show_indemnity else 3)
+
+with metric_cols[0]:
     st.markdown(
         '<div class="metric-box"><div class="metric-label">Total Assets Protected</div>'
-        '<div class="metric-value-silver">142 Cases</div></div>',
+        f'<div class="metric-value-silver">{kpis["total_assets"]} Cases</div></div>',
         unsafe_allow_html=True,
     )
-with col2:
+with metric_cols[1]:
     st.markdown(
         '<div class="metric-box"><div class="metric-label">Critical Point of Drift</div>'
-        '<div class="metric-value-crimson">18 Subjects</div></div>',
+        f'<div class="metric-value-crimson">{kpis["critical_drift"]} Subjects</div></div>',
         unsafe_allow_html=True,
     )
-with col3:
+with metric_cols[2]:
     st.markdown(
         '<div class="metric-box"><div class="metric-label">ODG Timeline Baseline Alignment</div>'
-        '<div class="metric-value-green">87.3%</div></div>',
+        f'<div class="metric-value-green">{kpis["odg_alignment"]:.1f}%</div></div>',
         unsafe_allow_html=True,
     )
-with col4:
-    st.markdown(
-        '<div class="metric-box"><div class="metric-label">Projected Indemnity Exposure</div>'
-        '<div class="metric-value-silver">$412.5K</div></div>',
-        unsafe_allow_html=True,
-    )
+if show_indemnity:
+    indemnity_k = kpis["indemnity_exposure"] / 1000.0
+    with metric_cols[3]:
+        st.markdown(
+            '<div class="metric-box"><div class="metric-label">Projected Indemnity Exposure</div>'
+            f'<div class="metric-value-silver">${indemnity_k:,.1f}K</div></div>',
+            unsafe_allow_html=True,
+        )
 
 # --- NESTED AUDIT ORACLE MATRIX (Drill-Down Framework) ---
 st.markdown("### HIERARCHICAL AUDIT PORTALS")
@@ -421,6 +556,20 @@ with metric_col:
     label_color = border
     ppd_color = "#ef4444" if permanent_disability_prob > 0.50 else "#e2e8f0"
 
+    # Role-based Privacy Enclave — redact ledger dollars unless GM
+    gm_clearance = is_general_manager(role)
+    if gm_clearance:
+        tase_display = f"${projected_final_cost:,.2f}"
+        lookback_display = f"${lookback_fee:,.2f}"
+        ledger_note = ""
+    else:
+        tase_display = LEDGER_MASK
+        lookback_display = LEDGER_MASK
+        ledger_note = (
+            f'<div style="margin-top:0.9rem; color:#fbbf24; font-weight:700; '
+            f'font-size:0.9rem;">{LEDGER_MASK}</div>'
+        )
+
     st.markdown(
         f"""
         <div class="metric-box" style="border-left: 4px solid {border};">
@@ -429,7 +578,9 @@ with metric_col:
                 {status_label}
             </div>
             <div class="metric-label">Projected Total Case Cost (TASE)</div>
-            <div class="metric-value-silver">${projected_final_cost:,.2f}</div>
+            <div class="metric-value-silver" style="font-size: {'1.0rem' if not gm_clearance else '2rem'};">
+                {tase_display}
+            </div>
             <div class="metric-label" style="margin-top:0.8rem;">
                 Probability of Permanent Disability (PPD)
             </div>
@@ -439,13 +590,19 @@ with metric_col:
             <div class="metric-label" style="margin-top:0.8rem;">
                 Dynamic Lookback License Premium Fee Basis
             </div>
-            <div class="metric-value-green">${lookback_fee:,.2f}</div>
+            <div class="metric-value-green" style="font-size: {'1.0rem' if not gm_clearance else '2rem'};
+                 color: {'#fbbf24' if not gm_clearance else '#10b981'};">
+                {lookback_display}
+            </div>
             <div class="metric-label" style="margin-top:0.8rem;">Input Variance Coefficient (IVC)</div>
             <div class="metric-value-silver">{st.session_state.ivc * 100:.1f}%</div>
+            {ledger_note}
         </div>
         """,
         unsafe_allow_html=True,
     )
+    if not gm_clearance:
+        st.warning(LEDGER_MASK)
 
     # 4. Automated Remediate / Escalate Action Panel Gate
     if status_color == "crimson":
