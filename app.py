@@ -103,6 +103,38 @@ st.markdown(
         color: #ffffff !important;
         font-weight: 700 !important;
     }
+    /* High-contrast controls — keep labels/values readable on dark deck */
+    .stButton > button {
+        background-color: #21262d !important;
+        color: #ffffff !important;
+        border: 1px solid #30363d !important;
+        font-weight: 700 !important;
+    }
+    .stButton > button:hover {
+        background-color: #30363d !important;
+        border-color: #8b949e !important;
+        color: #ffffff !important;
+    }
+    .stButton > button p,
+    .stButton > button span,
+    .stButton > button div {
+        color: #ffffff !important;
+    }
+    [data-baseweb="select"] > div,
+    [data-baseweb="input"] > div,
+    [data-baseweb="textarea"] > div,
+    .stTextInput input,
+    .stNumberInput input,
+    .stTextArea textarea {
+        background-color: #161b22 !important;
+        color: #ffffff !important;
+        border-color: #30363d !important;
+    }
+    [data-baseweb="select"] span,
+    [data-baseweb="menu"] li,
+    [data-baseweb="menu"] li span {
+        color: #ffffff !important;
+    }
     </style>
     """,
     unsafe_allow_html=True,
