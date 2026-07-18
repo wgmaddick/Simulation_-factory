@@ -670,7 +670,10 @@ def _inject_theme() -> None:
             border: 1px solid #FFFFFF;
             background: #0a0a0a;
             padding: 0.95rem 1rem;
-            min-height: 100%;
+            width: 100%;
+            max-width: 100%;
+            overflow: visible;
+            box-sizing: border-box;
         }}
         .radar-panel .cap-meta {{
             font-family: "IBM Plex Mono", monospace;
@@ -689,26 +692,37 @@ def _inject_theme() -> None:
         }}
         .radar-grid {{
             width: 100%;
+            max-width: 100%;
+            table-layout: auto;
             border-collapse: collapse;
             font-family: "IBM Plex Mono", monospace;
-            font-size: 0.92rem;
+            font-size: 0.95rem;
             margin-top: 0.35rem;
         }}
         .radar-grid th,
         .radar-grid td {{
             border: 1px solid #FFFFFF;
-            padding: 0.55rem 0.65rem;
+            padding: 0.65rem 0.75rem;
             text-align: left;
             color: #FFFFFF;
             background: #000000;
+            white-space: normal !important;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            max-width: none;
+            line-height: 1.4;
+            vertical-align: top;
         }}
         .radar-grid th {{
             color: #00FFCC;
             font-weight: 700;
             letter-spacing: 0.06em;
             text-transform: uppercase;
-            font-size: 0.78rem;
+            font-size: 0.8rem;
             background: #0a0a0a;
+            white-space: normal !important;
         }}
         .radar-grid td.mint {{
             color: #00FFCC;
@@ -718,6 +732,34 @@ def _inject_theme() -> None:
             color: #FFFFFF;
             font-weight: 700;
             background: #1a0505;
+        }}
+        .radar-track-rule {{
+            border: 0;
+            border-top: 3px solid #FFFFFF;
+            margin: 1.35rem 0 0.65rem 0;
+            background: transparent;
+            height: 0;
+        }}
+        .radar-track-label {{
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            color: #00FFCC;
+            text-transform: uppercase;
+            margin: 0 0 0.85rem 0;
+        }}
+        /* Prevent Streamlit/Baseweb truncation on radar surfaces */
+        .radar-panel *,
+        .radar-grid * {{
+            text-overflow: clip !important;
+            overflow: visible !important;
+        }}
+        .token-chip {{
+            white-space: normal !important;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            max-width: 100%;
         }}
         .token-chip {{
             display: inline-block;
@@ -1276,123 +1318,126 @@ def render_preventative_drift_radar(
         unsafe_allow_html=True,
     )
 
-    left, right = st.columns(2, gap="medium")
-
     # ------------------------------------------------------------------
-    # Left — Physical Point of Drift (row highlight from Level 3 isolate)
+    # Stacked high-real-estate layout — full-width Physical, then Financial
+    # (avoids iPad side-by-side compression of data grids)
     # ------------------------------------------------------------------
     isolated_channel: dict[str, str] | None = None
-    with left:
-        phys_rows = []
-        for c in channels:
-            key = c["metric_key"]
-            live_v = live[key]
-            base_v = hero[key]
-            delta = live_v - base_v
-            alert = "alert" if delta > 0 else ""
-            mint = "mint" if delta > 0 else ""
-            is_isolated = c["token"] == isolated
-            if is_isolated:
-                isolated_channel = c
-            row_class = "isolated" if is_isolated else ""
-            phys_rows.append(
-                f"<tr class='{row_class}'>"
-                f"<td>{c['token']}</td>"
-                f"<td>{c['signal']}</td>"
-                f"<td>{base_v:g} {c['unit']}</td>"
-                f"<td class='{mint}'>{live_v:g} {c['unit']}</td>"
-                f"<td class='{alert}'>{delta:+.2f}</td>"
-                "</tr>"
-            )
-        st.markdown(
-            f"""
-            <div class="radar-panel">
-              <div class="cap-meta">PHYSICAL · POINT OF DRIFT</div>
-              <div class="cap-title">Live divergence from Hero Baseline</div>
-              <table class="radar-grid">
-                <thead>
-                  <tr>
-                    <th>Asset Token</th>
-                    <th>Signal</th>
-                    <th>Hero Baseline</th>
-                    <th>Live</th>
-                    <th>Δ Path</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {"".join(phys_rows)}
-                </tbody>
-              </table>
-            </div>
-            """,
-            unsafe_allow_html=True,
+    phys_rows = []
+    for c in channels:
+        key = c["metric_key"]
+        live_v = live[key]
+        base_v = hero[key]
+        delta = live_v - base_v
+        alert = "alert" if delta > 0 else ""
+        mint = "mint" if delta > 0 else ""
+        is_isolated = c["token"] == isolated
+        if is_isolated:
+            isolated_channel = c
+        row_class = "isolated" if is_isolated else ""
+        phys_rows.append(
+            f"<tr class='{row_class}'>"
+            f"<td>{c['token']}</td>"
+            f"<td>{c['signal']}</td>"
+            f"<td>{base_v:g} {c['unit']}</td>"
+            f"<td class='{mint}'>{live_v:g} {c['unit']}</td>"
+            f"<td class='{alert}'>{delta:+.2f}</td>"
+            "</tr>"
         )
+    st.markdown(
+        f"""
+        <div class="radar-panel">
+          <div class="cap-meta">PHYSICAL · POINT OF DRIFT</div>
+          <div class="cap-title">Live divergence from Hero Baseline</div>
+          <table class="radar-grid">
+            <thead>
+              <tr>
+                <th>Asset Token</th>
+                <th>Signal</th>
+                <th>Hero Baseline</th>
+                <th>Live</th>
+                <th>Δ Path</th>
+              </tr>
+            </thead>
+            <tbody>
+              {"".join(phys_rows)}
+            </tbody>
+          </table>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    # ------------------------------------------------------------------
-    # Right — Financial Liability Variance
-    # ------------------------------------------------------------------
-    with right:
-        idx = drift["composite_drift_index"]
-        fin_rows = [
-            (
-                "Composite Drift Index",
-                f"{idx:.3f}",
-                "unitless",
-            ),
-            (
-                "Financial Liability Variance",
-                _money_precise(liability["financial_liability_variance_usd"]),
-                "USD",
-            ),
-            (
-                "Path A Cost Avoidance at Risk",
-                _money_precise(liability["path_a_cost_avoidance_at_risk_usd"]),
-                "USD",
-            ),
-            (
-                "Unaddressed Drift Bleed",
-                _money_precise(liability["unaddressed_drift_bleed_usd"]),
-                "USD",
-            ),
-            (
-                "Shear Divergence",
-                f"{drift['shear_divergence']*100:.1f}%",
-                "vs Hero",
-            ),
-            (
-                "Asymmetry Divergence",
-                f"{drift['asymmetry_divergence']*100:.1f}%",
-                "vs Hero",
-            ),
-            (
-                "Tissue Debt Divergence",
-                f"{drift['tissue_debt_divergence']*100:.1f}%",
-                "vs Hero",
-            ),
-        ]
-        body = "".join(
-            f"<tr><td>{label}</td><td class='mint'>{value}</td><td>{unit}</td></tr>"
-            for label, value, unit in fin_rows
-        )
-        st.markdown(
-            f"""
-            <div class="radar-panel">
-              <div class="cap-meta">MACRO · FINANCIAL LIABILITY VARIANCE</div>
-              <div class="cap-title">Causal premium from unaddressed drift</div>
-              <table class="radar-grid">
-                <thead>
-                  <tr>
-                    <th>Liability Path</th>
-                    <th>Live Value</th>
-                    <th>Basis</th>
-                  </tr>
-                </thead>
-                <tbody>{body}</tbody>
-              </table>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    st.markdown(
+        """
+        <hr class="radar-track-rule" />
+        <div class="radar-track-label">── Financial Tracking Environment ──</div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown("---")
+
+    idx = drift["composite_drift_index"]
+    fin_rows = [
+        (
+            "Composite Drift Index",
+            f"{idx:.3f}",
+            "unitless",
+        ),
+        (
+            "Financial Liability Variance",
+            _money_precise(liability["financial_liability_variance_usd"]),
+            "USD",
+        ),
+        (
+            "Path A Cost Avoidance at Risk",
+            _money_precise(liability["path_a_cost_avoidance_at_risk_usd"]),
+            "USD",
+        ),
+        (
+            "Unaddressed Drift Bleed",
+            _money_precise(liability["unaddressed_drift_bleed_usd"]),
+            "USD",
+        ),
+        (
+            "Shear Divergence",
+            f"{drift['shear_divergence']*100:.1f}%",
+            "vs Hero",
+        ),
+        (
+            "Asymmetry Divergence",
+            f"{drift['asymmetry_divergence']*100:.1f}%",
+            "vs Hero",
+        ),
+        (
+            "Tissue Debt Divergence",
+            f"{drift['tissue_debt_divergence']*100:.1f}%",
+            "vs Hero",
+        ),
+    ]
+    body = "".join(
+        f"<tr><td>{label}</td><td class='mint'>{value}</td><td>{unit}</td></tr>"
+        for label, value, unit in fin_rows
+    )
+    st.markdown(
+        f"""
+        <div class="radar-panel">
+          <div class="cap-meta">MACRO · FINANCIAL LIABILITY VARIANCE</div>
+          <div class="cap-title">Causal premium from unaddressed drift</div>
+          <table class="radar-grid">
+            <thead>
+              <tr>
+                <th>Liability Path</th>
+                <th>Live Value</th>
+                <th>Basis</th>
+              </tr>
+            </thead>
+            <tbody>{body}</tbody>
+          </table>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     # ------------------------------------------------------------------
     # Lookback License Fee Basis — real-time tracking panel
