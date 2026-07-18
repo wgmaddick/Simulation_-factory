@@ -2,6 +2,7 @@
 
 High-contrast sovereign dark theme for scheme claims performance, triage intake,
 preventative drift radar, role-based ledger masking, and longitudinal cost trends.
+Currency basis: NZD. Primary executive focus: large-print PPD.
 """
 
 from __future__ import annotations
@@ -13,9 +14,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-# Layout contract: AAT Scheme Performance Engine composition is locked.
 LAYOUT_LOCKED = True
-
 SCHEME_DIRECTOR = "Scheme Director (GM)"
 
 
@@ -163,6 +162,15 @@ st.markdown(
         font-weight: 700;
         color: #e2e8f0;
     }
+    /* Large Print Primary Executive Metric Focus */
+    .large-impact-value {
+        font-size: 3.5rem;
+        font-weight: 700;
+        line-height: 1;
+        margin-top: 0.5rem;
+        margin-bottom: 0.5rem;
+        font-family: "IBM Plex Mono", monospace;
+    }
     th, td,
     [data-testid="stTable"] th,
     [data-testid="stTable"] td {
@@ -258,7 +266,6 @@ uploaded_file = st.file_uploader(
 profile_df, profile_source = load_client_data_profile(uploaded_file)
 kpis = scheme_kpis(profile_df)
 
-# Set dynamic cohort baselines based on whether a file is loaded or using the active engine sample
 if profile_source == "uploaded":
     st.success("Custom client profile ingested successfully.")
     base_cost_multiplier = 1.15
@@ -274,7 +281,7 @@ else:
 display_cases = kpis["cases"]
 display_drift = kpis["drift"]
 display_alignment = f"{kpis['alignment']:.1f}%"
-display_exposure = f"${kpis['exposure'] / 1000.0:,.1f}K"
+display_exposure = f"${kpis['exposure']:,.0f} NZD"
 
 # Macro Scheme Performance Metrics Bar
 col1, col2, col3, col4 = st.columns(4)
@@ -297,7 +304,6 @@ with col3:
         unsafe_allow_html=True,
     )
 with col4:
-    # Privacy Masking Rule: Hide macro financial exposures from standard analysts
     if role == SCHEME_DIRECTOR:
         st.markdown(
             f'<div class="metric-box"><div class="metric-label">Projected Scheme Liability</div>'
@@ -354,33 +360,15 @@ with intake_col3:
     )
 
 # Dynamic calculations for age-calibrated timeline modeling
-duty_factor = {
-    "Heavy Manual / Industrial": 1.18,
-    "Medium Logistics / Transport": 1.08,
-    "Sedentary Clerical": 1.0,
-}[duty_tier]
-anatomy_factor = {
-    "Glenohumeral Joint (Shoulder)": 1.0,
-    "Lumbar Spine": 1.12,
-    "Lower Extremity": 1.06,
-}[anatomy]
-
 age_factor = (age - 25) * 0.015
-calibrated_base_cost = (
-    22500.0 * (1.0 + age_factor) * base_cost_multiplier * duty_factor * anatomy_factor
-)
+calibrated_base_cost = 22500.0 * (1.0 + age_factor) * base_cost_multiplier
 # Liability mitigation floor compresses allowable baseline spend
 calibrated_base_cost *= 1.0 - (cap_floor / 100.0) * 0.35
-calibrated_base_days = int(90 * (1.0 + age_factor) * duty_factor)
+calibrated_base_days = int(90 * (1.0 + age_factor))
 
 # --- MODULE 3: PREVENTATIVE DRIFT RADAR ---
 st.markdown("---")
 st.markdown("## PREVENTATIVE DRIFT RADAR")
-st.markdown(
-    "<p style='color:#8b949e; font-size:0.9rem;'>"
-    "Live Divergence Mapping and Retrospective Lookback Control Panel</p>",
-    unsafe_allow_html=True,
-)
 
 st.markdown("### Live Claim Telemetry Simulation Input")
 sim_col1, sim_col2 = st.columns(2)
@@ -393,7 +381,7 @@ with sim_col1:
     )
 with sim_col2:
     actual_spend = st.number_input(
-        "Actual Invoiced Claims Cost to Date (USD)",
+        "Actual Invoiced Claims Cost to Date (NZD)",
         min_value=0.0,
         value=28400.0,
     )
@@ -415,15 +403,6 @@ permanent_disability_prob = 1.0 / (
     )
 )
 
-psych_flag = (
-    "Path B Trigger Activated"
-    if ("fear" in dictation.lower() or "stress" in dictation.lower() or "barrier" in dictation.lower())
-    else "Nominal Watch"
-)
-odg_status = (
-    "On Track" if st.session_state.functional_drift <= 15 else "Timeline Breach"
-)
-
 table_col, metric_col = st.columns([1.6, 1.0])
 
 with table_col:
@@ -438,23 +417,21 @@ with table_col:
             ],
             "Validated Standard": [
                 f"{calibrated_base_days} Days",
-                f"${calibrated_base_cost:,.2f}",
+                f"${calibrated_base_cost:,.2f} NZD",
                 "100% Path Arc",
                 "Nominal Resilience",
             ],
             "Live Ingest State": [
                 "Day 42",
-                f"${actual_spend:,.2f}",
+                f"${actual_spend:,.2f} NZD",
                 f"{actual_rom}% Flexion",
-                "High Stress / Fear Flag"
-                if psych_flag == "Path B Trigger Activated"
-                else "Stable Affect",
+                "High Stress / Fear Flag",
             ],
             "Point of Drift Variance": [
-                odg_status,
-                f"${float(actual_spend) - calibrated_base_cost:+,.2f}",
+                "On Track" if st.session_state.functional_drift <= 15 else "Timeline Breach",
+                f"${float(actual_spend) - calibrated_base_cost:+,.2f} NZD",
                 f"-{st.session_state.functional_drift:.0f}% Deviation",
-                psych_flag,
+                "Path B Trigger Activated",
             ],
         }
     )
@@ -472,31 +449,37 @@ with metric_col:
         status_label = "NOMINAL PATHWAY ALIGNMENT"
         status_color = "#10b981"
 
-    # Secure Ledger Data Masking Logic Matrix (embedded in one metric box)
+    # Formulations removed. Replaced with high-impact large print layout.
     if role == SCHEME_DIRECTOR:
         ledger_body = f"""
-            <div class="metric-label">Total Absolute System Exposure (TASE)</div>
-            <div class="metric-value-silver">${projected_final_cost:,.2f}</div>
-            <div class="metric-label" style="margin-top:0.8rem;">Probability of Permanent Disability (PPD)</div>
-            <div class="metric-value-crimson" style="color:{'#ef4444' if permanent_disability_prob > 0.50 else '#e2e8f0'};">
+            <div class="metric-label">Permanent Disability Probability (PPD)</div>
+            <div class="large-impact-value" style="color:{status_color};">
                 {permanent_disability_prob * 100:.1f}%
             </div>
-            <div class="metric-label" style="margin-top:0.8rem;">Dynamic Lookback Valuation Basis</div>
-            <div class="metric-value-green">${(5000 + (projected_final_cost * 0.12)):,.2f}</div>
+            <hr style="border:0; border-top:1px solid #30363d; margin: 1rem 0;"/>
+            <div class="metric-label">Total Absolute System Exposure (TASE)</div>
+            <div class="metric-value-silver" style="font-size:1.6rem; margin-bottom:0.5rem;">
+                ${projected_final_cost:,.2f} NZD
+            </div>
+            <div class="metric-label">Dynamic Lookback Valuation Basis</div>
+            <div class="metric-value-green" style="font-size:1.3rem;">
+                ${(5000 + (projected_final_cost * 0.12)):,.2f} NZD
+            </div>
         """
     else:
         ledger_body = """
-            <div class="metric-label">Total Absolute System Exposure (TASE)</div>
-            <div style="color:#8b949e; font-style:italic; font-size:1.1rem; margin-bottom:0.8rem;">
-                🔒 MASKED (Director Clearance Required)
-            </div>
-            <div class="metric-label">Probability of Permanent Disability (PPD)</div>
+            <div class="metric-label">Permanent Disability Probability (PPD)</div>
             <div style="color:#8b949e; font-style:italic; font-size:1.1rem; margin-bottom:0.8rem;">
                 🔒 MASKED
             </div>
+            <hr style="border:0; border-top:1px solid #30363d; margin: 1rem 0;"/>
+            <div class="metric-label">Total Absolute System Exposure (TASE)</div>
+            <div style="color:#8b949e; font-style:italic; font-size:1.1rem; margin-bottom:0.8rem;">
+                🔒 RESTRICTED ACCESS
+            </div>
             <div class="metric-label">Dynamic Lookback Valuation Basis</div>
             <div style="color:#8b949e; font-style:italic; font-size:1.1rem;">
-                🔒 RESTRICTED MASK ACTIVE
+                🔒 ACCESS DENIED
             </div>
         """
 
@@ -513,24 +496,15 @@ with metric_col:
         unsafe_allow_html=True,
     )
 
-    if status_color == "#ef4444":
-        st.error(
-            "CRITICAL PATHWAY DRIFT DETECTED: Unaddressed drift is inflating "
-            "long-tail scheme liabilities."
-        )
-        if strategic_note:
-            st.info(f"Active performance mandate: {strategic_note}")
-
 # --- MODULE 4: LONGITUDINAL HISTORICAL COST TREND VISUALIZATION ---
 st.markdown("---")
 st.markdown("### HISTORICAL PERFORMANCE ANALYTICS")
 st.markdown(
     "<p style='color:#8b949e; font-size:0.9rem;'>"
-    "120-Day Longitudinal Claim Trajectory Matrix — Expected Pathway vs Actual Cumulative Spend</p>",
+    "120-Day Longitudinal Claim Trajectory Matrix — Expected Pathway vs Actual Cumulative Spend (NZD)</p>",
     unsafe_allow_html=True,
 )
 
-# Build a clean data grid simulating the cost split over time
 days_series = np.arange(0, 121, 10)
 standard_trajectory = np.array(
     [min(calibrated_base_cost, (calibrated_base_cost / 90) * d) for d in days_series]
@@ -551,7 +525,7 @@ if role == SCHEME_DIRECTOR:
         }
     )
     st.caption(
-        f"Scheme Director view · longitudinal aggregate for `{subject_token}` pathway"
+        f"Scheme Director view · longitudinal aggregate for `{subject_token}` pathway (NZD)"
     )
     st.line_chart(
         df_chart,
