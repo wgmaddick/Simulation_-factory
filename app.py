@@ -1,7 +1,7 @@
 """AAT Scheme Performance Engine — predictive operational risk governance.
 
 Portrait-tablet optimized: slim 3-column global metrics, core-vector master
-ledger, and a consolidated Comprehensive Scheme Ledger Dossier on drill-down.
+ledger, and stacked drill-down viewports (dossier → alignment table → chart).
 """
 
 from __future__ import annotations
@@ -68,7 +68,8 @@ st.markdown(
         border-radius: 6px;
         padding: 1.2rem;
         margin-bottom: 1rem;
-        min-height: 110px;
+        height: auto;
+        overflow: visible;
     }
     .metric-label {
         font-family: "IBM Plex Mono", monospace;
@@ -82,19 +83,19 @@ st.markdown(
         font-size: 1.8rem;
         font-weight: 700;
         color: #e2e8f0;
-        line-height: 1.1;
+        line-height: 1.2;
     }
     .metric-value-crimson {
         font-size: 1.8rem;
         font-weight: 700;
         color: #ef4444;
-        line-height: 1.1;
+        line-height: 1.2;
     }
     .metric-value-green {
         font-size: 1.8rem;
         font-weight: 700;
         color: #10b981;
-        line-height: 1.1;
+        line-height: 1.2;
     }
     .metric-subtext {
         font-size: 0.85rem;
@@ -105,7 +106,7 @@ st.markdown(
     .critical-impact-value {
         font-size: 3.8rem;
         font-weight: 700;
-        line-height: 1;
+        line-height: 1.1;
         margin-top: 0.4rem;
         margin-bottom: 0.4rem;
         font-family: "IBM Plex Mono", monospace;
@@ -114,7 +115,7 @@ st.markdown(
     .nominal-impact-value {
         font-size: 3.8rem;
         font-weight: 700;
-        line-height: 1;
+        line-height: 1.1;
         margin-top: 0.4rem;
         margin-bottom: 0.4rem;
         font-family: "IBM Plex Mono", monospace;
@@ -453,62 +454,28 @@ else:
         .replace(">", "&gt;")
     )
 
-    # Balanced structural split layout
-    table_col, metric_col = st.columns([1.1, 1.0])
+    st.markdown("## PREVENTATIVE DRIFT RADAR DEEP-DIVE")
 
-    with table_col:
-        st.markdown("#### Operational Pathway Alignment Vector")
-        df_vector = pd.DataFrame(
-            {
-                "Performance Dimension": [
-                    "Target Recovery Runway",
-                    "Expected Cost Runway",
-                    "Current Capacity",
-                    "Variance Index",
-                ],
-                "Validated Standard": [
-                    f"{calibrated_base_days} Days",
-                    f"${calibrated_base_cost:,.0f} NZD",
-                    "100% Target",
-                    "Nominal",
-                ],
-                "Live Ingest State": [
-                    "Day 42",
-                    f"${actual_spend:,.0f} NZD",
-                    f"{actual_rom:.0f}% Flexion",
-                    "High Drift Flag" if functional_drift > 15 else "Clear",
-                ],
-                "Point of Drift Variance": [
-                    "On Track" if functional_drift <= 15 else "Timeline Breach",
-                    f"${actual_spend - calibrated_base_cost:+,.0f} NZD",
-                    f"-{functional_drift:.0f}% Dev",
-                    "Path B Active" if functional_drift > 15 else "Clear",
-                ],
-            }
+    # --- STACKED BLOCK 1: MASTER LEDGER DOSSIER (full width for tablet scanning) ---
+    st.markdown("#### Comprehensive Scheme Ledger Dossier")
+
+    if role == SCHEME_DIRECTOR:
+        fee_line = (
+            f'<div class="metric-label" style="margin-top:0.6rem;">Dynamic Lookback Valuation Basis</div>\n'
+            f'<div class="metric-value-green" style="font-size:1.4rem;">'
+            f"${(5000 + (projected_final_cost * 0.12)):,.2f} NZD</div>"
         )
-        st.table(df_vector)
+    else:
+        fee_line = (
+            '<div class="metric-label" style="margin-top:0.6rem;">Dynamic Lookback Valuation Basis</div>\n'
+            '<div style="color:#8b949e; font-style:italic; font-size:0.95rem;">'
+            "🔒 SECURE LEDGER PROXIED TO EXECUTIVE SECTOR</div>"
+        )
 
-    with metric_col:
-        st.markdown("#### Comprehensive Scheme Ledger Dossier")
-
-        # Security firewall switch — left-aligned strings force pure HTML rendering
-        if role == SCHEME_DIRECTOR:
-            fee_line = (
-                f'<div class="metric-label" style="margin-top:0.4rem;">Dynamic Lookback Valuation Basis</div>\n'
-                f'<div class="metric-value-green" style="font-size:1.3rem;">'
-                f"${(5000 + (projected_final_cost * 0.12)):,.2f} NZD</div>"
-            )
-        else:
-            fee_line = (
-                '<div class="metric-label" style="margin-top:0.4rem;">Dynamic Lookback Valuation Basis</div>\n'
-                '<div style="color:#8b949e; font-style:italic; font-size:0.95rem;">'
-                "🔒 SECURE LEDGER PROXIED TO EXECUTIVE SECTOR</div>"
-            )
-
-        # Left-aligned HTML payload block to force pure HTML engine processing
-        html_payload = f"""<div class="metric-box" style="border-left: 4px solid {status_color}; padding: 1.5rem;">
+    # Left-aligned HTML payload — no indent so Streamlit does not code-fence it
+    html_payload = f"""<div class="metric-box" style="border-left: 4px solid {status_color}; padding: 1.5rem; height: auto;">
 <div class="metric-label">Scheme Alignment Status</div>
-<div style="color:{status_color}; font-weight:700; font-size:1.1rem; margin-bottom:0.8rem;">{status_label}</div>
+<div style="color:{status_color}; font-weight:700; font-size:1.2rem; margin-bottom:0.8rem;">{status_label}</div>
 <div style="background-color:#0c1017; padding:0.8rem; border-radius:4px; border:1px solid #30363d; margin-bottom:0.8rem;">
 <div class="metric-label" style="color:#ffffff;">Claimant File Dossier Matrix</div>
 <span style="font-size:0.9rem; color:#8b949e;">ID:</span> <span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{display_token}</span><br/>
@@ -525,9 +492,43 @@ else:
 <div class="metric-value-green" style="font-size:1.5rem; margin-bottom:0.3rem;">${mitigated_reserve_target:,.2f} NZD</div>
 {fee_line}
 </div>"""
-        st.markdown(html_payload, unsafe_allow_html=True)
+    st.markdown(html_payload, unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
 
-    # Individual Cost Trajectory Trend Graph
+    # --- STACKED BLOCK 2: DATA ALIGNMENT MATRIX (full width, unscrunched) ---
+    st.markdown("#### Operational Pathway Alignment Vector")
+    df_vector = pd.DataFrame(
+        {
+            "Performance Dimension": [
+                "Target Recovery Runway",
+                "Expected Cost Runway",
+                "Current Capacity",
+                "Variance Index",
+            ],
+            "Validated Standard": [
+                f"{calibrated_base_days} Days",
+                f"${calibrated_base_cost:,.0f} NZD",
+                "100% Target",
+                "Nominal",
+            ],
+            "Live Ingest State": [
+                "Day 42",
+                f"${actual_spend:,.0f} NZD",
+                f"{actual_rom:.0f}% Flexion",
+                "High Drift Flag" if functional_drift > 15 else "Clear",
+            ],
+            "Point of Drift Variance": [
+                "On Track" if functional_drift <= 15 else "Timeline Breach",
+                f"${actual_spend - calibrated_base_cost:+,.0f} NZD",
+                f"-{functional_drift:.0f}% Dev",
+                "Path B Active" if functional_drift > 15 else "Clear",
+            ],
+        }
+    )
+    st.table(df_vector)
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # --- STACKED BLOCK 3: Individual Cost Trajectory Trend Graph ---
     st.markdown("### INDIVIDUAL PERFORMANCE TIME-COST AXIS")
     days_series = np.arange(0, calibrated_base_days + 31, 10)
     standard_trajectory = np.array(
