@@ -137,30 +137,40 @@ st.markdown(
         background-color: #161b22;
         border: 1px solid #30363d;
         border-radius: 6px;
-        padding: 1.5rem;
+        padding: 1.2rem;
         margin-bottom: 1rem;
+        min-height: 110px;
     }
     .metric-label {
         font-family: "IBM Plex Mono", monospace;
-        font-size: 0.85rem;
+        font-size: 0.82rem;
         text-transform: uppercase;
         color: #8b949e;
         letter-spacing: 0.05em;
-    }
-    .metric-value-green {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #10b981;
-    }
-    .metric-value-crimson {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #ef4444;
+        margin-bottom: 0.4rem;
     }
     .metric-value-silver {
-        font-size: 2rem;
+        font-size: 2.2rem;
         font-weight: 700;
         color: #e2e8f0;
+        line-height: 1.1;
+    }
+    .metric-value-crimson {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #ef4444;
+        line-height: 1.1;
+    }
+    .metric-value-green {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #10b981;
+        line-height: 1.1;
+    }
+    .metric-subtext {
+        font-size: 0.88rem;
+        color: #8b949e;
+        margin-top: 0.3rem;
     }
     /* Large Print Primary Executive Metric Focus */
     .large-impact-value {
@@ -278,43 +288,49 @@ else:
     )
     base_cost_multiplier = 1.0
 
-display_cases = kpis["cases"]
-display_drift = kpis["drift"]
+display_cases = str(kpis["cases"])
+display_drift = str(kpis["drift"])
 display_alignment = f"{kpis['alignment']:.1f}%"
-display_exposure = f"${kpis['exposure']:,.0f} NZD"
+# Compact executive readout; subtext carries the NZD unit label
+display_exposure = f"${kpis['exposure'] / 1000.0:,.1f}K"
 
-# Macro Scheme Performance Metrics Bar
+# Macro Scheme Performance Metrics Bar (Decoupled & Stacking Safe)
 col1, col2, col3, col4 = st.columns(4)
 with col1:
     st.markdown(
         f'<div class="metric-box"><div class="metric-label">Total Scheme Claims</div>'
-        f'<div class="metric-value-silver">{display_cases} Cases</div></div>',
+        f'<div class="metric-value-silver">{display_cases}</div>'
+        f'<div class="metric-subtext">Active Files Ingested</div></div>',
         unsafe_allow_html=True,
     )
 with col2:
     st.markdown(
         f'<div class="metric-box"><div class="metric-label">Critical Pathway Drift</div>'
-        f'<div class="metric-value-crimson">{display_drift} Subjects</div></div>',
+        f'<div class="metric-value-crimson">{display_drift}</div>'
+        f'<div class="metric-subtext">Divergent Subjects</div></div>',
         unsafe_allow_html=True,
     )
 with col3:
     st.markdown(
-        f'<div class="metric-box"><div class="metric-label">AAT Baseline Performance Index</div>'
-        f'<div class="metric-value-green">{display_alignment}</div></div>',
+        f'<div class="metric-box"><div class="metric-label">AAT Performance Index</div>'
+        f'<div class="metric-value-green">{display_alignment}</div>'
+        f'<div class="metric-subtext">Baseline Trajectory</div></div>',
         unsafe_allow_html=True,
     )
 with col4:
     if role == SCHEME_DIRECTOR:
         st.markdown(
-            f'<div class="metric-box"><div class="metric-label">Projected Scheme Liability</div>'
-            f'<div class="metric-value-silver">{display_exposure}</div></div>',
+            f'<div class="metric-box"><div class="metric-label">Projected Liability</div>'
+            f'<div class="metric-value-silver">{display_exposure}</div>'
+            f'<div class="metric-subtext">Total NZD Exposure</div></div>',
             unsafe_allow_html=True,
         )
     else:
         st.markdown(
-            '<div class="metric-box"><div class="metric-label">Projected Scheme Liability</div>'
-            '<div style="color:#8b949e; font-size:1.2rem; font-weight:700; margin-top:0.8rem;">'
-            "🔒 RESTRICTED</div></div>",
+            '<div class="metric-box"><div class="metric-label">Projected Liability</div>'
+            '<div style="color:#8b949e; font-size:1.1rem; font-weight:700; margin-top:0.5rem;">'
+            "🔒 RESTRICTED</div>"
+            '<div class="metric-subtext">Requires GM Level</div></div>',
             unsafe_allow_html=True,
         )
 
@@ -362,7 +378,6 @@ with intake_col3:
 # Dynamic calculations for age-calibrated timeline modeling
 age_factor = (age - 25) * 0.015
 calibrated_base_cost = 22500.0 * (1.0 + age_factor) * base_cost_multiplier
-# Liability mitigation floor compresses allowable baseline spend
 calibrated_base_cost *= 1.0 - (cap_floor / 100.0) * 0.35
 calibrated_base_days = int(90 * (1.0 + age_factor))
 
@@ -442,6 +457,7 @@ with table_col:
 
 with metric_col:
     st.markdown("#### Macro Financial Liability Ledger")
+
     if st.session_state.functional_drift > 15.0 or permanent_disability_prob > 0.50:
         status_label = "CRITICAL PATHWAY DRIFT DETECTED"
         status_color = "#ef4444"
@@ -449,52 +465,37 @@ with metric_col:
         status_label = "NOMINAL PATHWAY ALIGNMENT"
         status_color = "#10b981"
 
-    # Formulations removed. Replaced with high-impact large print layout.
+    # Unify the structural elements into single, clean payload blocks
     if role == SCHEME_DIRECTOR:
-        ledger_body = f"""
+        html_payload = f"""
+        <div class="metric-box" style="border-left: 4px solid {status_color}; min-height: 290px;">
+            <div class="metric-label">Scheme Alignment Status</div>
+            <div style="color:{status_color}; font-weight:700; font-size:1.1rem; margin-bottom:0.8rem;">{status_label}</div>
             <div class="metric-label">Permanent Disability Probability (PPD)</div>
-            <div class="large-impact-value" style="color:{status_color};">
-                {permanent_disability_prob * 100:.1f}%
-            </div>
+            <div class="large-impact-value" style="color:{status_color};">{permanent_disability_prob * 100:.1f}%</div>
             <hr style="border:0; border-top:1px solid #30363d; margin: 1rem 0;"/>
             <div class="metric-label">Total Absolute System Exposure (TASE)</div>
-            <div class="metric-value-silver" style="font-size:1.6rem; margin-bottom:0.5rem;">
-                ${projected_final_cost:,.2f} NZD
-            </div>
+            <div class="metric-value-silver" style="font-size:1.6rem; margin-bottom:0.5rem;">${projected_final_cost:,.2f} NZD</div>
             <div class="metric-label">Dynamic Lookback Valuation Basis</div>
-            <div class="metric-value-green" style="font-size:1.3rem;">
-                ${(5000 + (projected_final_cost * 0.12)):,.2f} NZD
-            </div>
+            <div class="metric-value-green" style="font-size:1.3rem;">${(5000 + (projected_final_cost * 0.12)):,.2f} NZD</div>
+        </div>
         """
     else:
-        ledger_body = """
+        html_payload = f"""
+        <div class="metric-box" style="border-left: 4px solid {status_color}; min-height: 290px;">
+            <div class="metric-label">Scheme Alignment Status</div>
+            <div style="color:{status_color}; font-weight:700; font-size:1.1rem; margin-bottom:0.8rem;">{status_label}</div>
             <div class="metric-label">Permanent Disability Probability (PPD)</div>
-            <div style="color:#8b949e; font-style:italic; font-size:1.1rem; margin-bottom:0.8rem;">
-                🔒 MASKED
-            </div>
+            <div style="color:#8b949e; font-style:italic; font-size:1.1rem; margin-bottom:0.8rem;">🔒 MASKED</div>
             <hr style="border:0; border-top:1px solid #30363d; margin: 1rem 0;"/>
             <div class="metric-label">Total Absolute System Exposure (TASE)</div>
-            <div style="color:#8b949e; font-style:italic; font-size:1.1rem; margin-bottom:0.8rem;">
-                🔒 RESTRICTED ACCESS
-            </div>
+            <div style="color:#8b949e; font-style:italic; font-size:1.1rem; margin-bottom:0.8rem;">🔒 RESTRICTED ACCESS</div>
             <div class="metric-label">Dynamic Lookback Valuation Basis</div>
-            <div style="color:#8b949e; font-style:italic; font-size:1.1rem;">
-                🔒 ACCESS DENIED
-            </div>
+            <div style="color:#8b949e; font-style:italic; font-size:1.1rem;">🔒 ACCESS DENIED</div>
+        </div>
         """
 
-    st.markdown(
-        f"""
-        <div class="metric-box" style="border-left: 4px solid {status_color};">
-            <div class="metric-label">Scheme Alignment Status</div>
-            <div style="color:{status_color}; font-weight:700; font-size:1.1rem; margin-bottom:0.8rem;">
-                {status_label}
-            </div>
-            {ledger_body}
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.markdown(html_payload, unsafe_allow_html=True)
 
 # --- MODULE 4: LONGITUDINAL HISTORICAL COST TREND VISUALIZATION ---
 st.markdown("---")
