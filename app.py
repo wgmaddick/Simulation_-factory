@@ -220,6 +220,47 @@ def dictation_for_claim(claim_id: str) -> str:
     )
 
 
+def mitigation_protocol_html(
+    claim_token: str,
+    *,
+    projected_final_cost: float,
+    mitigated_reserve_target: float,
+    functional_drift: float,
+    permanent_disability_prob: float,
+) -> str:
+    """Prescriptive AI protocol block injected into the ledger dossier."""
+    token = str(claim_token)
+    is_critical = functional_drift > 15.0 or permanent_disability_prob > 0.50
+
+    # Zeta / extreme PPD: commutation + IME + demands override
+    if "Zeta" in token or permanent_disability_prob > 0.90:
+        return f"""<div style="background-color:#1b1416; padding:0.8rem; border-radius:4px; border:1px solid #6b21a8; margin-bottom:0.8rem;">
+<div class="metric-label" style="color:#ef4444; font-weight:700;">AUTOMATED MITIGATION PROTOCOL</div>
+<ul style="color:#f8fafc; font-size:0.88rem; margin:0; padding-left:1.2rem; line-height:1.4;">
+<li><strong>Commutation Target:</strong> Initiate immediate Lump-Sum settlement review range (${mitigated_reserve_target:,.0f} - ${projected_final_cost:,.0f} NZD) to transfer long-tail structural risk off ledger balance sheets.</li>
+<li><strong>IME Authorization:</strong> Issue urgent Independent Medical Examination directive to challenge current permanent incapacity ceiling.</li>
+<li><strong>Demands Override:</strong> Force immediate drop in Occupational Tier from Heavy Manual to Clerical/Supervisory.</li>
+</ul>
+</div>"""
+
+    # Delta / other critical drift: psychosocial triage + light-duty matching
+    if "Delta" in token or is_critical:
+        return """<div style="background-color:#141b1f; padding:0.8rem; border-radius:4px; border:1px solid #0369a1; margin-bottom:0.8rem;">
+<div class="metric-label" style="color:#38bdf8; font-weight:700;">AUTOMATED MITIGATION PROTOCOL</div>
+<ul style="color:#f8fafc; font-size:0.88rem; margin:0; padding-left:1.2rem; line-height:1.4;">
+<li><strong>Clinical Triage:</strong> Deploy proactive psychological resilience and behavioral counseling within 7 days to address elevated psychosocial barrier spikes.</li>
+<li><strong>Light-Duty Matching:</strong> Initialize structured transitional employer-return tracking protocol to halt ongoing baseline drift velocity.</li>
+</ul>
+</div>"""
+
+    return """<div style="background-color:#141f17; padding:0.8rem; border-radius:4px; border:1px solid #15803d; margin-bottom:0.8rem;">
+<div class="metric-label" style="color:#4ade80; font-weight:700;">AUTOMATED MITIGATION PROTOCOL</div>
+<p style="color:#f8fafc; font-size:0.88rem; margin:0; line-height:1.4;">
+<strong>Path Alignment Secure:</strong> Maintain standard vocational rehabilitation baseline track. Clear file for regular automated payment processing. No structural intervention required this cycle.
+</p>
+</div>"""
+
+
 def _job_params(duty_tier: str) -> tuple[float, float, float]:
     if "Heavy" in duty_tier:
         return 1.30, 28.0, 1.35
@@ -618,6 +659,14 @@ else:
             "🔒 SECURE LEDGER PROXIED TO EXECUTIVE SECTOR</div>"
         )
 
+    protocol_html = mitigation_protocol_html(
+        display_token,
+        projected_final_cost=float(projected_final_cost),
+        mitigated_reserve_target=float(mitigated_reserve_target),
+        functional_drift=float(functional_drift),
+        permanent_disability_prob=float(permanent_disability_prob),
+    )
+
     # Left-aligned HTML payload — no indent so Streamlit does not code-fence it
     html_payload = f"""<div class="metric-box" style="border-left: 4px solid {status_color}; padding: 1.5rem; height: auto;">
 <div class="metric-label">Scheme Alignment Status</div>
@@ -629,6 +678,7 @@ else:
 <span style="font-size:0.9rem; color:#8b949e;">Demands / Age:</span> <span style="font-size:0.9rem; color:#ffffff;">{duty_tier} (Age {int(age)})</span><br/>
 <p style="font-size:0.85rem; color:#8b949e; font-style:italic; margin-top:0.4rem; margin-bottom:0;"><strong>NLP Ingest:</strong> {dict_html}</p>
 </div>
+{protocol_html}
 <div class="metric-label">Probability of Permanent Disability (PPD)</div>
 <div class="{impact_class}">{permanent_disability_prob * 100:.1f}%</div>
 <hr style="border:0; border-top:1px solid #30363d; margin: 0.8rem 0;"/>
