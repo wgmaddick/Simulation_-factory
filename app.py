@@ -6,139 +6,143 @@ import numpy as np
 st.set_page_config(layout="wide", page_title="AAT Sovereign Orchestration Engine")
 
 st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
-    
-    .reportview-container, .main {
-        background-color: #0c1017;
-        color: #f8fafc;
-        font-family: "IBM Plex Sans", sans-serif;
-    }
-    .stApp {
-        background-color: #0c1017;
-    }
-    h1, h2, h3, h4 {
-        color: #ffffff !important;
-        font-weight: 700 !important;
-    }
-    .metric-box {
-        background-color: #161b22;
-        border: 1px solid #30363d;
-        border-radius: 6px;
-        padding: 1.2rem;
-        margin-bottom: 1rem;
-        height: auto;
-        overflow: visible;
-    }
-    .metric-label {
-        font-family: "IBM Plex Mono", monospace;
-        font-size: 0.80rem;
-        text-transform: uppercase;
-        color: #8b949e;
-        letter-spacing: 0.05em;
-        margin-bottom: 0.4rem;
-    }
-    .metric-value-silver {
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: #e2e8f0;
-        line-height: 1.2;
-    }
-    .metric-value-crimson {
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: #ef4444;
-        line-height: 1.2;
-    }
-    .metric-value-green {
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: #10b981;
-        line-height: 1.2;
-    }
-    
-    /* 📋 ADVANCED RESPONSIVE SOVEREIGN TABLE ARCHITECTURE */
-    .sovereign-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 0.5rem;
-        margin-bottom: 1.5rem;
-    }
-    .sovereign-table th {
-        background-color: #161b22;
-        color: #8b949e;
-        font-family: "IBM Plex Mono", monospace;
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        text-align: left;
-        padding: 0.75rem;
-        border-bottom: 2px solid #30363d;
-    }
-    .sovereign-table td {
-        padding: 0.75rem;
-        border-bottom: 1px solid #21262d;
-        font-size: 0.95rem;
-        color: #c9d1d9;
-    }
-    .sovereign-table tr:hover {
-        background-color: #161b22;
-    }
-    .status-badge-drift {
-        color: #ff7b72 !important;
-        font-weight: 600;
-        background-color: rgba(248, 81, 73, 0.15);
-        padding: 0.2rem 0.5rem;
-        border-radius: 4px;
-        border: 1px solid rgba(248, 81, 73, 0.4);
-        font-family: "IBM Plex Mono", monospace;
-        font-size: 0.85rem;
-    }
-    .status-badge-nominal {
-        color: #56d364 !important;
-        font-weight: 600;
-        background-color: rgba(56, 139, 60, 0.15);
-        padding: 0.2rem 0.5rem;
-        border-radius: 4px;
-        border: 1px solid rgba(56, 139, 60, 0.4);
-        font-family: "IBM Plex Mono", monospace;
-        font-size: 0.85rem;
-    }
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
 
-    .critical-impact-value {
-        font-size: 3.8rem;
-        font-weight: 700;
-        line-height: 1.1;
-        font-family: "IBM Plex Mono", monospace;
-        color: #ef4444 !important;
-    }
-    .nominal-impact-value {
-        font-size: 3.8rem;
-        font-weight: 700;
-        line-height: 1.1;
-        font-family: "IBM Plex Mono", monospace;
-        color: #10b981 !important;
-    }
+.reportview-container, .main {
+    background-color: #0c1017;
+    color: #f8fafc;
+    font-family: "IBM Plex Sans", sans-serif;
+}
+.stApp {
+    background-color: #0c1017;
+}
+h1, h2, h3, h4 {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+.metric-box {
+    background-color: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 1.2rem;
+    margin-bottom: 1rem;
+    height: auto;
+    overflow: visible;
+}
+.metric-label {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.80rem;
+    text-transform: uppercase;
+    color: #8b949e;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.4rem;
+}
+.metric-value-silver {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #e2e8f0;
+    line-height: 1.2;
+}
+.metric-value-crimson {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #ef4444;
+    line-height: 1.2;
+}
+.metric-value-green {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #10b981;
+    line-height: 1.2;
+}
+.metric-subtext {
+    font-size: 0.85rem;
+    color: #8b949e;
+    margin-top: 0.3rem;
+}
 
-    /* 📱 VIEWPORT DATA CONDENSATION QUERY */
-    @media (max-width: 768px) {
-        .critical-impact-value, .nominal-impact-value {
-            font-size: 2.4rem !important;
-        }
-        .metric-value-silver, .metric-value-crimson, .metric-value-green {
-            font-size: 1.4rem !important;
-        }
-        .floating-avatar-container {
-            bottom: 20px !important;
-            right: 20px !important;
-            width: 46px !important;
-            height: 46px !important;
-        }
-        /* Completely strips non-essential columns off screen on iPhone viewports */
-        .mobile-condense {
-            display: none !important;
-        }
+/* 📋 ADVANCED RESPONSIVE SOVEREIGN TABLE ARCHITECTURE */
+.sovereign-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+.sovereign-table th {
+    background-color: #161b22;
+    color: #8b949e;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    text-align: left;
+    padding: 0.75rem;
+    border-bottom: 2px solid #30363d;
+}
+.sovereign-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #21262d;
+    font-size: 0.95rem;
+    color: #c9d1d9;
+}
+.sovereign-table tr:hover {
+    background-color: #161b22;
+}
+.status-badge-drift {
+    color: #ff7b72 !important;
+    font-weight: 600;
+    background-color: rgba(248, 81, 73, 0.15);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid rgba(248, 81, 73, 0.4);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.85rem;
+}
+.status-badge-nominal {
+    color: #56d364 !important;
+    font-weight: 600;
+    background-color: rgba(56, 139, 60, 0.15);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid rgba(56, 139, 60, 0.4);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.85rem;
+}
+
+.critical-impact-value {
+    font-size: 3.8rem;
+    font-weight: 700;
+    line-height: 1.1;
+    font-family: "IBM Plex Mono", monospace;
+    color: #ef4444 !important;
+}
+.nominal-impact-value {
+    font-size: 3.8rem;
+    font-weight: 700;
+    line-height: 1.1;
+    font-family: "IBM Plex Mono", monospace;
+    color: #10b981 !important;
+}
+
+/* 📱 VIEWPORT DATA CONDENSATION QUERY */
+@media (max-width: 768px) {
+    .critical-impact-value, .nominal-impact-value {
+        font-size: 2.4rem !important;
     }
-    </style>
+    .metric-value-silver, .metric-value-crimson, .metric-value-green {
+        font-size: 1.4rem !important;
+    }
+    .floating-avatar-container {
+        bottom: 20px !important;
+        right: 20px !important;
+        width: 46px !important;
+        height: 46px !important;
+    }
+    .mobile-condense {
+        display: none !important;
+    }
+}
+</style>
 """, unsafe_allow_html=True)
 
 # --- MASTER CLAIMS DATABASE SESSION STATE INITIALIZATION ---
@@ -250,30 +254,14 @@ if view_selection == "Global Scheme Portfolio (All Active Claims)":
 
     st.markdown("### 📋 MASTER ORCHESTRATION ACCOUNTABILITY LEDGER")
     
-    # 🛠️ NATIVE VIEWPORT-CONDENSED HTML TABLE WITH CRISP COLOR BLOCKS
-    table_html = """
-    <table class="sovereign-table">
-        <thead>
-            <tr>
-                <th>Claim ID</th>
-                <th class="mobile-condense">Anatomy Target</th>
-                <th>Status Anchor</th>
-            </tr>
-        </thead>
-        <tbody>
-    """
+    # 🌟 CRITICAL: Left-aligned string literal formatting avoids accidental code blocks
+    table_html = '<table class="sovereign-table"><thead><tr><th>Claim ID</th><th class="mobile-condense">Anatomy Target</th><th>Status Anchor</th></tr></thead><tbody>'
     
     for idx, row in st.session_state.master_ledger.iterrows():
         badge_style = "status-badge-drift" if row["Status"] == "CRITICAL DRIFT" else "status-badge-nominal"
-        table_html += f"""
-            <tr>
-                <td style="font-family:'IBM Plex Mono', monospace; font-weight:600;">{row['Claim ID']}</td>
-                <td class="mobile-condense">{row['Anatomy Target']}</td>
-                <td><span class="{badge_style}">{row['Status']}</span></td>
-            </tr>
-        """
+        table_html += f'<tr><td style="font-family:\'IBM Plex Mono\', monospace; font-weight:600;">{row["Claim ID"]}</td><td class="mobile-condense">{row["Anatomy Target"]}</td><td><span class="{badge_style}">{row["Status"]}</span></td></tr>'
         
-    table_html += "</tbody></table>"
+    table_html += '</tbody></table>'
     st.markdown(table_html, unsafe_allow_html=True)
 
 # ==============================================================================
@@ -427,7 +415,7 @@ st.markdown(f"""
         justify-content: center;
         cursor: pointer;
         z-index: 999999;
-    " onclick="alert('🤖 Native NLP Compliance Advisor Node\\n\\nActive Context: {role}\\n\\n[LICENSE VERIFIED] This text assistant responds instantly on pocket devices without data lag. Direct questions are securely managed under license parameters.')">
+    " onclick="alert('🤖 Native NLP Compliance Advisor Node\\n\\nActive Context: {role}\\n\\n[LICENSE VERIFIED] This text assistant responds instantly on pocket devices without data lag.')">
         <span class="floating-avatar-icon" style="font-size: 1.4rem;">🤖</span>
     </div>
 """, unsafe_allow_html=True)
