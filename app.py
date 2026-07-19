@@ -112,6 +112,40 @@ st.markdown(
         color: #8b949e;
         margin-top: 0.3rem;
     }
+    /* MSD Training Bridge — interactive automation badge */
+    .msd-bridge-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        padding: 0.35rem 0;
+    }
+    .msd-auto-badge {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #10b981;
+        background: rgba(16, 185, 129, 0.12);
+        border: 1px solid rgba(16, 185, 129, 0.45);
+        border-radius: 4px;
+        padding: 0.18rem 0.45rem;
+        animation: msd-pulse 1.6s ease-in-out infinite;
+    }
+    .msd-confirm-text {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: #38bdf8 !important;
+        line-height: 1.35;
+    }
+    @keyframes msd-pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.35); opacity: 1; }
+        50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); opacity: 0.85; }
+    }
     /* Executive Large-Print Callout Focus */
     .critical-impact-value {
         font-size: 3.8rem;
@@ -268,6 +302,16 @@ def mitigation_protocol_html(
 </div>"""
 
 
+def msd_training_bridge_cell(confirmation: str) -> str:
+    """Interactive MSD Training Bridge cell with live automation badge."""
+    return (
+        '<div class="msd-bridge-cell">'
+        '<span class="msd-auto-badge">⚡ SYSTEM AUTOMATION ACTIVE</span>'
+        f'<span class="msd-confirm-text">{confirmation}</span>'
+        "</div>"
+    )
+
+
 def adaptive_cv_trajectory_html(
     claim_token: str,
     *,
@@ -279,26 +323,32 @@ def adaptive_cv_trajectory_html(
     is_critical = functional_drift > 15.0 or permanent_disability_prob > 0.50
 
     if "Zeta" in token or permanent_disability_prob > 0.90:
-        return """<div style="background-color:#18141c; padding:0.8rem; border-radius:4px; border:1px solid #a855f7; margin-bottom:0.8rem;">
+        bridge = msd_training_bridge_cell(
+            "📁 MSD Registry Slot Reserved → Digital Site Log Systems Cert #AAT-2026"
+        )
+        return f"""<div style="background-color:#18141c; padding:0.8rem; border-radius:4px; border:1px solid #a855f7; margin-bottom:0.8rem;">
 <div class="metric-label" style="color:#c084fc; font-weight:700;">ADAPTIVE CAREER TRAJECTORY & CV PIVOT MATRIX</div>
 <div style="font-size:0.84rem; color:#8b949e; margin-bottom:0.4rem; font-style:italic;">Mental Preparation Lifeline & Supportive Path Forward via Inter-Agency Ingest</div>
 <table style="width:100%; border-collapse:collapse; font-size:0.85rem; color:#f8fafc;">
-<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">Obsolete Vector:</td><td>Heavy Industrial Operations (Physically Incapacitated)</td></tr>
-<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">Cognitive Harvest:</td><td>Blueprint Interpretation, Logistics Coordination, OHS Enforcement</td></tr>
-<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">New Target CV:</td><td><strong>Site Quality & Safety Compliance Auditor</strong></td></tr>
-<tr><td style="color:#8b949e; padding:4px 0;">MSD Training Bridge:</td><td>Automated enrollment into Digital Site Log Systems Certificate</td></tr>
+<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0; vertical-align:top;">Obsolete Vector:</td><td>Heavy Industrial Operations (Physically Incapacitated)</td></tr>
+<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0; vertical-align:top;">Cognitive Harvest:</td><td>Blueprint Interpretation, Logistics Coordination, OHS Enforcement</td></tr>
+<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0; vertical-align:top;">New Target CV:</td><td><strong>Site Quality & Safety Compliance Auditor</strong></td></tr>
+<tr><td style="color:#8b949e; padding:4px 0; vertical-align:top;">MSD Training Bridge:</td><td>{bridge}</td></tr>
 </table>
 </div>"""
 
     if "Delta" in token or is_critical:
-        return """<div style="background-color:#141b1f; padding:0.8rem; border-radius:4px; border:1px solid #0284c7; margin-bottom:0.8rem;">
+        bridge = msd_training_bridge_cell(
+            "📁 MSD Registry Slot Reserved → Transit Admin Pipeline Cert #AAT-2026"
+        )
+        return f"""<div style="background-color:#141b1f; padding:0.8rem; border-radius:4px; border:1px solid #0284c7; margin-bottom:0.8rem;">
 <div class="metric-label" style="color:#38bdf8; font-weight:700;">ADAPTIVE CAREER TRAJECTORY & CV PIVOT MATRIX</div>
 <div style="font-size:0.84rem; color:#8b949e; margin-bottom:0.4rem; font-style:italic;">Mental Preparation Lifeline & Supportive Path Forward via Inter-Agency Ingest</div>
 <table style="width:100%; border-collapse:collapse; font-size:0.85rem; color:#f8fafc;">
-<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">Obsolete Vector:</td><td>Active Logistics Manual Handling (Glenohumeral Traumatic Deviation)</td></tr>
-<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">Cognitive Harvest:</td><td>Fleet Routing Management, Procurement Sourcing, Manifest Tracking</td></tr>
-<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">New Target CV:</td><td><strong>Supply Chain Procurement Analyst / Dispatch Supervisor</strong></td></tr>
-<tr><td style="color:#8b949e; padding:4px 0;">MSD Training Bridge:</td><td>Active matching with public service transit administration pipelines</td></tr>
+<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0; vertical-align:top;">Obsolete Vector:</td><td>Active Logistics Manual Handling (Glenohumeral Traumatic Deviation)</td></tr>
+<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0; vertical-align:top;">Cognitive Harvest:</td><td>Fleet Routing Management, Procurement Sourcing, Manifest Tracking</td></tr>
+<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0; vertical-align:top;">New Target CV:</td><td><strong>Supply Chain Procurement Analyst / Dispatch Supervisor</strong></td></tr>
+<tr><td style="color:#8b949e; padding:4px 0; vertical-align:top;">MSD Training Bridge:</td><td>{bridge}</td></tr>
 </table>
 </div>"""
 
