@@ -124,15 +124,13 @@ st.markdown(
         align-items: center;
         width: fit-content;
         font-family: "IBM Plex Mono", monospace;
-        font-size: 0.68rem;
-        font-weight: 700;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        color: #10b981;
-        background: rgba(16, 185, 129, 0.12);
-        border: 1px solid rgba(16, 185, 129, 0.45);
-        border-radius: 4px;
-        padding: 0.18rem 0.45rem;
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #4ade80;
+        background-color: #166534;
+        border: 1px solid #14532d;
+        border-radius: 3px;
+        padding: 1px 6px;
         animation: msd-pulse 1.6s ease-in-out infinite;
     }
     .msd-confirm-text {
@@ -142,9 +140,22 @@ st.markdown(
         color: #38bdf8 !important;
         line-height: 1.35;
     }
+    .msd-mandatory-badge {
+        display: inline-block;
+        background-color: #10b981;
+        color: #0c1017;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.7rem;
+        padding: 1px 5px;
+        border-radius: 3px;
+        font-weight: 700;
+        margin-left: 10px;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
     @keyframes msd-pulse {
-        0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.35); opacity: 1; }
-        50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); opacity: 0.85; }
+        0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.45); opacity: 1; }
+        50% { box-shadow: 0 0 0 6px rgba(74, 222, 128, 0); opacity: 0.88; }
     }
     /* Executive Large-Print Callout Focus */
     .critical-impact-value {
@@ -321,41 +332,53 @@ def adaptive_cv_trajectory_html(
     """Adaptive career / CV pivot matrix via inter-agency ingest."""
     token = str(claim_token)
     is_critical = functional_drift > 15.0 or permanent_disability_prob > 0.50
+    mandatory = (
+        '<span class="msd-mandatory-badge">'
+        "🎖️ MSD CERTIFIED ADOPTION MANDATORY</span>"
+    )
+    subtitle = (
+        "Mental Preparation Lifeline & Supportive Path Forward via Inter-Agency "
+        "Ingest. Adherence is state-certified."
+    )
 
     if "Zeta" in token or permanent_disability_prob > 0.90:
         bridge = msd_training_bridge_cell(
             "📁 MSD Registry Slot Reserved → Digital Site Log Systems Cert #AAT-2026"
         )
         return f"""<div style="background-color:#18141c; padding:0.8rem; border-radius:4px; border:1px solid #a855f7; margin-bottom:0.8rem;">
-<div class="metric-label" style="color:#c084fc; font-weight:700;">ADAPTIVE CAREER TRAJECTORY & CV PIVOT MATRIX</div>
-<div style="font-size:0.84rem; color:#8b949e; margin-bottom:0.4rem; font-style:italic;">Mental Preparation Lifeline & Supportive Path Forward via Inter-Agency Ingest</div>
+<div class="metric-label" style="color:#c084fc; font-weight:700;">
+<span>ADAPTIVE CAREER TRAJECTORY & CV PIVOT MATRIX</span>{mandatory}
+</div>
+<div style="font-size:0.84rem; color:#8b949e; margin-bottom:0.4rem; font-style:italic;">{subtitle}</div>
 <table style="width:100%; border-collapse:collapse; font-size:0.85rem; color:#f8fafc;">
 <tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0; vertical-align:top;">Obsolete Vector:</td><td>Heavy Industrial Operations (Physically Incapacitated)</td></tr>
 <tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0; vertical-align:top;">Cognitive Harvest:</td><td>Blueprint Interpretation, Logistics Coordination, OHS Enforcement</td></tr>
-<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0; vertical-align:top;">New Target CV:</td><td><strong>Site Quality & Safety Compliance Auditor</strong></td></tr>
-<tr><td style="color:#8b949e; padding:4px 0; vertical-align:top;">MSD Training Bridge:</td><td>{bridge}</td></tr>
+<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0; vertical-align:top;">New Target CV:</td><td><strong>Site Quality & Safety Compliance Auditor</strong> (MSD Legally Registered Blueprint)</td></tr>
+<tr><td style="color:#8b949e; padding:4px 0; vertical-align:middle;">MSD Training Bridge:</td><td>{bridge}</td></tr>
 </table>
 </div>"""
 
     if "Delta" in token or is_critical:
         bridge = msd_training_bridge_cell(
-            "📁 MSD Registry Slot Reserved → Transit Admin Pipeline Cert #AAT-2026"
+            "📁 MSD Registry Slot Reserved → Public Service Transit Admin Pipeline"
         )
         return f"""<div style="background-color:#141b1f; padding:0.8rem; border-radius:4px; border:1px solid #0284c7; margin-bottom:0.8rem;">
-<div class="metric-label" style="color:#38bdf8; font-weight:700;">ADAPTIVE CAREER TRAJECTORY & CV PIVOT MATRIX</div>
-<div style="font-size:0.84rem; color:#8b949e; margin-bottom:0.4rem; font-style:italic;">Mental Preparation Lifeline & Supportive Path Forward via Inter-Agency Ingest</div>
+<div class="metric-label" style="color:#38bdf8; font-weight:700;">
+<span>ADAPTIVE CAREER TRAJECTORY & CV PIVOT MATRIX</span>{mandatory}
+</div>
+<div style="font-size:0.84rem; color:#8b949e; margin-bottom:0.4rem; font-style:italic;">{subtitle}</div>
 <table style="width:100%; border-collapse:collapse; font-size:0.85rem; color:#f8fafc;">
 <tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0; vertical-align:top;">Obsolete Vector:</td><td>Active Logistics Manual Handling (Glenohumeral Traumatic Deviation)</td></tr>
 <tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0; vertical-align:top;">Cognitive Harvest:</td><td>Fleet Routing Management, Procurement Sourcing, Manifest Tracking</td></tr>
 <tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0; vertical-align:top;">New Target CV:</td><td><strong>Supply Chain Procurement Analyst / Dispatch Supervisor</strong></td></tr>
-<tr><td style="color:#8b949e; padding:4px 0; vertical-align:top;">MSD Training Bridge:</td><td>{bridge}</td></tr>
+<tr><td style="color:#8b949e; padding:4px 0; vertical-align:middle;">MSD Training Bridge:</td><td>{bridge}</td></tr>
 </table>
 </div>"""
 
     return """<div style="background-color:#141f17; padding:0.8rem; border-radius:4px; border:1px solid #166534; margin-bottom:0.8rem;">
 <div class="metric-label" style="color:#4ade80; font-weight:700;">ADAPTIVE CAREER TRAJECTORY STATUS</div>
 <p style="color:#f8fafc; font-size:0.88rem; margin:0; line-height:1.4;">
-Baseline capacity holds. Pre-injury CV requires zero structural alterations. Natural track recovery trajectory validated.
+Baseline capacity holds. Pre-injury CV requires zero structural alterations. Natural track recovery trajectory validated. Verified via MSD National Framework.
 </p>
 </div>"""
 
