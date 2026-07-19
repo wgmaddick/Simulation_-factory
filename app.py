@@ -56,17 +56,58 @@ st.markdown("""
         color: #10b981;
         line-height: 1.2;
     }
-    .metric-subtext {
-        font-size: 0.85rem;
-        color: #8b949e;
-        margin-top: 0.3rem;
+    
+    /* 📋 ADVANCED RESPONSIVE SOVEREIGN TABLE ARCHITECTURE */
+    .sovereign-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 0.5rem;
+        margin-bottom: 1.5rem;
     }
+    .sovereign-table th {
+        background-color: #161b22;
+        color: #8b949e;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        text-align: left;
+        padding: 0.75rem;
+        border-bottom: 2px solid #30363d;
+    }
+    .sovereign-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #21262d;
+        font-size: 0.95rem;
+        color: #c9d1d9;
+    }
+    .sovereign-table tr:hover {
+        background-color: #161b22;
+    }
+    .status-badge-drift {
+        color: #ff7b72 !important;
+        font-weight: 600;
+        background-color: rgba(248, 81, 73, 0.15);
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        border: 1px solid rgba(248, 81, 73, 0.4);
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.85rem;
+    }
+    .status-badge-nominal {
+        color: #56d364 !important;
+        font-weight: 600;
+        background-color: rgba(56, 139, 60, 0.15);
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        border: 1px solid rgba(56, 139, 60, 0.4);
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.85rem;
+    }
+
     .critical-impact-value {
         font-size: 3.8rem;
         font-weight: 700;
         line-height: 1.1;
-        margin-top: 0.4rem;
-        margin-bottom: 0.4rem;
         font-family: "IBM Plex Mono", monospace;
         color: #ef4444 !important;
     }
@@ -74,15 +115,11 @@ st.markdown("""
         font-size: 3.8rem;
         font-weight: 700;
         line-height: 1.1;
-        margin-top: 0.4rem;
-        margin-bottom: 0.4rem;
         font-family: "IBM Plex Mono", monospace;
         color: #10b981 !important;
     }
-    th, td {
-        color: #ffffff !important;
-        font-size: 0.95rem !important;
-    }
+
+    /* 📱 VIEWPORT DATA CONDENSATION QUERY */
     @media (max-width: 768px) {
         .critical-impact-value, .nominal-impact-value {
             font-size: 2.4rem !important;
@@ -96,8 +133,9 @@ st.markdown("""
             width: 46px !important;
             height: 46px !important;
         }
-        .floating-avatar-icon {
-            font-size: 1.1rem !important;
+        /* Completely strips non-essential columns off screen on iPhone viewports */
+        .mobile-condense {
+            display: none !important;
         }
     }
     </style>
@@ -163,7 +201,6 @@ with gov_col1:
         st.markdown("""<div style="font-family:monospace; font-size:0.8rem; color:#8b949e; line-height:1.4;">
         <strong>Status:</strong> SECURE LIVE SYNC<br/>
         <strong>Last Harvest:</strong> Today, 11:42 AM<br/>
-        <strong>Channel Hash:</strong> IRD-2026-99X4<br/>
         <hr style="border:0; border-top:1px solid #30363d; margin:0.4rem 0;"/>
         <span style="color:#10b981;">✓ 12-Month wage ledger verified.</span>
         </div>""", unsafe_allow_html=True)
@@ -173,7 +210,6 @@ with gov_col2:
         st.markdown("""<div style="font-family:monospace; font-size:0.8rem; color:#8b949e; line-height:1.4;">
         <strong>Status:</strong> LIVE INTEGRATION<br/>
         <strong>Last Harvest:</strong> Today, 11:40 AM<br/>
-        <strong>Channel Hash:</strong> MSD-AX-7710<br/>
         <hr style="border:0; border-top:1px solid #30363d; margin:0.4rem 0;"/>
         <span style="color:#10b981;">✓ 14 Modified light-duty matches found.</span>
         </div>""", unsafe_allow_html=True)
@@ -184,10 +220,9 @@ with gov_col3:
     with st.expander(f"{'🟢' if st.session_state.ministerial_override else '🔵'} HEALTH NZ CLINICAL GRID", expanded=False):
         st.markdown(f"""<div style="font-family:monospace; font-size:0.8rem; color:#8b949e; line-height:1.4;">
         <strong>Status:</strong> {hnz_status}<br/>
-        <strong>Last Harvest:</strong> Today, 10:15 AM<br/>
         <strong>Channel Hash:</strong> HNZ-MED-4402<br/>
         <hr style="border:0; border-top:1px solid #30363d; margin:0.4rem 0;"/>
-        <span style="color:{hnz_color};">{'✓ Ministerial Overlap Mandate Active: Encrypted patient history fully decrypted for review.' if st.session_state.ministerial_override else 'i Historical orthopaedic records linked.'}</span>
+        <span style="color:{hnz_color};">{'✓ Ministerial Overlap Mandate Active' if st.session_state.ministerial_override else 'i Historical orthopaedic records linked.'}</span>
         </div>""", unsafe_allow_html=True)
 
 st.markdown("---")
@@ -214,8 +249,32 @@ if view_selection == "Global Scheme Portfolio (All Active Claims)":
         st.markdown('<div class="metric-box"><div class="metric-label">Performance Index</div><div class="metric-value-green">85.9%</div><div class="metric-subtext">Baseline Trajectory Alignment</div></div>', unsafe_allow_html=True)
 
     st.markdown("### 📋 MASTER ORCHESTRATION ACCOUNTABILITY LEDGER")
-    df_formatted_ledger = st.session_state.master_ledger[["Claim ID", "Anatomy Target", "Status"]].copy()
-    st.table(df_formatted_ledger)
+    
+    # 🛠️ NATIVE VIEWPORT-CONDENSED HTML TABLE WITH CRISP COLOR BLOCKS
+    table_html = """
+    <table class="sovereign-table">
+        <thead>
+            <tr>
+                <th>Claim ID</th>
+                <th class="mobile-condense">Anatomy Target</th>
+                <th>Status Anchor</th>
+            </tr>
+        </thead>
+        <tbody>
+    """
+    
+    for idx, row in st.session_state.master_ledger.iterrows():
+        badge_style = "status-badge-drift" if row["Status"] == "CRITICAL DRIFT" else "status-badge-nominal"
+        table_html += f"""
+            <tr>
+                <td style="font-family:'IBM Plex Mono', monospace; font-weight:600;">{row['Claim ID']}</td>
+                <td class="mobile-condense">{row['Anatomy Target']}</td>
+                <td><span class="{badge_style}">{row['Status']}</span></td>
+            </tr>
+        """
+        
+    table_html += "</tbody></table>"
+    st.markdown(table_html, unsafe_allow_html=True)
 
 # ==============================================================================
 # INTERFACE LAYER B: NEW CLIENT INTAKE PATHWAY FORM
@@ -224,7 +283,7 @@ elif view_selection == "➕ Onboard New Claimant Matrix":
     st.markdown("## 📥 SECURE REGISTRY INTAKE GATEWAY")
     with st.form("intake_form", clear_on_submit=True):
         f_id = st.text_input("Claimant Identification Token Label", placeholder="e.g., AAT-Claimant-Omega-2026")
-        f_anatomy = st.selectbox("Target Anatomical Structure Classification", ["Lower Extremity (Knee)", "Shoulder (Glenohumeral)", "Lumbar Spine Matrix", "Cervical Alignment Structure"])
+        f_anatomy = st.selectbox("Target Anatomical Structure Classification", ["Lower Extremity (Knee)", "Shoulder (Glenohumeral)", "Lumbar Spine Matrix"])
         f_age = st.number_input("Chronological Biological Age Curve", min_value=18, max_value=80, value=45)
         f_demands = st.selectbox("Occupational Demands Tier", ["Heavy Manual / Industrial", "Medium Logistics / Transport", "Sedentary Clerical"])
         f_rom = st.slider("Live Telemetry Flexion Performance Baseline (Range of Motion %)", 10, 100, 75)
@@ -236,7 +295,7 @@ elif view_selection == "➕ Onboard New Claimant Matrix":
             determined_status = "CRITICAL DRIFT" if drift_calc > 15 else "NOMINAL ALIGNMENT"
             new_row = {"Claim ID": f_id, "Anatomy Target": f_anatomy, "Age": int(f_age), "Demands": f_demands, "ROM_Actual": float(f_rom), "Spend_To_Date": float(f_spend), "Status": determined_status}
             st.session_state.master_ledger = pd.concat([st.session_state.master_ledger, pd.DataFrame([new_row])], ignore_index=True)
-            st.success(f"✓ Security Node Authenticated: {f_id} dynamically linked to cross-agency frameworks.")
+            st.success(f"✓ Security Node Authenticated: {f_id} dynamically linked successfully.")
 
 # ==============================================================================
 # INTERFACE LAYER C: INDIVIDUAL DRILL-DOWN VIEW (WITH SIMULATION)
@@ -303,10 +362,6 @@ else:
 <table style="width:100%; border-collapse:collapse; font-size:0.85rem; color:#f8fafc;">
 <tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">Obsolete Vector:</td><td>{duty_tier} Matrix</td></tr>
 <tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">New Target CV:</td><td><strong>Assigned Operational Safety Compliance Auditor</strong></td></tr>
-<tr><td style="color:#8b949e; padding:4px 0; vertical-align:middle;">MSD Bridge:</td><td>
-<div style="display:inline-block; background-color:#166534; color:#4ade80; border:1px solid #14532d; font-size:0.72rem; padding:1px 6px; border-radius:3px; font-weight:600; margin-bottom:3px;">⚡ SYSTEM AUTOMATION ACTIVE</div><br/>
-<span style="color:#38bdf8; font-family:monospace;">📁 MSD Registry Slot Reserved</span>
-</td></tr>
 </table>
 </div>"""
 
@@ -327,7 +382,6 @@ else:
 <div class="metric-label" style="color:#ffffff;">Claimant File Dossier Matrix</div>
 <span style="font-size:0.9rem; color:#8b949e;">ID:</span> <span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{subject_token}</span><br/>
 <span style="font-size:0.9rem; color:#8b949e;">Target Anatomy:</span> <span style="font-size:0.9rem; color:#ffffff;">{anatomy}</span><br/>
-<span style="font-size:0.9rem; color:#8b949e;">Demands / Age:</span> <span style="font-size:0.9rem; color:#ffffff;">{duty_tier} (Age {age})</span><br/>
 </div>
 
 {protocol_html}
@@ -337,7 +391,7 @@ else:
 <div class="{impact_class}">{permanent_disability_prob*100:.1f}%</div>
 
 <hr style="border:0; border-top:1px solid #30363d; margin: 0.8rem 0;"/>
-<div class="metric-label">Total Absolute System Exposure (TASE) {'<span style="color:#10b981;">(20% Crown Directive Compression Applied)</span>' if st.session_state.ministerial_override else ''}</div>
+<div class="metric-label">Total Absolute System Exposure (TASE) {'<span style="color:#10b981;">(20% Crown Directive Compression)</span>' if st.session_state.ministerial_override else ''}</div>
 <div class="metric-value-silver" style="font-size:1.5rem; margin-bottom:0.3rem;">${projected_final_cost:,.2f} NZD</div>
 <div class="metric-label">Mitigated Capital Reserve Target</div>
 <div class="metric-value-green" style="font-size:1.5rem; margin-bottom:0.3rem;">${mitigated_reserve_target:,.2f} NZD</div>
@@ -355,3 +409,25 @@ else:
             st.image(uploaded_evidence, use_container_width=True)
         elif file_extension in ["mp4"]:
             st.video(uploaded_evidence)
+
+# --- PORTABLE NLP ADVISOR NODE ---
+st.markdown(f"""
+    <div class="floating-avatar-container" style="
+        position: fixed;
+        bottom: 35px;
+        right: 35px;
+        width: 54px;
+        height: 54px;
+        background-color: #161b22;
+        border: 2px solid #a855f7;
+        border-radius: 50%;
+        box-shadow: 0px 4px 16px rgba(0,0,0,0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 999999;
+    " onclick="alert('🤖 Native NLP Compliance Advisor Node\\n\\nActive Context: {role}\\n\\n[LICENSE VERIFIED] This text assistant responds instantly on pocket devices without data lag. Direct questions are securely managed under license parameters.')">
+        <span class="floating-avatar-icon" style="font-size: 1.4rem;">🤖</span>
+    </div>
+""", unsafe_allow_html=True)
