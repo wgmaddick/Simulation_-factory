@@ -112,6 +112,26 @@ st.markdown(
         color: #8b949e;
         margin-top: 0.3rem;
     }
+    /* Inter-Departmental Link Badges */
+    .gov-link-container {
+        display: flex;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+        margin-bottom: 1.5rem;
+        background-color: #161b22;
+        padding: 0.8rem;
+        border-radius: 6px;
+        border: 1px solid #30363d;
+    }
+    .gov-badge {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.78rem;
+        font-weight: 600;
+        padding: 0.3rem 0.6rem;
+        border-radius: 4px;
+        background-color: #0c1017;
+        border: 1px solid #30363d;
+    }
     /* Executive Large-Print Callout Focus */
     .critical-impact-value {
         font-size: 3.8rem;
@@ -264,6 +284,48 @@ def mitigation_protocol_html(
 <div class="metric-label" style="color:#4ade80; font-weight:700;">AUTOMATED MITIGATION PROTOCOL</div>
 <p style="color:#f8fafc; font-size:0.88rem; margin:0; line-height:1.4;">
 <strong>Path Alignment Secure:</strong> Maintain standard vocational rehabilitation baseline track. Clear file for regular automated payment processing. No structural intervention required this cycle.
+</p>
+</div>"""
+
+
+def adaptive_cv_trajectory_html(
+    claim_token: str,
+    *,
+    functional_drift: float,
+    permanent_disability_prob: float,
+) -> str:
+    """Adaptive career / CV pivot matrix via inter-agency ingest."""
+    token = str(claim_token)
+    is_critical = functional_drift > 15.0 or permanent_disability_prob > 0.50
+
+    if "Zeta" in token or permanent_disability_prob > 0.90:
+        return """<div style="background-color:#18141c; padding:0.8rem; border-radius:4px; border:1px solid #a855f7; margin-bottom:0.8rem;">
+<div class="metric-label" style="color:#c084fc; font-weight:700;">ADAPTIVE CAREER TRAJECTORY & CV PIVOT MATRIX</div>
+<div style="font-size:0.84rem; color:#8b949e; margin-bottom:0.4rem; font-style:italic;">Mental Preparation Lifeline & Supportive Path Forward via Inter-Agency Ingest</div>
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem; color:#f8fafc;">
+<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">Obsolete Vector:</td><td>Heavy Industrial Operations (Physically Incapacitated)</td></tr>
+<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">Cognitive Harvest:</td><td>Blueprint Interpretation, Logistics Coordination, OHS Enforcement</td></tr>
+<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">New Target CV:</td><td><strong>Site Quality & Safety Compliance Auditor</strong></td></tr>
+<tr><td style="color:#8b949e; padding:4px 0;">MSD Training Bridge:</td><td>Automated enrollment into Digital Site Log Systems Certificate</td></tr>
+</table>
+</div>"""
+
+    if "Delta" in token or is_critical:
+        return """<div style="background-color:#141b1f; padding:0.8rem; border-radius:4px; border:1px solid #0284c7; margin-bottom:0.8rem;">
+<div class="metric-label" style="color:#38bdf8; font-weight:700;">ADAPTIVE CAREER TRAJECTORY & CV PIVOT MATRIX</div>
+<div style="font-size:0.84rem; color:#8b949e; margin-bottom:0.4rem; font-style:italic;">Mental Preparation Lifeline & Supportive Path Forward via Inter-Agency Ingest</div>
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem; color:#f8fafc;">
+<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">Obsolete Vector:</td><td>Active Logistics Manual Handling (Glenohumeral Traumatic Deviation)</td></tr>
+<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">Cognitive Harvest:</td><td>Fleet Routing Management, Procurement Sourcing, Manifest Tracking</td></tr>
+<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">New Target CV:</td><td><strong>Supply Chain Procurement Analyst / Dispatch Supervisor</strong></td></tr>
+<tr><td style="color:#8b949e; padding:4px 0;">MSD Training Bridge:</td><td>Active matching with public service transit administration pipelines</td></tr>
+</table>
+</div>"""
+
+    return """<div style="background-color:#141f17; padding:0.8rem; border-radius:4px; border:1px solid #166534; margin-bottom:0.8rem;">
+<div class="metric-label" style="color:#4ade80; font-weight:700;">ADAPTIVE CAREER TRAJECTORY STATUS</div>
+<p style="color:#f8fafc; font-size:0.88rem; margin:0; line-height:1.4;">
+Baseline capacity holds. Pre-injury CV requires zero structural alterations. Natural track recovery trajectory validated.
 </p>
 </div>"""
 
@@ -585,6 +647,17 @@ st.markdown(
 )
 st.markdown("---")
 
+# --- INITIATIVE 1: INTER-DEPARTMENTAL DATA LINK MONITOR ---
+st.markdown(
+    """<div class="gov-link-container">
+<div class="metric-label" style="width:100%; margin-bottom:0.2rem; color:#8b949e;">Cross-Government Interoperability Core Infrastructure</div>
+<div class="gov-badge" style="color:#10b981;">IRD INCOME DECK: SECURE LIVE FEED</div>
+<div class="gov-badge" style="color:#10b981;">MSD SOCIAL STRESS MATRIX: CONNECTED</div>
+<div class="gov-badge" style="color:#38bdf8;">HEALTH NZ E-HEALTH RECORDS: OPERATIONAL</div>
+</div>""",
+    unsafe_allow_html=True,
+)
+
 # --- CENTRAL ROUTING SELECTOR ---
 view_selection = st.selectbox(
     "AUDIT VIEW COMMAND SECTOR",
@@ -774,6 +847,11 @@ else:
         functional_drift=float(functional_drift),
         permanent_disability_prob=float(permanent_disability_prob),
     )
+    adaptive_cv_html = adaptive_cv_trajectory_html(
+        display_token,
+        functional_drift=float(functional_drift),
+        permanent_disability_prob=float(permanent_disability_prob),
+    )
 
     # Left-aligned HTML payload — no indent so Streamlit does not code-fence it
     html_payload = f"""<div class="metric-box" style="border-left: 4px solid {status_color}; padding: 1.5rem; height: auto;">
@@ -787,6 +865,7 @@ else:
 <p style="font-size:0.85rem; color:#8b949e; font-style:italic; margin-top:0.4rem; margin-bottom:0;"><strong>NLP Ingest:</strong> {dict_html}</p>
 </div>
 {protocol_html}
+{adaptive_cv_html}
 <div class="metric-label">Probability of Permanent Disability (PPD)</div>
 <div class="{impact_class}">{permanent_disability_prob * 100:.1f}%</div>
 <hr style="border:0; border-top:1px solid #30363d; margin: 0.8rem 0;"/>
