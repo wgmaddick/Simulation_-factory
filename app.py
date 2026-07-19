@@ -6,6 +6,8 @@ ledger, and stacked drill-down viewports (dossier → alignment table → chart)
 
 from __future__ import annotations
 
+from html import escape
+
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -633,13 +635,11 @@ else:
         status_color = "#10b981"
         impact_class = "nominal-impact-value"
 
-    # Escape NLP text for HTML injection
-    dict_html = (
-        str(dict_txt)
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-    )
+    # Escape dossier text before rendering with unsafe HTML enabled.
+    display_token_html = escape(str(display_token))
+    anatomy_html = escape(str(anatomy))
+    duty_tier_html = escape(str(duty_tier))
+    dict_html = escape(str(dict_txt))
 
     st.markdown("## PREVENTATIVE DRIFT RADAR DEEP-DIVE")
 
@@ -673,9 +673,9 @@ else:
 <div style="color:{status_color}; font-weight:700; font-size:1.2rem; margin-bottom:0.8rem;">{status_label}</div>
 <div style="background-color:#0c1017; padding:0.8rem; border-radius:4px; border:1px solid #30363d; margin-bottom:0.8rem;">
 <div class="metric-label" style="color:#ffffff;">Claimant File Dossier Matrix</div>
-<span style="font-size:0.9rem; color:#8b949e;">ID:</span> <span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{display_token}</span><br/>
-<span style="font-size:0.9rem; color:#8b949e;">Target Anatomy:</span> <span style="font-size:0.9rem; color:#ffffff;">{anatomy}</span><br/>
-<span style="font-size:0.9rem; color:#8b949e;">Demands / Age:</span> <span style="font-size:0.9rem; color:#ffffff;">{duty_tier} (Age {int(age)})</span><br/>
+<span style="font-size:0.9rem; color:#8b949e;">ID:</span> <span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{display_token_html}</span><br/>
+<span style="font-size:0.9rem; color:#8b949e;">Target Anatomy:</span> <span style="font-size:0.9rem; color:#ffffff;">{anatomy_html}</span><br/>
+<span style="font-size:0.9rem; color:#8b949e;">Demands / Age:</span> <span style="font-size:0.9rem; color:#ffffff;">{duty_tier_html} (Age {int(age)})</span><br/>
 <p style="font-size:0.85rem; color:#8b949e; font-style:italic; margin-top:0.4rem; margin-bottom:0;"><strong>NLP Ingest:</strong> {dict_html}</p>
 </div>
 {protocol_html}
