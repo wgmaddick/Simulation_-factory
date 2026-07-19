@@ -17,6 +17,7 @@ REVIEWING_SPECIALIST = "Reviewing Specialist"
 GLOBAL_VIEW = "Global Scheme Portfolio (All Active Claims)"
 NEW_CLAIM_VIEW = "➕ Log New Claimant Profile"
 CO_TASK_ID = "CO-AAT-2026-031"
+RS_TASK_ID = "RS-AAT-2026-042"
 DUTY_OPTIONS = [
     "Heavy Manual / Industrial",
     "Medium Logistics / Transport",
@@ -98,6 +99,12 @@ st.markdown(
         font-size: 1.8rem;
         font-weight: 700;
         color: #10b981;
+        line-height: 1.2;
+    }
+    .metric-value-purple {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #a855f7;
         line-height: 1.2;
     }
     .metric-subtext {
@@ -351,18 +358,16 @@ def render_claims_officer_action_task(
 
     st.markdown("### CLAIMS OFFICER / ANALYST — ACTION TASK")
     st.markdown(
-        f"<div class='metric-box' style='border-left:4px solid #ef4444;'>"
-        f"<div class='metric-label'>Task ID</div>"
-        f"<div class='metric-value-silver' style='font-size:1.35rem;'>{CO_TASK_ID}</div>"
-        f"<div class='metric-subtext'>Role: Claims Officer / Analyst · "
-        f"Mandate floor: {cap_floor}% CapEx mitigation</div>"
-        f"<p style='color:#e2e8f0; margin:0.75rem 0 0 0;'>"
-        f"Clear the CRITICAL DRIFT files before they harden into long-tail PPD exposure."
-        f"</p></div>",
+        f"<div class='metric-box' style='border-left:4px solid #ef4444; padding:1.2rem;'>"
+        f"<div class='metric-label' style='color:#ef4444;'>TASK ID: {CO_TASK_ID}</div>"
+        f"<div class='metric-subtext' style='color:#ffffff; font-weight:600; margin-bottom:0.4rem;'>"
+        f"Clear the CRITICAL DRIFT files before they harden into long-tail PPD exposure.</div>"
+        f"<div style='font-size:0.85rem; color:#8b949e;'>"
+        f"Active Mandate: {cap_floor}% CapEx Mitigation Control Active</div></div>",
         unsafe_allow_html=True,
     )
 
-    st.markdown("#### Priority Queue")
+    st.markdown("#### Operational Priority Queue")
     queue_rows: list[dict] = []
     for idx, (_, row) in enumerate(critical.iterrows()):
         priority = "P0" if idx == 0 else f"P{idx}"
@@ -447,7 +452,103 @@ def render_claims_officer_action_task(
             "still rising after intervention\n"
             "- Nominal files remain watch-only (no escalation)"
         )
-    st.markdown("---")
+
+
+def render_reviewing_specialist_audit_deck(
+    ledger_enriched: pd.DataFrame,
+) -> None:
+    """Role-gated clinical escalation deck for Reviewing Specialist (RS-AAT-2026-042)."""
+    critical = ledger_enriched[
+        ledger_enriched["Status"].str.contains("CRITICAL", case=False, na=False)
+    ].sort_values("PPD", ascending=False)
+    nominal = ledger_enriched[
+        ~ledger_enriched["Status"].str.contains("CRITICAL", case=False, na=False)
+    ]
+
+    st.markdown("### REVIEWING SPECIALIST — CLINICAL ESCALATION AUDIT DECK")
+    st.markdown(
+        f"<div class='metric-box' style='border-left:4px solid #a855f7; padding:1.2rem;'>"
+        f"<div class='metric-label' style='color:#a855f7;'>TASK ID: {RS_TASK_ID}</div>"
+        f"<div class='metric-subtext' style='color:#ffffff; font-weight:600; margin-bottom:0.4rem;'>"
+        f"Validate physical telemetry variance anomalies and verify Independent Medical "
+        f"Examination (IME) compliance directives.</div>"
+        f"<div style='font-size:0.85rem; color:#8b949e;'>"
+        f"Clinical Mandate: Audit structural tissue guarding thresholds and execute "
+        f"medical capacity validations.</div></div>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("#### Clinical Escalation & Validation Matrix")
+    matrix_rows: list[dict] = []
+    for idx, (_, row) in enumerate(critical.iterrows()):
+        rom = float(row["ROM_Actual"])
+        drift = float(row["Functional Drift"])
+        if idx == 0:
+            audit_class = "Critical Triage"
+            drivers = f"ROM {rom:.0f}% · High Joint Guarding (−{drift:.0f}% drift)"
+            ime_state = "PENDING SPECIALIST AUDIT"
+            sign_off = "Execute Independent Medical Audit"
+        else:
+            audit_class = "Path Variance"
+            drivers = f"ROM {rom:.0f}% · Psychosocial Guarding (−{drift:.0f}% drift)"
+            ime_state = "VERIFICATION REQUIRED"
+            sign_off = "Verify Behavioral Compliance Log"
+        matrix_rows.append(
+            {
+                "Audit Class": audit_class,
+                "Claim Token Target": row["Claim ID"],
+                "Ingested Telemetry Drivers": drivers,
+                "IME Verification State": ime_state,
+                "Required Sign-Off Command": sign_off,
+            }
+        )
+    if not nominal.empty:
+        cohort = " / ".join(
+            str(c).replace("AAT-Claimant-", "").replace("-2026", "")
+            for c in nominal["Claim ID"].tolist()
+        )
+        matrix_rows.append(
+            {
+                "Audit Class": "Nominal Clear",
+                "Claim Token Target": f"{cohort} Files",
+                "Ingested Telemetry Drivers": "ROM >85% · Natural Recovery Arc",
+                "IME Verification State": "CLINICALLY RESOLVED",
+                "Required Sign-Off Command": "Authorize Standard Billing Track",
+            }
+        )
+    st.table(pd.DataFrame(matrix_rows))
+
+    zeta_row = critical.iloc[0] if not critical.empty else None
+    delta_row = critical.iloc[1] if len(critical) > 1 else None
+    st.markdown("#### Required Clinical Actions (This Shift)")
+    actions = []
+    if zeta_row is not None:
+        zeta_short = (
+            str(zeta_row["Claim ID"]).replace("AAT-Claimant-", "").replace("-2026", "")
+        )
+        actions.append(
+            f"Select **{zeta_short}** from the audit drop-down sector. Cross-examine the "
+            f"severe **{float(zeta_row['Functional Drift']):.0f}% functional Range of Motion "
+            f"deficit** against the chronological tissue remodeling projection curves."
+        )
+        actions.append(
+            "Verify the legal validity of the pending **Independent Medical Examination "
+            "(IME)** request to formalize structural capacity limits."
+        )
+    if delta_row is not None:
+        delta_short = (
+            str(delta_row["Claim ID"]).replace("AAT-Claimant-", "").replace("-2026", "")
+        )
+        actions.append(
+            f"Audit **{delta_short}'s** text summary record to determine if behavioral "
+            "health intervention indices match standard compliance splines."
+        )
+    actions.append(
+        "Authorize or reject active clinical exception allocations based on raw "
+        "physiological telemetry records."
+    )
+    for i, action in enumerate(actions, start=1):
+        st.markdown(f"{i}. {action}")
 
 
 df_master_ledger = load_internal_portfolio_ledger()
@@ -492,10 +593,10 @@ view_selection = st.selectbox(
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ==============================================================================
-# INTERFACE LAYER A: GLOBAL SCHEME PORTFOLIO VIEW (PORTRAIT TABLET OPTIMIZED)
+# INTERFACE LAYER A: GLOBAL SCHEME PORTFOLIO (ROLE-DYNAMIC RESPONSIVE DECK)
 # ==============================================================================
 if view_selection == GLOBAL_VIEW:
-    # Text optimized to avoid text wrapping on tablet layouts
+    # Standard core portfolio metrics (shared across roles)
     col1, col2, col3 = st.columns(3)
     with col1:
         st.markdown(
@@ -519,40 +620,47 @@ if view_selection == GLOBAL_VIEW:
             unsafe_allow_html=True,
         )
 
-    # Claims Officer / Analyst role surface — action task CO-AAT-2026-031
+    ledger_enriched = enrich_ledger_with_metrics(df_master_ledger, int(cap_floor))
+
+    # CASE 1: Claims Officer / Analyst action matrix
     if role == CLAIMS_OFFICER:
         st.markdown("---")
-        ledger_enriched = enrich_ledger_with_metrics(df_master_ledger, int(cap_floor))
         render_claims_officer_action_task(ledger_enriched, int(cap_floor))
 
-    st.markdown("### MASTER CLAIMS ACCOUNTABILITY LEDGER")
-    # Sliced down strictly to core vectors to prevent page overflow
-    df_formatted_ledger = df_master_ledger[
-        ["Claim ID", "Anatomy Target", "Status"]
-    ].copy()
-    st.table(df_formatted_ledger)
+    # CASE 2: Reviewing Specialist clinical escalation audit deck
+    elif role == REVIEWING_SPECIALIST:
+        st.markdown("---")
+        render_reviewing_specialist_audit_deck(ledger_enriched)
 
-    st.markdown("---")
-    st.markdown("### AGGREGATE SCHEME CAPEX VELOCITY TRAJECTORY")
+    # CASE 3: Scheme Director — accountability ledger + CapEx velocity
+    else:
+        st.markdown("### MASTER CLAIMS ACCOUNTABILITY LEDGER")
+        df_formatted_ledger = df_master_ledger[
+            ["Claim ID", "Anatomy Target", "Status"]
+        ].copy()
+        st.table(df_formatted_ledger)
 
-    days_series = np.arange(0, 121, 10)
-    standard_macro = 25000 * 3 * (days_series / 90)
-    standard_macro = np.clip(standard_macro, 0, 25000 * 3)
-    actual_macro = 25000 * 3 * (days_series / 90) * (1.0 + (0.006 * days_series))
+        st.markdown("---")
+        st.markdown("### AGGREGATE SCHEME CAPEX VELOCITY TRAJECTORY")
 
-    df_macro_chart = pd.DataFrame(
-        {
-            "Days Elapsed": days_series,
-            "Target Operational Runway": standard_macro,
-            "Actual Scheme Outflow": actual_macro,
-        }
-    )
-    st.line_chart(
-        df_macro_chart,
-        x="Days Elapsed",
-        y=["Target Operational Runway", "Actual Scheme Outflow"],
-        color=["#10b981", "#ef4444"],
-    )
+        days_series = np.arange(0, 121, 10)
+        standard_macro = 25000 * 3 * (days_series / 90)
+        standard_macro = np.clip(standard_macro, 0, 25000 * 3)
+        actual_macro = 25000 * 3 * (days_series / 90) * (1.0 + (0.006 * days_series))
+
+        df_macro_chart = pd.DataFrame(
+            {
+                "Days Elapsed": days_series,
+                "Target Operational Runway": standard_macro,
+                "Actual Scheme Outflow": actual_macro,
+            }
+        )
+        st.line_chart(
+            df_macro_chart,
+            x="Days Elapsed",
+            y=["Target Operational Runway", "Actual Scheme Outflow"],
+            color=["#10b981", "#ef4444"],
+        )
 
 # ==============================================================================
 # INTERFACE LAYER B: INDIVIDUAL / NEW CLAIM (EXECUTIVE CARD CONSOLIDATED)
