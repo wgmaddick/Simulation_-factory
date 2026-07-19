@@ -236,8 +236,21 @@ else:
     duty_tier = selected_row["Demands"]
     actual_rom = float(selected_row["ROM_Actual"])
     actual_spend = float(selected_row["Spend_To_Date"])
-    
-    # Core Backend Calculations Matrix
+
+    st.markdown("## 📡 PREVENTATIVE DRIFT RADAR DEEP-DIVE")
+
+    # Live overrides must run before backend calc + html_payload construction
+    st.markdown("#### 🛠️ Live Simulation Adjustment Deck")
+    sim_mode = st.toggle("🔄 Enable Live Parameter Simulation Overrides", key=f"sim_{subject_token}")
+
+    if sim_mode:
+        col_sim1, col_sim2 = st.columns(2)
+        with col_sim1:
+            actual_rom = float(st.slider("Simulate Live Flexion / ROM (%)", 10, 100, int(actual_rom), key=f"sim_rom_{subject_token}"))
+        with col_sim2:
+            actual_spend = float(st.number_input("Simulate Live Spend to Date ($NZD)", min_value=0.0, value=float(actual_spend), key=f"sim_spend_{subject_token}"))
+
+    # Core Backend Calculations Matrix (responds to live sim overrides when toggled)
     job_multiplier = 1.30 if "Heavy" in duty_tier else (1.10 if "Medium" in duty_tier else 0.90)
     age_factor = (age - 25) * 0.015
     calibrated_base_cost = 22500.0 * (1.0 + age_factor) * job_multiplier
@@ -289,8 +302,6 @@ else:
 </p>
 </div>"""
 
-    st.markdown("## 📡 PREVENTATIVE DRIFT RADAR DEEP-DIVE")
-    
     # --- STACKED BLOCK 1: MASTER LEDGER DOSSIER BOX ---
     st.markdown("#### Comprehensive Scheme Ledger Dossier")
     
