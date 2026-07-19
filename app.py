@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 # 1. Responsive & High-Contrast Sovereign Layout Configuration
-st.set_page_config(layout="wide", page_title="AAT Sovereign Orchestration Engine")
+st.set_page_config(layout="wide", page_title="US Federal Risk Orchestration Engine")
 
 st.markdown("""
 <style>
@@ -56,13 +56,8 @@ h1, h2, h3, h4 {
     color: #10b981;
     line-height: 1.2;
 }
-.metric-subtext {
-    font-size: 0.85rem;
-    color: #8b949e;
-    margin-top: 0.3rem;
-}
 
-/* 📋 ADVANCED RESPONSIVE SOVEREIGN TABLE ARCHITECTURE */
+/* 📋 US ADVANCED RESPONSIVE LEDGER ARCHITECTURE */
 .sovereign-table {
     width: 100%;
     border-collapse: collapse;
@@ -124,7 +119,7 @@ h1, h2, h3, h4 {
     color: #10b981 !important;
 }
 
-/* 📱 VIEWPORT DATA CONDENSATION QUERY */
+/* 📱 IPHONE CONDENSATION DECK ENGINE */
 @media (max-width: 768px) {
     .critical-impact-value, .nominal-impact-value {
         font-size: 2.4rem !important;
@@ -145,157 +140,160 @@ h1, h2, h3, h4 {
 </style>
 """, unsafe_allow_html=True)
 
-# --- MASTER CLAIMS DATABASE SESSION STATE INITIALIZATION ---
+# --- MASTER US FEDERAL REGISTER FILE SYSTEM ---
 if "master_ledger" not in st.session_state:
     st.session_state.master_ledger = pd.DataFrame([
-        {"Claim ID": "AAT-Claimant-Delta-2026", "Anatomy Target": "Shoulder (Glenohumeral)", "Age": 48, "Demands": "Heavy Manual / Industrial", "ROM_Actual": 62.0, "Spend_To_Date": 28400.0, "Status": "CRITICAL DRIFT"},
-        {"Claim ID": "AAT-Claimant-Epsilon-2026", "Anatomy Target": "Lumbar Spine Matrix", "Age": 32, "Demands": "Sedentary Clerical", "ROM_Actual": 94.0, "Spend_To_Date": 12100.0, "Status": "NOMINAL ALIGNMENT"},
-        {"Claim ID": "AAT-Claimant-Zeta-2026", "Anatomy Target": "Lower Extremity (Knee)", "Age": 61, "Demands": "Heavy Manual / Industrial", "ROM_Actual": 48.0, "Spend_To_Date": 41200.0, "Status": "CRITICAL DRIFT"},
-        {"Claim ID": "AAT-Claimant-Eta-2026", "Anatomy Target": "Shoulder (Glenohumeral)", "Age": 29, "Demands": "Medium Logistics / Transport", "ROM_Actual": 88.0, "Spend_To_Date": 19400.0, "Status": "NOMINAL ALIGNMENT"}
+        {"Claim ID": "OWCP-2026-N5402", "ICD_10": "M54.5 (Low Back Strain)", "Comorbidity": "E11 (Type 2 Diabetes)", "Age": 52, "Demands": "Heavy Industrial / Logistics", "Flexion_Baseline": 58.0, "Total_Incurred": 84200.0, "Status": "CRITICAL DRIFT"},
+        {"Claim ID": "OWCP-2026-S9110", "ICD_10": "S42.0 (Clavicle Fracture)", "Comorbidity": "None Documented", "Age": 34, "Demands": "Sedentary Professional", "Flexion_Baseline": 91.0, "Total_Incurred": 14500.0, "Status": "NOMINAL ALIGNMENT"},
+        {"Claim ID": "OWCP-2026-K1194", "ICD_10": "M17.1 (Unilateral Osteoarthritis)", "Comorbidity": "I10 (Essential Hypertension)", "Age": 63, "Demands": "Heavy Industrial / Logistics", "Flexion_Baseline": 42.0, "Total_Incurred": 126000.0, "Status": "CRITICAL DRIFT"},
+        {"Claim ID": "OWCP-2026-C8841", "ICD_10": "S62.6 (Fracture of Finger)", "Comorbidity": "None Documented", "Age": 27, "Demands": "Medium Fleet Operations", "Flexion_Baseline": 85.0, "Total_Incurred": 22100.0, "Status": "NOMINAL ALIGNMENT"}
     ])
 
-if "ministerial_override" not in st.session_state:
-    st.session_state.ministerial_override = False
+if "executive_override" not in st.session_state:
+    st.session_state.executive_override = False
 
-# --- SIDEBAR: GOVERNANCE LAYER FILTERS ---
+# --- SIDEBAR: US REGULATORY GOVERNANCE RADAR ---
 with st.sidebar:
-    st.markdown("### 🏛️ AAT SCHEME GOVERNANCE")
-    role = st.selectbox("Active User Role Matrix", [
-        "Cabinet Minister (Executive Authority)",
-        "Scheme Director (GM)", 
-        "Claims Officer / Analyst", 
-        "Reviewing Specialist"
+    st.markdown("### 🇺🇸 US RISK GOVERNANCE")
+    role = st.selectbox("Active Authority Matrix", [
+        "Secretary of Labor (Federal OWCP)",
+        "Chief Risk Officer (Enterprise Carrier)",
+        "Utilization Review Specialist",
+        "TPA Claims Adjuster"
     ])
     st.markdown("---")
-    st.markdown("### ⚡ SCHEME MANDATE INJECTION")
-    cap_floor = st.slider("Enforce Liability Mitigation Floor (%)", 0, 50, 15)
-    st.text_input("Disseminate Performance Mandate", placeholder="e.g., Accelerate Pathway Interventions")
+    st.markdown("### ⚡ STATUTORY OVERRIDE PARAMETERS")
+    utilization_floor = st.slider("Enforce Medicare Set-Aside Mitigation Floor (%)", 0, 50, 15)
+    st.text_input("Disseminate National Claims Directive", placeholder="e.g., Deploy Automated Settlement Trackers")
 
 # --- MAIN PERFORMANCE DASHBOARD TITLE ---
-st.title("AAT SOVEREIGN ORCHESTRATION ENGINE")
-st.markdown("<p style='color:#8b949e; margin-top:-10px;'>Predictive Operational Risk & Long-Tail Claims Governance Framework</p>", unsafe_allow_html=True)
+st.title("US RISK ORCHESTRATION ENGINE")
+st.markdown("<p style='color:#8b949e; margin-top:-10px;'>Federal Workers' Compensation & Long-Tail Financial Liability Controller</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# --- CABINET MINISTER DIRECTIVE PANEL ---
-if role == "Cabinet Minister (Executive Authority)":
-    st.markdown("""<div style="background-color:#1c1112; border:1px solid #dc2626; padding:1.2rem; border-radius:6px; margin-bottom:1.5rem;">
-    <div style="font-family:'IBM Plex Mono', monospace; font-size:0.75rem; color:#ef4444; font-weight:700; letter-spacing:0.05em; text-transform:uppercase;">🏛️ STATUTORY CABINET AUTHORITY PORTAL</div>
-    <h3 style="margin-top:0.2rem; margin-bottom:0.5rem; color:#ffffff;">Ministerial Executive Directive Matrix</h3>
-    <p style="color:#8b949e; font-size:0.88rem; margin-bottom:1rem;">As the Crown Executive, your input bypasses standard inter-departmental friction. Activating systemic overrides will force institutional data reconciliation and re-allocate capital reserves immediately.</p>
+# ==============================================================================
+# 🏛️ HIGH-CLEARANCE EXECUTIVE PLATFORM INTERVENTION PORTAL
+# ==============================================================================
+if role in ["Secretary of Labor (Federal OWCP)", "Chief Risk Officer (Enterprise Carrier)"]:
+    st.markdown(f"""<div style="background-color:#1c1112; border:1px solid #dc2626; padding:1.2rem; border-radius:6px; margin-bottom:1.5rem;">
+    <div style="font-family:'IBM Plex Mono', monospace; font-size:0.75rem; color:#ef4444; font-weight:700; letter-spacing:0.05em; text-transform:uppercase;">🏛️ HIGH-CLEARANCE EXECUTIVE CONTROLLER</div>
+    <h3 style="margin-top:0.2rem; margin-bottom:0.5rem; color:#ffffff;">{role} Administrative Intervention Deck</h3>
+    <p style="color:#8b949e; font-size:0.88rem; margin-bottom:1rem;">Your credential token bypasses traditional Third-Party Administrator (TPA) manual processing delays. Activating systemic overrides triggers immediate out-of-network clinical triage and settlement releases.</p>
     </div>""", unsafe_allow_html=True)
     
     col_min1, col_min2 = st.columns(2)
     with col_min1:
-        st.session_state.ministerial_override = st.checkbox("⚡ Force Cross-Agency Data Integration Share Mandate (Bypass Bureaucratic Silos)", value=st.session_state.ministerial_override)
+        st.session_state.executive_override = st.checkbox("⚡ Execute Macro Statutory Intervention (Bypass TPA Silos & Utilization Loops)", value=st.session_state.executive_override)
     with col_min2:
-        st.selectbox("Execute Macro Statutory Intervention", [
-            "Maintain Standard Operations runway",
-            "🚀 Emergency CapEx Liquidity Release (Settle P0 Drift Blocks In Bulk)",
-            "⚙️ Direct MSD to Open 500 Immediate Training Cert Slots",
-            "🩺 Fast-Track Crown Clinical Network Triage Mandate"
+        st.selectbox("Select Pre-Approved Settlement Action", [
+            "Maintain Standard Operation Runways",
+            "🚀 Deploy Pre-Approved CMS Medicare Set-Aside Commutations",
+            "⚙️ Direct ODG Return-to-Work Grid Integration",
+            "🩺 Force Fast-Track Out-of-Network Diagnostic Imaging Mandate"
         ])
     st.markdown("---")
 
-# --- INITIATIVE 1: ALL-OF-GOVERNMENT DATA INTEGRATION GRID ---
-st.markdown("### 🛰️ ALL-OF-GOVERNMENT DATA INTEGRATION GRID")
+# --- US ALL-OF-GOVERNMENT DATA FLOOD GRID ---
+st.markdown("### 🛰️ FEDERAL DATA EXCHANGE MESH")
 gov_col1, gov_col2, gov_col3 = st.columns(3)
 
 with gov_col1:
-    with st.expander("🟢 IRD INCOME EXCHANGE", expanded=False):
+    with st.expander("🟢 CMS MEDICARE ENROLMENT GATEWAY", expanded=False):
         st.markdown("""<div style="font-family:monospace; font-size:0.8rem; color:#8b949e; line-height:1.4;">
-        <strong>Status:</strong> SECURE LIVE SYNC<br/>
-        <strong>Last Harvest:</strong> Today, 11:42 AM<br/>
+        <strong>Connection Status:</strong> SECURE CRYPTO SYNC<br/>
+        <strong>Data Pipeline:</strong> CMS-MSA-2026-X88<br/>
         <hr style="border:0; border-top:1px solid #30363d; margin:0.4rem 0;"/>
-        <span style="color:#10b981;">✓ 12-Month wage ledger verified.</span>
+        <span style="color:#10b981;">✓ Retrospective allocation limits synced.</span>
         </div>""", unsafe_allow_html=True)
 
 with gov_col2:
-    with st.expander("🟢 MSD WORKFORCE PIPELINE", expanded=False):
+    with st.expander("🟢 DOL / OWCP ACCOUNTABILITY RECONCILIATION", expanded=False):
         st.markdown("""<div style="font-family:monospace; font-size:0.8rem; color:#8b949e; line-height:1.4;">
-        <strong>Status:</strong> LIVE INTEGRATION<br/>
-        <strong>Last Harvest:</strong> Today, 11:40 AM<br/>
+        <strong>Connection Status:</strong> ENCRYPTED SECURE TUNNEL<br/>
+        <strong>Data Pipeline:</strong> FECA-DOL-9902<br/>
         <hr style="border:0; border-top:1px solid #30363d; margin:0.4rem 0;"/>
-        <span style="color:#10b981;">✓ 14 Modified light-duty matches found.</span>
+        <span style="color:#10b981;">✓ Federal wage ledger verification clear.</span>
         </div>""", unsafe_allow_html=True)
 
 with gov_col3:
-    hnz_status = "🟢 SECURE SYNCED" if st.session_state.ministerial_override else "🔵 PROXIED / OPERATIONAL"
-    hnz_color = "#10b981" if st.session_state.ministerial_override else "#38bdf8"
-    with st.expander(f"{'🟢' if st.session_state.ministerial_override else '🔵'} HEALTH NZ CLINICAL GRID", expanded=False):
+    hnz_status = "🟢 EXECUTIVE OVERRIDE SYNCHRONIZED" if st.session_state.executive_override else "🔵 STANDBY / OPERATIONAL PROXY"
+    hnz_color = "#10b981" if st.session_state.executive_override else "#38bdf8"
+    with st.expander(f"{'🟢' if st.session_state.executive_override else '🔵'} HHS / CDC COMORBIDITY CLOUD", expanded=False):
         st.markdown(f"""<div style="font-family:monospace; font-size:0.8rem; color:#8b949e; line-height:1.4;">
-        <strong>Status:</strong> {hnz_status}<br/>
-        <strong>Channel Hash:</strong> HNZ-MED-4402<br/>
+        <strong>Connection Status:</strong> {hnz_status}<br/>
+        <strong>Data Pipeline:</strong> CDC-ICD10-CMS<br/>
         <hr style="border:0; border-top:1px solid #30363d; margin:0.4rem 0;"/>
-        <span style="color:{hnz_color};">{'✓ Ministerial Overlap Mandate Active' if st.session_state.ministerial_override else 'i Historical orthopaedic records linked.'}</span>
+        <span style="color:{hnz_color};">{'✓ Executive Waiver Ingested: Full diagnostic clinical files extracted.' if st.session_state.executive_override else 'i Standard demographic statistical rules applied.'}</span>
         </div>""", unsafe_allow_html=True)
 
 st.markdown("---")
 
-# --- CENTRAL ROUTING SELECTOR ---
+# --- CENTRAL ROUTING CONTROL SECTOR ---
 dropdown_options = [
-    "Global Scheme Portfolio (All Active Claims)", 
-    "➕ Onboard New Claimant Matrix"
+    "Global Enterprise Portfolio (All Active Exposures)", 
+    "➕ Ingest New Claim Telemetry Matrix"
 ] + list(st.session_state.master_ledger["Claim ID"])
 
-view_selection = st.selectbox("📂 AUDIT VIEW COMMAND SECTOR", dropdown_options)
+view_selection = st.selectbox("📂 RECONCILIATION VIEW AUDIT SECTOR", dropdown_options)
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ==============================================================================
-# INTERFACE LAYER A: GLOBAL SCHEME PORTFOLIO VIEW
+# INTERFACE LAYER A: GLOBAL EXPOSURE VIEW
 # ==============================================================================
-if view_selection == "Global Scheme Portfolio (All Active Claims)":
+if view_selection == "Global Enterprise Portfolio (All Active Exposures)":
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.markdown('<div class="metric-box"><div class="metric-label">Total Scheme Claims</div><div class="metric-value-silver">142 Active</div><div class="metric-subtext">Regional Portfolio Intake</div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="metric-box"><div class="metric-label">Total Monitored Exposures</div><div class="metric-value-silver">412 Federal Nodes</div><div class="metric-subtext">Active Multi-State Portfolios</div></div>', unsafe_allow_html=True)
     with col2:
-        st.markdown('<div class="metric-box"><div class="metric-label">Critical Pathway Drift</div><div class="metric-value-crimson">18 Subjects</div><div class="metric-subtext">Targeted Escalations Pending</div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="metric-box"><div class="metric-label">Unmitigated Pathway Drift</div><div class="metric-value-crimson">24 High-Risk Targets</div><div class="metric-subtext">Immediate Administrative Triage Required</div></div>', unsafe_allow_html=True)
     with col3:
-        st.markdown('<div class="metric-box"><div class="metric-label">Performance Index</div><div class="metric-value-green">85.9%</div><div class="metric-subtext">Baseline Trajectory Alignment</div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="metric-box"><div class="metric-label">System Alignment Index</div><div class="metric-value-green">91.4%</div><div class="metric-subtext">Baseline ODG Trajectory Conformance</div></div>', unsafe_allow_html=True)
 
     st.markdown("### 📋 MASTER ORCHESTRATION ACCOUNTABILITY LEDGER")
     
-    # 🌟 CRITICAL: Left-aligned string literal formatting avoids accidental code blocks
-    table_html = '<table class="sovereign-table"><thead><tr><th>Claim ID</th><th class="mobile-condense">Anatomy Target</th><th>Status Anchor</th></tr></thead><tbody>'
+    table_html = '<table class="sovereign-table"><thead><tr><th>Federal Claim ID</th><th class="mobile-condense">ICD-10 Code & Condition</th><th class="mobile-condense">Comorbidity Anchor</th><th>System Status</th></tr></thead><tbody>'
     
     for idx, row in st.session_state.master_ledger.iterrows():
         badge_style = "status-badge-drift" if row["Status"] == "CRITICAL DRIFT" else "status-badge-nominal"
-        table_html += f'<tr><td style="font-family:\'IBM Plex Mono\', monospace; font-weight:600;">{row["Claim ID"]}</td><td class="mobile-condense">{row["Anatomy Target"]}</td><td><span class="{badge_style}">{row["Status"]}</span></td></tr>'
+        table_html += f'<tr><td style="font-family:\'IBM Plex Mono\', monospace; font-weight:600;">{row["Claim ID"]}</td><td class="mobile-condense">{row["ICD_10"]}</td><td class="mobile-condense" style="font-family:\'IBM Plex Mono\', monospace; font-size:0.85rem;">{row["Comorbidity"]}</td><td><span class="{badge_style}">{row["Status"]}</span></td></tr>'
         
     table_html += '</tbody></table>'
     st.markdown(table_html, unsafe_allow_html=True)
 
 # ==============================================================================
-# INTERFACE LAYER B: NEW CLIENT INTAKE PATHWAY FORM
+# INTERFACE LAYER B: NEW CLAIM INGESTION MECHANISM
 # ==============================================================================
-elif view_selection == "➕ Onboard New Claimant Matrix":
+elif view_selection == "➕ Ingest New Claim Telemetry Matrix":
     st.markdown("## 📥 SECURE REGISTRY INTAKE GATEWAY")
     with st.form("intake_form", clear_on_submit=True):
-        f_id = st.text_input("Claimant Identification Token Label", placeholder="e.g., AAT-Claimant-Omega-2026")
-        f_anatomy = st.selectbox("Target Anatomical Structure Classification", ["Lower Extremity (Knee)", "Shoulder (Glenohumeral)", "Lumbar Spine Matrix"])
+        f_id = st.text_input("Federal Claim Token Identifier", placeholder="e.g., OWCP-2026-X9910")
+        f_icd = st.selectbox("Primary ICD-10 Classification", ["M54.5 (Low Back Strain)", "S42.0 (Clavicle Fracture)", "M17.1 (Unilateral Osteoarthritis)"])
+        f_comorb = st.selectbox("HHS Registered Comorbidity Profile", ["None Documented", "E11 (Type 2 Diabetes)", "I10 (Essential Hypertension)"])
         f_age = st.number_input("Chronological Biological Age Curve", min_value=18, max_value=80, value=45)
-        f_demands = st.selectbox("Occupational Demands Tier", ["Heavy Manual / Industrial", "Medium Logistics / Transport", "Sedentary Clerical"])
-        f_rom = st.slider("Live Telemetry Flexion Performance Baseline (Range of Motion %)", 10, 100, 75)
-        f_spend = st.number_input("Initial Intake Capital Allocation ($NZD Baseline)", min_value=0.0, value=5000.0)
+        f_demands = st.selectbox("ODG Job Category Tier", ["Heavy Industrial / Logistics", "Medium Fleet Operations", "Sedentary Professional"])
+        f_rom = st.slider("Initial Telemetry Performance Baseline (Range of Motion %)", 10, 100, 75)
+        f_spend = st.number_input("Initial Incurred Financial Exposure ($USD)", min_value=0.0, value=5000.0)
         
-        submit_btn = st.form_submit_button("🎖️ AUTHORIZE STATE-CERTIFIED REGISTRY INJECTION")
+        submit_btn = st.form_submit_button("🎖️ INGEST AND ENFORCE PREDICTIVE SYSTEMIC BASELINES")
         if submit_btn and f_id:
             drift_calc = 100.0 - float(f_rom)
             determined_status = "CRITICAL DRIFT" if drift_calc > 15 else "NOMINAL ALIGNMENT"
-            new_row = {"Claim ID": f_id, "Anatomy Target": f_anatomy, "Age": int(f_age), "Demands": f_demands, "ROM_Actual": float(f_rom), "Spend_To_Date": float(f_spend), "Status": determined_status}
+            new_row = {"Claim ID": f_id, "ICD_10": f_icd, "Comorbidity": f_comorb, "Age": int(f_age), "Demands": f_demands, "Flexion_Baseline": float(f_rom), "Total_Incurred": float(f_spend), "Status": determined_status}
             st.session_state.master_ledger = pd.concat([st.session_state.master_ledger, pd.DataFrame([new_row])], ignore_index=True)
-            st.success(f"✓ Security Node Authenticated: {f_id} dynamically linked successfully.")
+            st.success(f"✓ Security Node Authenticated: {f_id} dynamically integrated into federal monitoring arrays successfully.")
 
 # ==============================================================================
-# INTERFACE LAYER C: INDIVIDUAL DRILL-DOWN VIEW (WITH SIMULATION)
+# INTERFACE LAYER C: COMPREHENSIVE DRILL-DOWN & VALUE MODELING
 # ==============================================================================
 else:
     selected_row = st.session_state.master_ledger[st.session_state.master_ledger["Claim ID"] == view_selection].iloc[0]
     subject_token = selected_row["Claim ID"]
-    anatomy = selected_row["Anatomy Target"]
+    icd_code = selected_row["ICD_10"]
+    comorb = selected_row["Comorbidity"]
     age = int(selected_row["Age"])
     duty_tier = selected_row["Demands"]
-    actual_rom = float(selected_row["ROM_Actual"])
-    actual_spend = float(selected_row["Spend_To_Date"])
+    actual_rom = float(selected_row["Flexion_Baseline"])
+    actual_spend = float(selected_row["Total_Incurred"])
     
     st.markdown("## 📡 PREVENTATIVE DRIFT RADAR DEEP-DIVE")
     
@@ -304,28 +302,26 @@ else:
     if sim_mode:
         col_sim1, col_sim2 = st.columns(2)
         with col_sim1:
-            actual_rom = float(st.slider("Simulate Live Flexion / ROM (%)", 10, 100, int(actual_rom), key=f"sim_rom_{subject_token}"))
+            actual_rom = float(st.slider("Simulate Live Telemetry Flexion Baseline (%)", 10, 100, int(actual_rom), key=f"sim_rom_{subject_token}"))
         with col_sim2:
-            actual_spend = float(st.number_input("Simulate Live Spend to Date ($NZD)", min_value=0.0, value=float(actual_spend), key=f"sim_spend_{subject_token}"))
+            actual_spend = float(st.number_input("Simulate Live Total Incurred Exposure ($USD)", min_value=0.0, value=float(actual_spend), key=f"sim_spend_{subject_token}"))
 
-    # Calculations Core
-    job_multiplier = 1.30 if "Heavy" in duty_tier else (1.10 if "Medium" in duty_tier else 0.90)
-    age_factor = (age - 25) * 0.015
-    calibrated_base_cost = 22500.0 * (1.0 + age_factor) * job_multiplier
-    calibrated_base_days = int(90 * (1.0 + age_factor) * job_multiplier)
+    # US Regulatory Financial Calculations Core
+    job_multiplier = 1.45 if "Heavy" in duty_tier else (1.15 if "Medium" in duty_tier else 0.85)
+    comorb_multiplier = 1.35 if comorb != "None Documented" else 1.00
+    age_factor = (age - 25) * 0.02
+    calibrated_base_cost = 45000.0 * (1.0 + age_factor) * job_multiplier * comorb_multiplier
     
     functional_drift = 100.0 - actual_rom
-    ivc = (actual_spend - calibrated_base_cost) / calibrated_base_cost
+    projected_final_cost = calibrated_base_cost + (functional_drift * 420.0)
     
-    projected_final_cost = calibrated_base_cost + (functional_drift * 185.0) + (ivc * calibrated_base_cost)
-    
-    if st.session_state.ministerial_override:
+    if st.session_state.executive_override:
         projected_final_cost = projected_final_cost * 0.80 
         
-    mitigated_reserve_target = projected_final_cost * (1.0 - (cap_floor / 100.0))
-    permanent_disability_prob = 1.0 / (1.0 + np.exp(-(-2.8 + (age * 0.045) + (functional_drift * 0.055))))
+    mitigated_reserve_target = projected_final_cost * (1.0 - (utilization_floor / 100.0))
+    permanent_disability_prob = 1.0 / (1.0 + np.exp(-(-3.2 + (age * 0.05) + (functional_drift * 0.065))))
 
-    if functional_drift > 15.0 or permanent_disability_prob > 0.50:
+    if functional_drift > 15.0 or permanent_disability_prob > 0.45:
         status_label = "CRITICAL PATHWAY DRIFT DETECTED"
         status_color = "#ef4444"
         impact_class = "critical-impact-value"
@@ -337,58 +333,59 @@ else:
     protocol_html = f"""<div style="background-color:#1b1416; padding:0.8rem; border-radius:4px; border:1px solid #6b21a8; margin-bottom:0.8rem;">
 <div class="metric-label" style="color:#ef4444; font-weight:700;">🤖 AUTOMATED MITIGATION PROTOCOL</div>
 <ul style="color:#f8fafc; font-size:0.88rem; margin:0; padding-left:1.2rem; line-height:1.4;">
-<li><strong>⚠️ Commutation Target:</strong> Initiate immediate Lump-Sum settlement review range (${mitigated_reserve_target:,.0f} - ${projected_final_cost:,.0f} NZD)</li>
-<li><strong>🩺 IME Authorization:</strong> Issue urgent Independent Medical Examination directive.</li>
+<li><strong>⚠️ Preempt Litigation Cycle:</strong> Deploy immediate out-of-court administrative settlement structures evaluated between (${mitigated_reserve_target:,.0f} - ${projected_final_cost:,.0f} USD).</li>
+<li><strong>🩺 UR Overrule:</strong> Circumvent standard TPA waitlists; clear instant authorization for targeted clinical intervention.</li>
 </ul>
 </div>"""
 
     adaptive_cv_html = f"""<div style="background-color:#18141c; padding:0.8rem; border-radius:4px; border:1px solid #a855f7; margin-bottom:0.8rem;">
 <div class="metric-label" style="color:#c084fc; font-weight:700; display:flex; justify-content:between; align-items:center;">
-<span>💼 ADAPTIVE CAREER TRAJECTORY & CV PIVOT MATRIX</span>
-<span style="background-color:#10b981; color:#0c1017; font-size:0.7rem; padding:1px 5px; border-radius:3px; font-weight:700; margin-left:10px;">🎖️ MSD CERTIFIED ADOPTION MANDATORY</span>
+<span>💼 ODG COMPLIANT RETURN-TO-WORK (RTW) TRAJECTORY</span>
+<span style="background-color:#10b981; color:#0c1017; font-size:0.7rem; padding:1px 5px; border-radius:3px; font-weight:700; margin-left:10px;">🎖️ EMPLOYER NETWORK LINKED</span>
 </div>
 <table style="width:100%; border-collapse:collapse; font-size:0.85rem; color:#f8fafc;">
-<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">Obsolete Vector:</td><td>{duty_tier} Matrix</td></tr>
-<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">New Target CV:</td><td><strong>Assigned Operational Safety Compliance Auditor</strong></td></tr>
+<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">Pre-Injury Capacity:</td><td>{duty_tier} Grid</td></tr>
+<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">Modified Target Class:</td><td><strong>Operational Logistics Safety & Compliance Manager</strong></td></tr>
 </table>
 </div>"""
 
     st.markdown("#### Comprehensive Scheme Ledger Dossier")
     
-    if role in ["Cabinet Minister (Executive Authority)", "Scheme Director (GM)"]:
+    if role in ["Secretary of Labor (Federal OWCP)", "Chief Risk Officer (Enterprise Carrier)"]:
         fee_line = f"""<div class="metric-label" style="margin-top:0.6rem;">Dynamic Lookback Valuation Basis</div>
-<div class="metric-value-green" style="font-size:1.4rem;">${(5000 + (projected_final_cost * 0.12)):,.2f} NZD</div>"""
+<div class="metric-value-green" style="font-size:1.4rem;">${(12000 + (projected_final_cost * 0.08)):,.2f} USD</div>"""
     else:
         fee_line = """<div class="metric-label" style="margin-top:0.6rem;">Dynamic Lookback Valuation Basis</div>
-<div style="color:#8b949e; font-style:italic; font-size:0.95rem;">🔒 SECURE LEDGER PROXIED TO EXECUTIVE SECTOR</div>"""
+<div style="color:#8b949e; font-style:italic; font-size:0.95rem;">🔒 SECURE FINANCIAL MATRIX DEPLOYED UNTIL AUTHORIZED</div>"""
         
     html_payload = f"""<div class="metric-box" style="border-left: 4px solid {status_color}; padding: 1.5rem; height: auto;">
-<div class="metric-label">Scheme Alignment Status</div>
+<div class="metric-label">System Alignment Status</div>
 <div style="color:{status_color}; font-weight:700; font-size:1.2rem; margin-bottom:0.8rem;">{status_label}</div>
 
 <div style="background-color:#0c1017; padding:0.8rem; border-radius:4px; border:1px solid #30363d; margin-bottom:0.8rem;">
 <div class="metric-label" style="color:#ffffff;">Claimant File Dossier Matrix</div>
-<span style="font-size:0.9rem; color:#8b949e;">ID:</span> <span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{subject_token}</span><br/>
-<span style="font-size:0.9rem; color:#8b949e;">Target Anatomy:</span> <span style="font-size:0.9rem; color:#ffffff;">{anatomy}</span><br/>
+<span style="font-size:0.9rem; color:#8b949e;">ID Token:</span> <span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{subject_token}</span><br/>
+<span style="font-size:0.9rem; color:#8b949e;">Primary ICD-10 Classification:</span> <span style="font-size:0.9rem; color:#ffffff;">{icd_code}</span><br/>
+<span style="font-size:0.9rem; color:#8b949e;">Registered Comorbidity Profile:</span> <span style="font-size:0.9rem; color:#ffffff; font-family:'IBM Plex Mono'; font-size:0.82rem;">{comorb}</span><br/>
 </div>
 
 {protocol_html}
 {adaptive_cv_html}
 
-<div class="metric-label">Probability of Permanent Disability (PPD)</div>
+<div class="metric-label">Probability of Permanent Partial Disability (PPD)</div>
 <div class="{impact_class}">{permanent_disability_prob*100:.1f}%</div>
 
 <hr style="border:0; border-top:1px solid #30363d; margin: 0.8rem 0;"/>
-<div class="metric-label">Total Absolute System Exposure (TASE) {'<span style="color:#10b981;">(20% Crown Directive Compression)</span>' if st.session_state.ministerial_override else ''}</div>
-<div class="metric-value-silver" style="font-size:1.5rem; margin-bottom:0.3rem;">${projected_final_cost:,.2f} NZD</div>
-<div class="metric-label">Mitigated Capital Reserve Target</div>
-<div class="metric-value-green" style="font-size:1.5rem; margin-bottom:0.3rem;">${mitigated_reserve_target:,.2f} NZD</div>
+<div class="metric-label">Total Absolute System Exposure (TASE) {'<span style="color:#10b981;">(20% Executive Intervention Compression Applied)</span>' if st.session_state.executive_override else ''}</div>
+<div class="metric-value-silver" style="font-size:1.5rem; margin-bottom:0.3rem;">${projected_final_cost:,.2f} USD</div>
+<div class="metric-label">Medicare Set-Aside (MSA) Reserve Target</div>
+<div class="metric-value-green" style="font-size:1.5rem; margin-bottom:0.3rem;">${mitigated_reserve_target:,.2f} USD</div>
 {fee_line}
 </div>"""
     
     st.markdown(html_payload, unsafe_allow_html=True)
 
-    # 📸 Empirical Evidence Matrix
+    # 📸 Telemetry Imaging Input
     st.markdown("#### 📸 Empirical Evidence & Telemetry Capture Matrix")
     uploaded_evidence = st.file_uploader("Ingest Biometric Evidence", type=["png", "jpg", "jpeg", "mp4"], key=f"upload_{subject_token}")
     if uploaded_evidence is not None:
@@ -415,7 +412,7 @@ st.markdown(f"""
         justify-content: center;
         cursor: pointer;
         z-index: 999999;
-    " onclick="alert('🤖 Native NLP Compliance Advisor Node\\n\\nActive Context: {role}\\n\\n[LICENSE VERIFIED] This text assistant responds instantly on pocket devices without data lag.')">
+    " onclick="alert('🤖 Native NLP Compliance Advisor Node\\n\\nActive Context: {role}\\n\\n[LICENSE VERIFIED] This responsive text assistant operates securely within licensed US enterprise parameters.')">
         <span class="floating-avatar-icon" style="font-size: 1.4rem;">🤖</span>
     </div>
 """, unsafe_allow_html=True)
