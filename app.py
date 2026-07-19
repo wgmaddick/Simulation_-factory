@@ -112,26 +112,6 @@ st.markdown(
         color: #8b949e;
         margin-top: 0.3rem;
     }
-    /* Inter-Departmental Link Badges */
-    .gov-link-container {
-        display: flex;
-        gap: 0.8rem;
-        flex-wrap: wrap;
-        margin-bottom: 1.5rem;
-        background-color: #161b22;
-        padding: 0.8rem;
-        border-radius: 6px;
-        border: 1px solid #30363d;
-    }
-    .gov-badge {
-        font-family: "IBM Plex Mono", monospace;
-        font-size: 0.78rem;
-        font-weight: 600;
-        padding: 0.3rem 0.6rem;
-        border-radius: 4px;
-        background-color: #0c1017;
-        border: 1px solid #30363d;
-    }
     /* Executive Large-Print Callout Focus */
     .critical-impact-value {
         font-size: 3.8rem;
@@ -647,16 +627,54 @@ st.markdown(
 )
 st.markdown("---")
 
-# --- INITIATIVE 1: INTER-DEPARTMENTAL DATA LINK MONITOR ---
+# --- INITIATIVE 1: ALL-OF-GOVERNMENT DATA INTEGRATION GRID ---
+st.markdown("### ALL-OF-GOVERNMENT DATA INTEGRATION GRID")
 st.markdown(
-    """<div class="gov-link-container">
-<div class="metric-label" style="width:100%; margin-bottom:0.2rem; color:#8b949e;">Cross-Government Interoperability Core Infrastructure</div>
-<div class="gov-badge" style="color:#10b981;">IRD INCOME DECK: SECURE LIVE FEED</div>
-<div class="gov-badge" style="color:#10b981;">MSD SOCIAL STRESS MATRIX: CONNECTED</div>
-<div class="gov-badge" style="color:#38bdf8;">HEALTH NZ E-HEALTH RECORDS: OPERATIONAL</div>
-</div>""",
+    "<p style='color:#8b949e; margin-top:-10px; font-size:0.9rem;'>"
+    "Real-time inter-agency data synchronization pipeline and encrypted security "
+    "verification tokens.</p>",
     unsafe_allow_html=True,
 )
+
+gov_col1, gov_col2, gov_col3 = st.columns(3)
+with gov_col1:
+    with st.expander("IRD INCOME EXCHANGE", expanded=False):
+        st.markdown(
+            """<div style="font-family:monospace; font-size:0.8rem; color:#8b949e; line-height:1.4;">
+<strong>Status:</strong> SECURE LIVE SYNC<br/>
+<strong>Last Harvest:</strong> Today, 11:42 AM<br/>
+<strong>Channel Hash:</strong> IRD-2026-99X4<br/>
+<hr style="border:0; border-top:1px solid #30363d; margin:0.4rem 0;"/>
+<span style="color:#10b981;">12-Month wage ledger verified.</span>
+</div>""",
+            unsafe_allow_html=True,
+        )
+with gov_col2:
+    with st.expander("MSD WORKFORCE PIPELINE", expanded=False):
+        st.markdown(
+            """<div style="font-family:monospace; font-size:0.8rem; color:#8b949e; line-height:1.4;">
+<strong>Status:</strong> LIVE INTEGRATION<br/>
+<strong>Last Harvest:</strong> Today, 11:40 AM<br/>
+<strong>Channel Hash:</strong> MSD-AX-7710<br/>
+<hr style="border:0; border-top:1px solid #30363d; margin:0.4rem 0;"/>
+<span style="color:#10b981;">14 Modified light-duty matches found.</span>
+</div>""",
+            unsafe_allow_html=True,
+        )
+with gov_col3:
+    with st.expander("HEALTH NZ CLINICAL GRID", expanded=False):
+        st.markdown(
+            """<div style="font-family:monospace; font-size:0.8rem; color:#8b949e; line-height:1.4;">
+<strong>Status:</strong> PROXIED / OPERATIONAL<br/>
+<strong>Last Harvest:</strong> Today, 10:15 AM<br/>
+<strong>Channel Hash:</strong> HNZ-MED-4402<br/>
+<hr style="border:0; border-top:1px solid #30363d; margin:0.4rem 0;"/>
+<span style="color:#38bdf8;">Historical orthopaedic records linked.</span>
+</div>""",
+            unsafe_allow_html=True,
+        )
+
+st.markdown("---")
 
 # --- CENTRAL ROUTING SELECTOR ---
 view_selection = st.selectbox(
