@@ -120,50 +120,6 @@ st.title("AAT SCHEME PERFORMANCE ENGINE")
 st.markdown("<p style='color:#8b949e; margin-top:-10px;'>Predictive Operational Risk & Long-Tail Claims Governance Framework</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# --- INITIATIVE 1: ALL-OF-GOVERNMENT DATA INTEGRATION GRID ---
-st.markdown("### 🛰️ ALL-OF-GOVERNMENT DATA INTEGRATION GRID")
-st.markdown("<p style='color:#8b949e; margin-top:-10px; font-size:0.9rem;'>Real-time inter-agency data synchronization pipeline and encrypted security verification tokens.</p>", unsafe_allow_html=True)
-
-gov_col1, gov_col2, gov_col3 = st.columns(3)
-
-with gov_col1:
-    with st.expander("🟢 IRD INCOME EXCHANGE", expanded=False):
-        st.markdown("""
-<div style="font-family:monospace; font-size:0.8rem; color:#8b949e; line-height:1.4;">
-<strong>Status:</strong> SECURE LIVE SYNC<br/>
-<strong>Last Harvest:</strong> Today, 11:42 AM<br/>
-<strong>Channel Hash:</strong> IRD-2026-99X4<br/>
-<hr style="border:0; border-top:1px solid #30363d; margin:0.4rem 0;"/>
-<span style="color:#10b981;">✓ 12-Month wage ledger verified.</span>
-</div>
-""", unsafe_allow_html=True)
-
-with gov_col2:
-    with st.expander("🟢 MSD WORKFORCE PIPELINE", expanded=False):
-        st.markdown("""
-<div style="font-family:monospace; font-size:0.8rem; color:#8b949e; line-height:1.4;">
-<strong>Status:</strong> LIVE INTEGRATION<br/>
-<strong>Last Harvest:</strong> Today, 11:40 AM<br/>
-<strong>Channel Hash:</strong> MSD-AX-7710<br/>
-<hr style="border:0; border-top:1px solid #30363d; margin:0.4rem 0;"/>
-<span style="color:#10b981;">✓ 14 Modified light-duty matches found.</span>
-</div>
-""", unsafe_allow_html=True)
-
-with gov_col3:
-    with st.expander("🔵 HEALTH NZ CLINICAL GRID", expanded=False):
-        st.markdown("""
-<div style="font-family:monospace; font-size:0.8rem; color:#8b949e; line-height:1.4;">
-<strong>Status:</strong> PROXIED / OPERATIONAL<br/>
-<strong>Last Harvest:</strong> Today, 10:15 AM<br/>
-<strong>Channel Hash:</strong> HNZ-MED-4402<br/>
-<hr style="border:0; border-top:1px solid #30363d; margin:0.4rem 0;"/>
-<span style="color:#38bdf8;">i Historical orthopaedic records linked.</span>
-</div>
-""", unsafe_allow_html=True)
-
-st.markdown("---")
-
 # --- CENTRAL ROUTING SELECTOR ---
 view_selection = st.selectbox(
     "📂 AUDIT VIEW COMMAND SECTOR", 
@@ -172,10 +128,11 @@ view_selection = st.selectbox(
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ==============================================================================
-# INTERFACE LAYER A: GLOBAL SCHEME PORTFOLIO VIEW
+# INTERFACE LAYER A: GLOBAL SCHEME PORTFOLIO VIEW (ROLE-DYNAMIC RESPONSIVE DECK)
 # ==============================================================================
 if view_selection == "Global Scheme Portfolio (All Active Claims)":
     
+    # Standard Core Portfolio Metrics Block
     col1, col2, col3 = st.columns(3)
     with col1:
         st.markdown('<div class="metric-box"><div class="metric-label">Total Scheme Claims</div><div class="metric-value-silver">142 Active</div><div class="metric-subtext">Regional Portfolio Intake</div></div>', unsafe_allow_html=True)
@@ -184,6 +141,9 @@ if view_selection == "Global Scheme Portfolio (All Active Claims)":
     with col3:
         st.markdown('<div class="metric-box"><div class="metric-label">Performance Index</div><div class="metric-value-green">85.9%</div><div class="metric-subtext">Baseline Trajectory Alignment</div></div>', unsafe_allow_html=True)
 
+    # --------------------------------------------------------------------------
+    # CASE 1: CLAIMS OFFICER MATRIX VIEW
+    # --------------------------------------------------------------------------
     if role == "Claims Officer / Analyst":
         st.markdown("### 📋 CLAIMS OFFICER / ANALYST — ACTION TASK")
         
@@ -202,7 +162,19 @@ if view_selection == "Global Scheme Portfolio (All Active Claims)":
             "Target Operational Status": ["Action Required (Shift 1)", "Review Required (Shift 1)", "Watch-Only Status Log"]
         })
         st.table(df_co_queue)
+        
+        st.markdown("#### Required Actions (This Shift)")
+        st.markdown("""
+        1. Open **AUDIT VIEW → Zeta**, confirm Path B trigger state, and input structured tracking notes.
+        2. Escalate **Zeta** to advanced rehab pipeline; log variance markers against standard 180-day runway.
+        3. Open **Delta**, evaluate psychosocial pathway barriers, and schedule mandatory clinical review.
+        4. Update all modified entries inside the core database ledger framework.
+        5. **Strict Security Filter:** Lookback Valuation parameters are restricted to Scheme Director clearance.
+        """)
 
+    # --------------------------------------------------------------------------
+    # CASE 2: REVIEWING SPECIALIST MATRIX VIEW (NEW TARGET INJECTION)
+    # --------------------------------------------------------------------------
     elif role == "Reviewing Specialist":
         st.markdown("### 🩻 REVIEWING SPECIALIST — CLINICAL ESCALATION AUDIT DECK")
         
@@ -222,7 +194,18 @@ if view_selection == "Global Scheme Portfolio (All Active Claims)":
             "Required Sign-Off Command": ["Execute Independent Medical Audit", "Verify Behavioral Compliance Log", "Authorize Standard Billing Track"]
         })
         st.table(df_rs_queue)
+        
+        st.markdown("#### Required Clinical Actions (This Shift)")
+        st.markdown("""
+        1. Select **Zeta** from the audit drop-down sector. Cross-examine the severe **52% functional Range of Motion deficit** against the chronological tissue remodeling projection curves.
+        2. Verify the legal validity of the pending **Independent Medical Examination (IME)** request to formalize structural capacity limits.
+        3. Audit **Delta's** text summary record to determine if behavioral health intervention indices match standard compliance splines.
+        4. Authorize or reject active clinical exception allocations based on raw physiological telemetry records.
+        """)
 
+    # --------------------------------------------------------------------------
+    # CASE 3: SCHEME DIRECTOR GENERAL MANAGER VIEW
+    # --------------------------------------------------------------------------
     else:
         st.markdown("### 📋 MASTER CLAIMS ACCOUNTABILITY LEDGER")
         df_formatted_ledger = df_master_ledger[["Claim ID", "Anatomy Target", "Status"]].copy()
@@ -242,7 +225,7 @@ if view_selection == "Global Scheme Portfolio (All Active Claims)":
         st.line_chart(df_macro_chart, x="Days Elapsed", y=["Target Operational Runway", "Actual Scheme Outflow"])
 
 # ==============================================================================
-# INTERFACE LAYER B: INDIVIDUAL DRILL-DOWN VIEW
+# INTERFACE LAYER B: INDIVIDUAL DRILL-DOWN VIEW (EXECUTIVE CARD CONSOLIDATED)
 # ==============================================================================
 else:
     selected_row = df_master_ledger[df_master_ledger["Claim ID"] == view_selection].iloc[0]
@@ -277,10 +260,9 @@ else:
         status_color = "#10b981"
         impact_class = "nominal-impact-value"
 
-    # Prescriptive AI Protocol Engine & Adaptive CV Trajectory Loops
+    # Prescriptive AI Protocol Engine Ingestion Loop
     if "Zeta" in subject_token:
         dict_txt = "Advanced structural vulnerability noted in knee construct. High manual occupational exposures compounding timeline variance."
-        
         protocol_html = f"""<div style="background-color:#1b1416; padding:0.8rem; border-radius:4px; border:1px solid #6b21a8; margin-bottom:0.8rem;">
 <div class="metric-label" style="color:#ef4444; font-weight:700;">🤖 AUTOMATED MITIGATION PROTOCOL</div>
 <ul style="color:#f8fafc; font-size:0.88rem; margin:0; padding-left:1.2rem; line-height:1.4;">
@@ -289,27 +271,8 @@ else:
 <li><strong>⚙️ Demands Override:</strong> Force immediate drop in Occupational Tier from Heavy Manual to Clerical/Supervisory.</li>
 </ul>
 </div>"""
-
-        adaptive_cv_html = """<div style="background-color:#18141c; padding:0.8rem; border-radius:4px; border:1px solid #a855f7; margin-bottom:0.8rem;">
-<div class="metric-label" style="color:#c084fc; font-weight:700; display:flex; justify-content:between; align-items:center;">
-<span>💼 ADAPTIVE CAREER TRAJECTORY & CV PIVOT MATRIX</span>
-<span style="background-color:#10b981; color:#0c1017; font-size:0.7rem; padding:1px 5px; border-radius:3px; font-weight:700; margin-left:10px;">🎖️ MSD CERTIFIED ADOPTION MANDATORY</span>
-</div>
-<div style="font-size:0.84rem; color:#8b949e; margin-bottom:0.4rem; font-style:italic;">Mental Preparation Lifeline & Supportive Path Forward via Inter-Agency Ingest. Adherence is state-certified.</div>
-<table style="width:100%; border-collapse:collapse; font-size:0.85rem; color:#f8fafc;">
-<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">Obsolete Vector:</td><td>Heavy Industrial Operations (Physically Incapacitated)</td></tr>
-<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">Cognitive Harvest:</td><td>Blueprint Interpretation, Logistics Coordination, OHS Enforcement</td></tr>
-<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">New Target CV:</td><td><strong>Site Quality & Safety Compliance Auditor</strong> (MSD Legally Registered Blueprint)</td></tr>
-<tr><td style="color:#8b949e; padding:4px 0; vertical-align:middle;">MSD Training Bridge:</td><td>
-<div style="display:inline-block; background-color:#166534; color:#4ade80; border:1px solid #14532d; font-size:0.72rem; padding:1px 6px; border-radius:3px; font-weight:600; margin-bottom:3px;">⚡ SYSTEM AUTOMATION ACTIVE</div><br/>
-<span style="color:#38bdf8; font-family:monospace;">📁 MSD Registry Slot Reserved → Digital Site Log Systems Cert #AAT-2026</span>
-</td></tr>
-</table>
-</div>"""
-
     elif "Delta" in subject_token:
         dict_txt = "Claimant presents with severe shoulder disruption. Cellular age curves indicate prolonged recovery runway."
-        
         protocol_html = """<div style="background-color:#141b1f; padding:0.8rem; border-radius:4px; border:1px solid #0369a1; margin-bottom:0.8rem;">
 <div class="metric-label" style="color:#38bdf8; font-weight:700;">🤖 AUTOMATED MITIGATION PROTOCOL</div>
 <ul style="color:#f8fafc; font-size:0.88rem; margin:0; padding-left:1.2rem; line-height:1.4;">
@@ -317,37 +280,12 @@ else:
 <li><strong>🤝 Light-Duty Matching:</strong> Initialize structured transitional employer-return tracking protocol to halt ongoing baseline drift velocity.</li>
 </ul>
 </div>"""
-
-        adaptive_cv_html = """<div style="background-color:#141b1f; padding:0.8rem; border-radius:4px; border:1px solid #0284c7; margin-bottom:0.8rem;">
-<div class="metric-label" style="color:#38bdf8; font-weight:700; display:flex; justify-content:between; align-items:center;">
-<span>💼 ADAPTIVE CAREER TRAJECTORY & CV PIVOT MATRIX</span>
-<span style="background-color:#10b981; color:#0c1017; font-size:0.7rem; padding:1px 5px; border-radius:3px; font-weight:700; margin-left:10px;">🎖️ MSD CERTIFIED ADOPTION MANDATORY</span>
-</div>
-<div style="font-size:0.84rem; color:#8b949e; margin-bottom:0.4rem; font-style:italic;">Mental Preparation Lifeline & Supportive Path Forward via Inter-Agency Ingest. Adherence is state-certified.</div>
-<table style="width:100%; border-collapse:collapse; font-size:0.85rem; color:#f8fafc;">
-<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">Obsolete Vector:</td><td>Active Logistics Manual Handling (Glenohumeral Traumatic Deviation)</td></tr>
-<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">Cognitive Harvest:</td><td>Fleet Routing Management, Procurement Sourcing, Manifest Tracking</td></tr>
-<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">New Target CV:</td><td><strong>Supply Chain Procurement Analyst / Dispatch Supervisor</strong></td></tr>
-<tr><td style="color:#8b949e; padding:4px 0; vertical-align:middle;">MSD Training Bridge:</td><td>
-<div style="display:inline-block; background-color:#166534; color:#4ade80; border:1px solid #14532d; font-size:0.72rem; padding:1px 6px; border-radius:3px; font-weight:600; margin-bottom:3px;">⚡ SYSTEM AUTOMATION ACTIVE</div><br/>
-<span style="color:#38bdf8; font-family:monospace;">📁 MSD Registry Slot Reserved → Public Service Transit Admin Pipeline</span>
-</td></tr>
-</table>
-</div>"""
-
     else:
         dict_txt = "Favorable tissue consistency. Functional path trajectory arc tracking nominal. Low stress metrics."
         protocol_html = """<div style="background-color:#141f17; padding:0.8rem; border-radius:4px; border:1px solid #15803d; margin-bottom:0.8rem;">
 <div class="metric-label" style="color:#4ade80; font-weight:700;">🤖 AUTOMATED MITIGATION PROTOCOL</div>
 <p style="color:#f8fafc; font-size:0.88rem; margin:0; line-height:1.4;">
 <strong>✅ Path Alignment Secure:</strong> Maintain standard vocational rehabilitation baseline track. Clear file for regular automated payment processing. No structural intervention required this cycle.
-</p>
-</div>"""
-        
-        adaptive_cv_html = """<div style="background-color:#141f17; padding:0.8rem; border-radius:4px; border:1px solid #166534; margin-bottom:0.8rem;">
-<div class="metric-label" style="color:#4ade80; font-weight:700;">💼 ADAPTIVE CAREER TRAJECTORY STATUS</div>
-<p style="color:#f8fafc; font-size:0.88rem; margin:0; line-height:1.4;">
-Baseline capacity holds. Pre-injury CV requires zero structural alterations. Natural track recovery trajectory validated. Verified via MSD National Framework.
 </p>
 </div>"""
 
@@ -371,13 +309,11 @@ Baseline capacity holds. Pre-injury CV requires zero structural alterations. Nat
 <div class="metric-label" style="color:#ffffff;">Claimant File Dossier Matrix</div>
 <span style="font-size:0.9rem; color:#8b949e;">ID:</span> <span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{subject_token}</span><br/>
 <span style="font-size:0.9rem; color:#8b949e;">Target Anatomy:</span> <span style="font-size:0.9rem; color:#ffffff;">{anatomy}</span><br/>
-<span style="font-size:0.9rem; color:#ffffff; font-size:0.9rem; color:#8b949e;">Demands / Age:</span> <span style="font-size:0.9rem; color:#ffffff;">{duty_tier} (Age {age})</span><br/>
+<span style="font-size:0.9rem; color:#8b949e;">Demands / Age:</span> <span style="font-size:0.9rem; color:#ffffff;">{duty_tier} (Age {age})</span><br/>
 <p style="font-size:0.85rem; color:#8b949e; font-style:italic; margin-top:0.4rem; margin-bottom:0;"><strong>NLP Ingest:</strong> {dict_txt}</p>
 </div>
 
 {protocol_html}
-
-{adaptive_cv_html}
 
 <div class="metric-label">Probability of Permanent Disability (PPD)</div>
 <div class="{impact_class}">{permanent_disability_prob*100:.1f}%</div>
@@ -393,30 +329,6 @@ Baseline capacity holds. Pre-injury CV requires zero structural alterations. Nat
 </div>"""
     
     st.markdown(html_payload, unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # --- INITIATIVE 2: DYNAMIC BIOMETRIC EVIDENCE UPLOADER ---
-    st.markdown("#### 📸 Empirical Evidence & Telemetry Capture Matrix")
-    
-    with st.container():
-        uploaded_evidence = st.file_uploader(
-            "Ingest Direct Clinical Evidence (Biometric Photographs, Diagnostic Imaging, or Range-of-Motion Video Capture Profiles)", 
-            type=["png", "jpg", "jpeg", "mp4"],
-            key=f"upload_{subject_token}"
-        )
-        
-        if uploaded_evidence is not None:
-            st.markdown("""<div style="background-color:#161b22; border:1px solid #30363d; padding:0.8rem; border-radius:4px; margin-bottom:0.5rem;">
-            <span style="font-family:monospace; font-size:0.8rem; color:#10b981;">✓ LIVE INGESTION RECOGNIZED • LINKING REPOSITORY TO LEDGER DOSSIER</span>
-            </div>""", unsafe_allow_html=True)
-            
-            file_extension = uploaded_evidence.name.split(".")[-1].lower()
-            
-            if file_extension in ["png", "jpg", "jpeg"]:
-                st.image(uploaded_evidence, caption=f"Empirical Diagnostic Capture Profile Matrix — {subject_token}", use_container_width=True)
-            elif file_extension in ["mp4"]:
-                st.video(uploaded_evidence)
-    
     st.markdown("<br>", unsafe_allow_html=True)
 
     # --- STACKED BLOCK 2: DATA ALIGNMENT MATRIX ---
