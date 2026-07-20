@@ -1,4 +1,4 @@
-"""Sovereign Case Management Engine — executive operational risk governance.
+"""US Risk Orchestration Engine — executive operational risk governance.
 
 Stark dark-theme portfolio surface with Clinical Triage Intake, Preventative
 Drift Radar (asymmetrical high-real-estate layout), and Lookback License Fee
@@ -19,7 +19,7 @@ from config import TENANT_CONFIG
 
 st.set_page_config(
     layout="wide",
-    page_title="Sovereign Case Management Engine",
+    page_title="US Risk Orchestration Engine",
     page_icon="⬡",
     initial_sidebar_state="expanded",
 )
@@ -185,10 +185,11 @@ with st.sidebar:
 
 
 # --- MAIN EXECUTIVE VIEW: PORTFOLIO & ASSET LIFE RUNWAY ---
-st.title("SOVEREIGN CASE MANAGEMENT ENGINE")
+st.title("US RISK ORCHESTRATION ENGINE")
 st.markdown(
     "<p style='color:#8b949e; margin-top:-10px;'>"
-    "Sophisticated Operational Risk Governance in Simple Terms</p>",
+    "Sophisticated Operational Risk Governance in Simple Terms · "
+    "Sovereign Case Management Surface</p>",
     unsafe_allow_html=True,
 )
 st.markdown("---")

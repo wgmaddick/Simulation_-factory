@@ -1,8 +1,13 @@
-[server]
-headless = true
-enableCORS = false
-enableXsrfProtection = false
-enableWebsocketCompression = false
-
 [browser]
 gatherUsageStats = false
+
+[theme]
+base = "dark"
+primaryColor = "#10b981"
+backgroundColor = "#0c1017"
+secondaryBackgroundColor = "#161b22"
+textColor = "#f8fafc"
+font = "sans serif"
+
+[client]
+toolbarMode = "minimal"
