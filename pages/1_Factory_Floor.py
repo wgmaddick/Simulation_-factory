@@ -1,9 +1,14 @@
-"""Factory floor simulation console — secondary page in the multipage app."""
+"""Factory floor simulation console — secondary page in the multipage app.
+
+Alerts surface when (clock + tick), where (line / bay / station), and why
+(cause codes such as downstream_blocked, planned_maintenance, quality_defect).
+"""
 
 from __future__ import annotations
 
 import time
 
+import pandas as pd
 import streamlit as st
 
 from simulation import SimulationState, StationState, efficiency, step_simulation, throughput
@@ -25,6 +30,12 @@ def init_state() -> None:
 
 def render_station_card(station) -> None:
     color = STATE_COLORS.get(station.state, "#6b7280")
+    cause_line = (
+        f'<div style="font-size: 0.75rem; color: #fbbf24; margin-top: 4px;">'
+        f"Why: {station.last_cause}</div>"
+        if station.last_cause != "—"
+        else ""
+    )
     st.markdown(
         f"""
         <div style="
@@ -39,9 +50,13 @@ def render_station_card(station) -> None:
             <div style="color: {color}; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em;">
                 {station.state.value}
             </div>
+            <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 4px;">
+                Where: {station.line} / {station.bay}
+            </div>
             <div style="font-size: 0.8rem; color: #9ca3af; margin-top: 6px;">
                 Queue: {station.queue} &nbsp;|&nbsp; Processed: {station.processed} &nbsp;|&nbsp; Defects: {station.defects}
             </div>
+            {cause_line}
         </div>
         """,
         unsafe_allow_html=True,
@@ -73,7 +88,10 @@ with st.sidebar:
             st.rerun()
 
 st.title("Factory Floor Console")
-st.markdown("Live production metrics, station status, and event log.")
+st.markdown(
+    "Live production metrics, station status, and alerts that answer "
+    "**when** / **where** / **why**."
+)
 
 k1, k2, k3, k4, k5 = st.columns(5)
 k1.metric("Tick", f"{sim.tick:,}")
@@ -83,7 +101,10 @@ k4.metric("Efficiency", f"{efficiency(sim)}%")
 k5.metric("Throughput", f"{throughput(sim)}/min")
 
 status_label = "🟢 RUNNING" if sim.running else "⏸ PAUSED"
-st.caption(f"Status: {status_label}  ·  Speed: {sim.speed}s/tick  ·  Stations: {len(sim.stations)}")
+st.caption(
+    f"Status: {status_label}  ·  Speed: {sim.speed}s/tick  ·  "
+    f"Stations: {len(sim.stations)}  ·  Alerts: {len(sim.alerts)}"
+)
 
 st.divider()
 
@@ -95,12 +116,33 @@ with left:
         render_station_card(station)
 
 with right:
+    st.subheader("Alerts (When / Where / Why)")
+    if sim.alerts:
+        alert_rows = [
+            {
+                "When": alert.when,
+                "Tick": alert.tick,
+                "Where": alert.where,
+                "Why": alert.why,
+                "Detail": alert.detail,
+            }
+            for alert in reversed(sim.alerts[-30:])
+        ]
+        st.dataframe(
+            pd.DataFrame(alert_rows),
+            use_container_width=True,
+            hide_index=True,
+            height=320,
+        )
+    else:
+        st.info("No alerts yet. Start the simulation to emit when/where/why events.")
+
     st.subheader("Console Log")
     log_text = "\n".join(reversed(sim.log[-30:]))
     st.text_area(
         "Events (newest first)",
         value=log_text,
-        height=520,
+        height=220,
         disabled=True,
         label_visibility="collapsed",
     )
