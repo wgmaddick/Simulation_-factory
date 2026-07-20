@@ -6,6 +6,10 @@ ledger, and stacked drill-down viewports (dossier → alignment table → chart)
 
 from __future__ import annotations
 
+import html
+import re
+from typing import Any
+
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -27,6 +31,56 @@ ANATOMY_OPTIONS = [
     "Lumbar Spine Matrix",
     "Lower Extremity (Knee)",
 ]
+
+# Defensive bounds for the data-intake matrix / form surfaces (Streamlit widgets
+# + any future CSV/XLSX corporate profile parse path).
+MAX_TOKEN_CHARS = 96
+MAX_STATUS_CHARS = 64
+MAX_NOTES_CHARS = 4000
+MAX_MANDATE_CHARS = 280
+MAX_INTAKE_ROWS = 500
+MAX_FIELD_CHARS = 120
+_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def sanitize_plain_text(value: Any, *, max_chars: int) -> str:
+    """Strip control chars and truncate free-form intake before render/store."""
+    text = _CONTROL_CHARS.sub("", str(value if value is not None else "")).strip()
+    return text[:max_chars]
+
+
+def sanitize_html_text(value: Any, *, max_chars: int | None = None) -> str:
+    """HTML-escape dynamic values injected into custom metric-box markup."""
+    text = sanitize_plain_text(
+        value, max_chars=max_chars if max_chars is not None else MAX_FIELD_CHARS
+    )
+    return html.escape(text, quote=True)
+
+
+def sanitize_claim_token(value: Any) -> str:
+    """Bound participant / claim identifiers used across dossier + tables."""
+    return sanitize_plain_text(value, max_chars=MAX_TOKEN_CHARS)
+
+
+def sanitize_status_label(value: Any) -> str:
+    return sanitize_plain_text(value, max_chars=MAX_STATUS_CHARS)
+
+
+def sanitize_for_markdown(value: Any, *, max_chars: int = MAX_TOKEN_CHARS) -> str:
+    """Neutralize markdown metacharacters in claim labels rendered via st.markdown."""
+    text = sanitize_plain_text(value, max_chars=max_chars)
+    for ch in ("*", "_", "`", "[", "]", "<", ">", "|"):
+        text = text.replace(ch, "")
+    return text
+
+
+def bound_intake_frame(frame: pd.DataFrame) -> pd.DataFrame:
+    """Cap row count for any corporate / matrix intake parse to avoid unbounded load."""
+    if frame is None or frame.empty:
+        return frame
+    if len(frame) > MAX_INTAKE_ROWS:
+        return frame.iloc[:MAX_INTAKE_ROWS].copy()
+    return frame
 
 # 1. High-Contrast Sovereign Dark Theme Configuration
 st.set_page_config(
@@ -309,12 +363,14 @@ def render_claims_officer_action_task(
     ].sort_values("PPD", ascending=False)
 
     st.markdown("### CLAIMS OFFICER / ANALYST — ACTION TASK")
+    safe_task_id = sanitize_html_text(CO_TASK_ID, max_chars=48)
+    safe_cap = sanitize_html_text(f"{int(cap_floor)}", max_chars=8)
     st.markdown(
         f"<div class='metric-box' style='border-left:4px solid #ef4444;'>"
         f"<div class='metric-label'>Task ID</div>"
-        f"<div class='metric-value-silver' style='font-size:1.35rem;'>{CO_TASK_ID}</div>"
+        f"<div class='metric-value-silver' style='font-size:1.35rem;'>{safe_task_id}</div>"
         f"<div class='metric-subtext'>Role: Claims Officer / Analyst · "
-        f"Mandate floor: {cap_floor}% CapEx mitigation</div>"
+        f"Mandate floor: {safe_cap}% CapEx mitigation</div>"
         f"<p style='color:#e2e8f0; margin:0.75rem 0 0 0;'>"
         f"Clear the CRITICAL DRIFT files before they harden into long-tail PPD exposure."
         f"</p></div>",
@@ -330,14 +386,18 @@ def render_claims_officer_action_task(
             if idx == 0
             else "Critical pathway escalation"
         )
+        claim_id = sanitize_claim_token(row["Claim ID"])
+        anatomy = sanitize_plain_text(row["Anatomy Target"], max_chars=MAX_FIELD_CHARS)
+        demands = sanitize_plain_text(row["Demands"], max_chars=MAX_FIELD_CHARS)
         queue_rows.append(
             {
                 "Priority": priority,
-                "Claim ID": row["Claim ID"],
+                "Claim ID": claim_id,
+                "Status": sanitize_status_label(row.get("Status", "")),
                 "Why now": why,
                 "Key metrics": (
-                    f"Age {int(row['Age'])} · {row['Anatomy Target']} · "
-                    f"{row['Demands']} · ROM {row['ROM_Actual']:.0f}% · "
+                    f"Age {int(row['Age'])} · {anatomy} · "
+                    f"{demands} · ROM {row['ROM_Actual']:.0f}% · "
                     f"Drift −{row['Functional Drift']:.0f}% · "
                     f"Spend ${row['Spend_To_Date']:,.0f} · "
                     f"PPD {row['PPD'] * 100:.1f}% · "
@@ -347,15 +407,22 @@ def render_claims_officer_action_task(
             }
         )
     if not watch.empty:
+        watch_claim_ids = [
+            sanitize_claim_token(c) for c in watch["Claim ID"].tolist()
+        ]
         watch_ids = " / ".join(
-            str(c).replace("AAT-Claimant-", "").replace("-2026", "")
-            for c in watch["Claim ID"].tolist()
+            sanitize_for_markdown(
+                c.replace("AAT-Claimant-", "").replace("-2026", ""),
+                max_chars=48,
+            )
+            for c in watch_claim_ids
         )
         watch_ppd = " / ".join(f"{p * 100:.1f}%" for p in watch["PPD"].tolist())
         queue_rows.append(
             {
                 "Priority": "Watch",
-                "Claim ID": " / ".join(watch["Claim ID"].tolist()),
+                "Claim ID": " / ".join(watch_claim_ids),
+                "Status": "NOMINAL ALIGNMENT",
                 "Why now": f"Nominal — no action this cycle ({watch_ids})",
                 "Key metrics": f"PPD {watch_ppd}",
             }
@@ -365,7 +432,10 @@ def render_claims_officer_action_task(
     if not critical.empty:
         p0 = critical.iloc[0]
         p1 = critical.iloc[1] if len(critical) > 1 else None
-        p0_short = str(p0["Claim ID"]).replace("AAT-Claimant-", "").replace("-2026", "")
+        p0_short = sanitize_for_markdown(
+            str(p0["Claim ID"]).replace("AAT-Claimant-", "").replace("-2026", ""),
+            max_chars=48,
+        )
         actions = [
             (
                 f"Open **AUDIT VIEW → {p0_short}**, confirm Path B trigger and "
@@ -377,8 +447,9 @@ def render_claims_officer_action_task(
             ),
         ]
         if p1 is not None:
-            p1_short = (
-                str(p1["Claim ID"]).replace("AAT-Claimant-", "").replace("-2026", "")
+            p1_short = sanitize_for_markdown(
+                str(p1["Claim ID"]).replace("AAT-Claimant-", "").replace("-2026", ""),
+                max_chars=48,
             )
             actions.append(
                 f"Open **{p1_short}**; schedule pathway review and psychosocial "
@@ -396,7 +467,10 @@ def render_claims_officer_action_task(
             st.markdown(f"{i}. {action}")
 
         critical_names = " and ".join(
-            str(c).replace("AAT-Claimant-", "").replace("-2026", "")
+            sanitize_for_markdown(
+                str(c).replace("AAT-Claimant-", "").replace("-2026", ""),
+                max_chars=48,
+            )
             for c in critical["Claim ID"].tolist()
         )
         st.markdown("#### Done When")
@@ -409,12 +483,29 @@ def render_claims_officer_action_task(
     st.markdown("---")
 
 
-df_master_ledger = load_internal_portfolio_ledger()
-claim_ids = df_master_ledger["Claim ID"].tolist()
+df_master_ledger = bound_intake_frame(load_internal_portfolio_ledger())
+claim_ids = [sanitize_claim_token(c) for c in df_master_ledger["Claim ID"].tolist()]
 
 # --- SIDEBAR: GOVERNANCE LAYER FILTERS ---
 with st.sidebar:
     st.markdown("### AAT SCHEME GOVERNANCE")
+    # -------------------------------------------------------------------------
+    # DEMO ROLE MATRIX (local toggle only — not an access-control boundary)
+    #
+    # Production identity architecture (OpenID Connect / enterprise OAuth):
+    #   1. Place an OIDC-compliant IdP in front of Streamlit (e.g. Auth0,
+    #      Azure AD / Entra ID, Okta, Keycloak) via reverse proxy or
+    #      streamlit-oauth / custom st.login component.
+    #   2. Resolve the authenticated principal once per session, e.g.:
+    #        # claims = st.user  # or secrets-backed OIDC callback payload
+    #        # role = map_idp_groups_to_scheme_role(claims["groups"])
+    #   3. Replace the selectbox below with the IdP-derived role; keep the
+    #      same SCHEME_DIRECTOR / CLAIMS_OFFICER / REVIEWING_SPECIALIST
+    #      constants so privacy switches (lookback fee masking, action board)
+    #      continue to gate on `role` without UI churn.
+    #   4. Enforce authorization server-side on any future data APIs — never
+    #      trust a client-chosen role string as the sole ACL.
+    # -------------------------------------------------------------------------
     role = st.selectbox(
         "Active User Role Matrix",
         [
@@ -422,6 +513,7 @@ with st.sidebar:
             CLAIMS_OFFICER,
             REVIEWING_SPECIALIST,
         ],
+        help="Demo toggle only. Production will bind this to OIDC group claims.",
     )
     st.markdown("---")
     st.markdown("### SCHEME MANDATE INJECTION")
@@ -429,10 +521,12 @@ with st.sidebar:
     strategic_note = st.text_input(
         "Disseminate Performance Mandate",
         placeholder="e.g., Accelerate Pathway Interventions",
+        max_chars=MAX_MANDATE_CHARS,
     )
-    st.caption(f"Active role: **{role}** · Liability floor **{cap_floor}%**")
+    strategic_note = sanitize_plain_text(strategic_note, max_chars=MAX_MANDATE_CHARS)
+    st.caption(f"Active role: **{sanitize_for_markdown(role, max_chars=64)}** · Liability floor **{int(cap_floor)}%**")
     if strategic_note:
-        st.caption(f"Mandate: {strategic_note}")
+        st.caption(f"Mandate: {sanitize_for_markdown(strategic_note, max_chars=MAX_MANDATE_CHARS)}")
 
 # --- MAIN PERFORMANCE DASHBOARD TITLE ---
 st.title("AAT SCHEME PERFORMANCE ENGINE")
@@ -485,10 +579,21 @@ if view_selection == GLOBAL_VIEW:
         render_claims_officer_action_task(ledger_enriched, int(cap_floor))
 
     st.markdown("### MASTER CLAIMS ACCOUNTABILITY LEDGER")
-    # Sliced down strictly to core vectors to prevent page overflow
+    # Sliced down strictly to core vectors to prevent page overflow.
+    # Preserve responsive st.table CSS (overflow-wrap / word-break) — only
+    # sanitize cell values before render.
     df_formatted_ledger = df_master_ledger[
         ["Claim ID", "Anatomy Target", "Status"]
     ].copy()
+    df_formatted_ledger["Claim ID"] = df_formatted_ledger["Claim ID"].map(
+        sanitize_claim_token
+    )
+    df_formatted_ledger["Anatomy Target"] = df_formatted_ledger["Anatomy Target"].map(
+        lambda v: sanitize_plain_text(v, max_chars=MAX_FIELD_CHARS)
+    )
+    df_formatted_ledger["Status"] = df_formatted_ledger["Status"].map(
+        sanitize_status_label
+    )
     st.table(df_formatted_ledger)
 
     st.markdown("---")
@@ -528,6 +633,7 @@ else:
                 "Participant Identifier Token",
                 value="",
                 placeholder="e.g., AAT-Claimant-Theta-2026",
+                max_chars=MAX_TOKEN_CHARS,
             )
             anatomy = st.selectbox(
                 "Anatomy Target",
@@ -550,15 +656,18 @@ else:
             dict_txt = st.text_area(
                 "Clinical Summary Ingest Log",
                 value="Type or dictate clinical triage notes here...",
+                max_chars=MAX_NOTES_CHARS,
             )
+        subject_token = sanitize_claim_token(subject_token)
+        dict_txt = sanitize_plain_text(dict_txt, max_chars=MAX_NOTES_CHARS)
         actual_rom, actual_spend = emulate_live_telemetry(int(age), str(duty_tier))
-        display_token = subject_token.strip() or "NEW-CLAIMANT-DRAFT"
+        display_token = subject_token or "NEW-CLAIMANT-DRAFT"
     else:
         selected_row = df_master_ledger[
             df_master_ledger["Claim ID"] == view_selection
         ].iloc[0]
 
-        subject_token = str(selected_row["Claim ID"])
+        subject_token = sanitize_claim_token(selected_row["Claim ID"])
         anatomy = str(selected_row["Anatomy Target"])
         age = int(selected_row["Age"])
         duty_tier = str(selected_row["Demands"])
@@ -592,13 +701,19 @@ else:
         status_color = "#10b981"
         impact_class = "nominal-impact-value"
 
-    # Escape NLP text for HTML injection
-    dict_html = (
-        str(dict_txt)
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-    )
+    # Escape every dynamic field before custom HTML dossier render (keep markup/CSS intact).
+    safe_display_token = sanitize_html_text(display_token, max_chars=MAX_TOKEN_CHARS)
+    safe_anatomy = sanitize_html_text(anatomy, max_chars=MAX_FIELD_CHARS)
+    safe_duty = sanitize_html_text(duty_tier, max_chars=MAX_FIELD_CHARS)
+    safe_status_label = sanitize_html_text(status_label, max_chars=MAX_STATUS_CHARS)
+    safe_dict_html = sanitize_html_text(dict_txt, max_chars=MAX_NOTES_CHARS)
+    safe_age = sanitize_html_text(int(age), max_chars=8)
+    safe_cap_floor = sanitize_html_text(int(cap_floor), max_chars=8)
+    safe_ppd = sanitize_html_text(f"{permanent_disability_prob * 100:.1f}", max_chars=16)
+    safe_tase = sanitize_html_text(f"{projected_final_cost:,.2f}", max_chars=32)
+    safe_reserve = sanitize_html_text(f"{mitigated_reserve_target:,.2f}", max_chars=32)
+    lookback_amount = 5000 + (projected_final_cost * 0.12)
+    safe_lookback = sanitize_html_text(f"{lookback_amount:,.2f}", max_chars=32)
 
     st.markdown("## PREVENTATIVE DRIFT RADAR DEEP-DIVE")
 
@@ -609,7 +724,7 @@ else:
         fee_line = (
             f'<div class="metric-label" style="margin-top:0.6rem;">Dynamic Lookback Valuation Basis</div>\n'
             f'<div class="metric-value-green" style="font-size:1.4rem;">'
-            f"${(5000 + (projected_final_cost * 0.12)):,.2f} NZD</div>"
+            f"${safe_lookback} NZD</div>"
         )
     else:
         fee_line = (
@@ -618,24 +733,25 @@ else:
             "🔒 SECURE LEDGER PROXIED TO EXECUTIVE SECTOR</div>"
         )
 
-    # Left-aligned HTML payload — no indent so Streamlit does not code-fence it
+    # Left-aligned HTML payload — no indent so Streamlit does not code-fence it.
+    # Metric-box / responsive table CSS classes unchanged for iPad viewport.
     html_payload = f"""<div class="metric-box" style="border-left: 4px solid {status_color}; padding: 1.5rem; height: auto;">
 <div class="metric-label">Scheme Alignment Status</div>
-<div style="color:{status_color}; font-weight:700; font-size:1.2rem; margin-bottom:0.8rem;">{status_label}</div>
+<div style="color:{status_color}; font-weight:700; font-size:1.2rem; margin-bottom:0.8rem;">{safe_status_label}</div>
 <div style="background-color:#0c1017; padding:0.8rem; border-radius:4px; border:1px solid #30363d; margin-bottom:0.8rem;">
 <div class="metric-label" style="color:#ffffff;">Claimant File Dossier Matrix</div>
-<span style="font-size:0.9rem; color:#8b949e;">ID:</span> <span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{display_token}</span><br/>
-<span style="font-size:0.9rem; color:#8b949e;">Target Anatomy:</span> <span style="font-size:0.9rem; color:#ffffff;">{anatomy}</span><br/>
-<span style="font-size:0.9rem; color:#8b949e;">Demands / Age:</span> <span style="font-size:0.9rem; color:#ffffff;">{duty_tier} (Age {int(age)})</span><br/>
-<p style="font-size:0.85rem; color:#8b949e; font-style:italic; margin-top:0.4rem; margin-bottom:0;"><strong>NLP Ingest:</strong> {dict_html}</p>
+<span style="font-size:0.9rem; color:#8b949e;">ID:</span> <span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{safe_display_token}</span><br/>
+<span style="font-size:0.9rem; color:#8b949e;">Target Anatomy:</span> <span style="font-size:0.9rem; color:#ffffff;">{safe_anatomy}</span><br/>
+<span style="font-size:0.9rem; color:#8b949e;">Demands / Age:</span> <span style="font-size:0.9rem; color:#ffffff;">{safe_duty} (Age {safe_age})</span><br/>
+<p style="font-size:0.85rem; color:#8b949e; font-style:italic; margin-top:0.4rem; margin-bottom:0;"><strong>NLP Ingest:</strong> {safe_dict_html}</p>
 </div>
 <div class="metric-label">Probability of Permanent Disability (PPD)</div>
-<div class="{impact_class}">{permanent_disability_prob * 100:.1f}%</div>
+<div class="{impact_class}">{safe_ppd}%</div>
 <hr style="border:0; border-top:1px solid #30363d; margin: 0.8rem 0;"/>
 <div class="metric-label">Total Absolute System Exposure (TASE)</div>
-<div class="metric-value-silver" style="font-size:1.5rem; margin-bottom:0.3rem;">${projected_final_cost:,.2f} NZD</div>
-<div class="metric-label">Mitigated Capital Reserve Target ({cap_floor}% Floor Applied)</div>
-<div class="metric-value-green" style="font-size:1.5rem; margin-bottom:0.3rem;">${mitigated_reserve_target:,.2f} NZD</div>
+<div class="metric-value-silver" style="font-size:1.5rem; margin-bottom:0.3rem;">${safe_tase} NZD</div>
+<div class="metric-label">Mitigated Capital Reserve Target ({safe_cap_floor}% Floor Applied)</div>
+<div class="metric-value-green" style="font-size:1.5rem; margin-bottom:0.3rem;">${safe_reserve} NZD</div>
 {fee_line}
 </div>"""
     st.markdown(html_payload, unsafe_allow_html=True)
@@ -708,7 +824,8 @@ else:
         }
     )
     st.caption(
-        f"{'Live draft' if is_new_claim else 'Individual'} axis · `{display_token}` · "
+        f"{'Live draft' if is_new_claim else 'Individual'} axis · "
+        f"`{sanitize_for_markdown(display_token)}` · "
         f"{calibrated_base_days}-day horizon (NZD)"
     )
     st.line_chart(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+import html
 
 import streamlit as st
 
@@ -62,6 +63,8 @@ def init_lab() -> None:
 
 def render_athlete_card(athlete) -> None:
     color = STATE_COLORS.get(athlete.state, "#64748b")
+    safe_name = html.escape(str(athlete.name), quote=True)
+    safe_state = html.escape(str(athlete.state.value), quote=True)
     st.markdown(
         f"""
         <div style="
@@ -71,10 +74,10 @@ def render_athlete_card(athlete) -> None:
             padding: 12px 14px;
             margin-bottom: 8px;
         ">
-            <div style="font-weight: 600; color: {THEME["text"]};">{athlete.name}</div>
+            <div style="font-weight: 600; color: {THEME["text"]};">{safe_name}</div>
             <div style="color: {color}; font-size: 0.78rem; text-transform: uppercase;
                         letter-spacing: 0.05em; font-family: IBM Plex Mono, monospace;">
-                {athlete.state.value}
+                {safe_state}
             </div>
             <div style="font-size: 0.8rem; color: {THEME["muted"]}; margin-top: 6px;">
                 Shear: {athlete.shear_peak_n:.1f} N &nbsp;|&nbsp;

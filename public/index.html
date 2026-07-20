@@ -230,6 +230,15 @@
             noise.stop(now + 0.13);
         }
 
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         async function initApp() {
             const res = await fetch('/api/config');
             currentConfig = await res.json();
@@ -241,13 +250,16 @@
             const container = document.getElementById('nodes-container');
             container.innerHTML = '';
             currentConfig.research_nodes.forEach((node, idx) => {
+                const safeId = escapeHtml(node.id);
+                const safeLabel = escapeHtml(node.label);
+                const safeCost = escapeHtml(node.credit_cost);
                 container.innerHTML += `
                     <label class="flex items-center justify-between p-3 border border-slate-800 rounded-lg bg-slate-950/50 cursor-pointer hover:border-slate-700 transition-all">
                         <div class="flex items-center space-x-3">
-                            <input type="radio" name="node-selection" value="${node.id}" ${idx === 0 ? 'checked' : ''} class="accent-emerald-500">
-                            <span class="text-xs text-slate-300 font-medium">${node.label}</span>
+                            <input type="radio" name="node-selection" value="${safeId}" ${idx === 0 ? 'checked' : ''} class="accent-emerald-500">
+                            <span class="text-xs text-slate-300 font-medium">${safeLabel}</span>
                         </div>
-                        <span class="text-[10px] font-mono font-bold bg-slate-800 text-slate-400 px-2 py-0.5 rounded">${node.credit_cost} Cr</span>
+                        <span class="text-[10px] font-mono font-bold bg-slate-800 text-slate-400 px-2 py-0.5 rounded">${safeCost} Cr</span>
                     </label>
                 `;
             });
@@ -302,18 +314,19 @@
         function showHealConfirmation(payload) {
             const panel = document.getElementById('heal-confirmation');
             const list = document.getElementById('heal-notifications');
-            document.getElementById('heal-headline').textContent =
+            const headline =
                 payload.message ||
                 `General Manager: entire sub-organization has been automatically re-aligned and self-healed for ${payload.candidateName}.`;
+            document.getElementById('heal-headline').textContent = headline;
 
             const notes = Array.isArray(payload.notifications) ? payload.notifications : [];
             list.innerHTML = notes
                 .map(
                     (n) => `
                 <li class="bg-slate-950/70 border border-emerald-900/40 rounded-md p-3">
-                    <p class="text-[10px] font-bold tracking-wider text-emerald-400 uppercase mb-1">${n.org}</p>
-                    <p class="text-xs text-slate-200 font-medium mb-1">${n.summary}</p>
-                    <p class="text-[11px] text-slate-400 leading-relaxed">${n.detail}</p>
+                    <p class="text-[10px] font-bold tracking-wider text-emerald-400 uppercase mb-1">${escapeHtml(n.org)}</p>
+                    <p class="text-xs text-slate-200 font-medium mb-1">${escapeHtml(n.summary)}</p>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">${escapeHtml(n.detail)}</p>
                 </li>`
                 )
                 .join('');
