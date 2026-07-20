@@ -304,6 +304,42 @@ st.markdown(
       font-weight: 700;
       padding: 0.35rem 0.7rem;
     }
+    .claim-id-bar .locked-chip {
+      display: inline-block;
+      border: 1px solid #475569;
+      color: #94a3b8;
+      background: #1e293b;
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 0.35rem 0.7rem;
+    }
+    /* Ministerial locked resolve control — muted slate */
+    div[data-testid="stButton"] > button[kind="secondary"].locked-resolve,
+    .locked-resolve-wrap button {
+      background-color: #1e293b !important;
+      background-image: none !important;
+      color: #94a3b8 !important;
+      border: 1px solid #475569 !important;
+      font-weight: 700 !important;
+    }
+    .locked-resolve-wrap button:hover {
+      background-color: #334155 !important;
+      color: #cbd5e1 !important;
+      border-color: #64748b !important;
+    }
+    /* Claims Officer / Specialist — active green resolve */
+    .active-resolve-wrap button[kind="primary"] {
+      background-color: #10b981 !important;
+      border-color: #10b981 !important;
+      color: #0c1017 !important;
+      font-weight: 700 !important;
+    }
+    .audit-toast {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.8rem;
+      color: #8b949e;
+      margin-top: 0.35rem;
+    }
 
     /* Tablet / mobile: hard floor — top-left hit targets ≥40px from edges */
     @media (max-width: 1024px) {
@@ -445,6 +481,27 @@ critical_drift_count = int(
 # Portfolio-level watchlist count for Ministerial banner (scheme-wide)
 SCHEME_CRITICAL_SUBJECTS = 18
 
+if "identity_audit_log" not in st.session_state:
+    st.session_state.identity_audit_log = []
+
+
+def _append_identity_audit(actor: str, action: str, token: str, native_id: str) -> None:
+    from datetime import datetime, timezone
+
+    st.session_state.identity_audit_log.append(
+        {
+            "ts": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%SZ"),
+            "actor": actor,
+            "action": action,
+            "token": token,
+            "native_id": native_id,
+        }
+    )
+    # Keep a short rolling window for the session console
+    if len(st.session_state.identity_audit_log) > 40:
+        st.session_state.identity_audit_log = st.session_state.identity_audit_log[-40:]
+
+
 # --- SIDEBAR: GOVERNANCE LAYER FILTERS ---
 with st.sidebar:
     st.markdown("### NZ ACC SCHEME GOVERNANCE")
@@ -459,6 +516,7 @@ with st.sidebar:
         key="active_user_role_matrix",
     )
     statutory_briefing_mode = role == MINISTER_ROLE
+    can_unmask_identity = role in {CLAIMS_OFFICER, REVIEWING_SPECIALIST}
     st.markdown("---")
     st.markdown("### SCHEME MANDATE INJECTION")
     cap_floor = st.slider("Enforce Liability Mitigation Floor (%)", 0, 50, 15)
@@ -468,7 +526,15 @@ with st.sidebar:
     )
     if statutory_briefing_mode:
         st.info("Statutory Briefing Mode active — Crown Entity Act compliance view.")
+        st.caption("Identity unmasking restricted under Ministerial governance.")
     st.caption("Localized NZ ACC · IRD · MSD · Health NZ · Ministerial AoG grids")
+    if st.session_state.identity_audit_log:
+        with st.expander("Identity Unmask Audit Log", expanded=False):
+            for entry in reversed(st.session_state.identity_audit_log[-8:]):
+                st.text(
+                    f"{entry['ts']} · {entry['actor']} · {entry['action']} · "
+                    f"{entry['token']} → {entry['native_id']}"
+                )
 
 # --- MAIN PERFORMANCE DASHBOARD TITLE ---
 st.title("NZ ACC RISK ORCHESTRATION ENGINE")
@@ -973,9 +1039,13 @@ Baseline capacity holds. Pre-injury CV requires zero structural alterations. Nat
     if resolve_key not in st.session_state:
         st.session_state[resolve_key] = False
 
+    # Ministerial statutory mode never retains an unmasked identity surface
+    if statutory_briefing_mode and st.session_state[resolve_key]:
+        st.session_state[resolve_key] = False
+
     id_col, btn_col = st.columns([2.4, 1.2])
     with id_col:
-        if st.session_state[resolve_key]:
+        if st.session_state[resolve_key] and can_unmask_identity:
             st.markdown(
                 f"""
                 <div class="claim-id-bar">
@@ -984,6 +1054,17 @@ Baseline capacity holds. Pre-injury CV requires zero structural alterations. Nat
                   <span class="resolve-chip">RESOLVED</span>
                   <span class="id-label">Native ACC Claim ID</span>
                   <span class="id-native">{native_acc_id}</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        elif statutory_briefing_mode:
+            st.markdown(
+                f"""
+                <div class="claim-id-bar">
+                  <span class="id-label">ID</span>
+                  <span class="id-token">{subject_token}</span>
+                  <span class="locked-chip">IDENTITY UNMASKING RESTRICTED</span>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -1000,37 +1081,81 @@ Baseline capacity holds. Pre-injury CV requires zero structural alterations. Nat
                 unsafe_allow_html=True,
             )
     with btn_col:
-        if st.session_state[resolve_key]:
+        if statutory_briefing_mode:
+            st.markdown('<div class="locked-resolve-wrap">', unsafe_allow_html=True)
             if st.button(
-                "Re-mask AAT Token",
-                key=f"remask_{subject_token}",
+                "Identity Unmasking Restricted",
+                key=f"resolve_locked_{subject_token}",
                 use_container_width=True,
             ):
-                st.session_state[resolve_key] = False
-                st.rerun()
+                st.warning(
+                    "Statutory governance mode restricts access to individual PII."
+                )
+            st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown(
+                '<div class="audit-toast">Minister for ACC · PII gate enforced</div>',
+                unsafe_allow_html=True,
+            )
+        elif can_unmask_identity:
+            st.markdown('<div class="active-resolve-wrap">', unsafe_allow_html=True)
+            if st.session_state[resolve_key]:
+                if st.button(
+                    "Re-mask AAT Token",
+                    key=f"remask_{subject_token}",
+                    use_container_width=True,
+                ):
+                    st.session_state[resolve_key] = False
+                    _append_identity_audit(
+                        role, "REMASK", subject_token, native_acc_id
+                    )
+                    st.rerun()
+            else:
+                if st.button(
+                    "Resolve to Native ACC Claim ID",
+                    key=f"resolve_{subject_token}",
+                    type="primary",
+                    use_container_width=True,
+                ):
+                    st.session_state[resolve_key] = True
+                    _append_identity_audit(
+                        role, "UNMASK", subject_token, native_acc_id
+                    )
+                    st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
         else:
+            # Scheme Director — operational view without PII unmask (policy: CO/RS only)
+            st.markdown('<div class="locked-resolve-wrap">', unsafe_allow_html=True)
             if st.button(
-                "Resolve to Native ACC Claim ID",
-                key=f"resolve_{subject_token}",
-                type="primary",
+                "Identity Unmasking Restricted",
+                key=f"resolve_gm_locked_{subject_token}",
                 use_container_width=True,
             ):
-                st.session_state[resolve_key] = True
-                st.rerun()
+                st.info(
+                    "Native ACC Claim ID resolve is reserved for Claims Officer / "
+                    "Analyst and Reviewing Specialist roles. Audit-gated unmask required."
+                )
+            st.markdown("</div>", unsafe_allow_html=True)
 
-    id_status_line = (
-        f'<span style="font-size:0.9rem; color:#8b949e;">ID:</span> '
-        f'<span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{subject_token}</span> '
-        f'<span class="resolve-chip">Resolve to Native ACC Claim ID</span><br/>'
-        f'<span style="font-size:0.9rem; color:#8b949e;">Native ACC Claim ID:</span> '
-        f'<span style="font-size:0.9rem; color:#10b981; font-weight:700;">{native_acc_id}</span><br/>'
-        if st.session_state[resolve_key]
-        else (
+    if st.session_state[resolve_key] and can_unmask_identity:
+        id_status_line = (
+            f'<span style="font-size:0.9rem; color:#8b949e;">ID:</span> '
+            f'<span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{subject_token}</span> '
+            f'<span class="resolve-chip">Resolve to Native ACC Claim ID</span><br/>'
+            f'<span style="font-size:0.9rem; color:#8b949e;">Native ACC Claim ID:</span> '
+            f'<span style="font-size:0.9rem; color:#10b981; font-weight:700;">{native_acc_id}</span><br/>'
+        )
+    elif statutory_briefing_mode:
+        id_status_line = (
+            f'<span style="font-size:0.9rem; color:#8b949e;">ID:</span> '
+            f'<span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{subject_token}</span> '
+            f'<span class="locked-chip">Identity Unmasking Restricted</span><br/>'
+        )
+    else:
+        id_status_line = (
             f'<span style="font-size:0.9rem; color:#8b949e;">ID:</span> '
             f'<span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{subject_token}</span> '
             f'<span class="masked-chip">Resolve to Native ACC Claim ID</span><br/>'
         )
-    )
 
     if role == SCHEME_DIRECTOR:
         fee_line = f"""<div class="metric-label" style="margin-top:0.6rem;">Dynamic Lookback Valuation Basis</div>
