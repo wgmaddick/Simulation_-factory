@@ -492,6 +492,150 @@ def resolve_native_acc_claim_id(aat_token: str) -> str:
     )
 
 
+def compute_actuarial_inaction_threat_matrix(
+    *,
+    portfolio_spend: float,
+    critical_subjects: int,
+) -> dict[str, Any]:
+    """36-month Controlled Upgrade vs Runaway Inaction liability projection (NZD)."""
+    base = max(float(portfolio_spend), 150_000.0)
+    # Critical drift subjects amplify runaway exposure without exploding the narrative band.
+    drift_scale = 1.0 + (max(int(critical_subjects), 0) * 0.02)
+    cost_rows = (
+        ("Maintenance Fees", 0.42, 0.78),
+        ("Failure Downtime", 0.18, 0.52),
+        ("Security Breach Vulnerabilities", 0.12, 0.44),
+        ("Productivity Drag", 0.22, 0.58),
+    )
+    rows: list[dict[str, Any]] = []
+    controlled_total = 0.0
+    runaway_total = 0.0
+    for label, controlled_w, runaway_w in cost_rows:
+        controlled = round(base * controlled_w, 2)
+        runaway = round(base * runaway_w * drift_scale, 2)
+        variance = round(runaway - controlled, 2)
+        controlled_total += controlled
+        runaway_total += runaway
+        rows.append(
+            {
+                "dimension": label,
+                "controlled": controlled,
+                "runaway": runaway,
+                "variance": variance,
+            }
+        )
+    sovereign_variance_total = round(runaway_total - controlled_total, 2)
+    fiduciary_pct = (
+        round((sovereign_variance_total / controlled_total) * 100.0, 1)
+        if controlled_total > 0
+        else 0.0
+    )
+    return {
+        "horizon_months": 36,
+        "rows": rows,
+        "controlled_total": round(controlled_total, 2),
+        "runaway_total": round(runaway_total, 2),
+        "sovereign_variance_total": sovereign_variance_total,
+        "fiduciary_pct": fiduciary_pct,
+    }
+
+
+def render_actuarial_inaction_threat_matrix(forecast: dict[str, Any]) -> None:
+    """High-contrast side-by-side forecast table + fiduciary warning (PR #24 safe)."""
+    horizon = sanitize_html_text(int(forecast["horizon_months"]), max_chars=8)
+    row_html: list[str] = []
+    for row in forecast["rows"]:
+        dim = sanitize_html_text(row["dimension"], max_chars=MAX_FIELD_CHARS)
+        controlled = sanitize_html_text(f"{row['controlled']:,.0f}", max_chars=32)
+        runaway = sanitize_html_text(f"{row['runaway']:,.0f}", max_chars=32)
+        variance = sanitize_html_text(f"{row['variance']:,.0f}", max_chars=32)
+        row_html.append(
+            "<tr style='border-bottom:1px solid #30363d;'>"
+            f"<td style='padding:0.65rem 0.55rem; color:#f8fafc; font-weight:600;'>{dim}</td>"
+            f"<td style='padding:0.65rem 0.55rem; color:#e2e8f0; text-align:right;'>"
+            f"${controlled}</td>"
+            f"<td style='padding:0.65rem 0.55rem; color:#e2e8f0; text-align:right;'>"
+            f"${runaway}</td>"
+            f"<td style='padding:0.65rem 0.55rem; text-align:right;'>"
+            f"<strong style='color:#ef4444; font-size:1.05rem;'>${variance}</strong></td>"
+            "</tr>"
+        )
+
+    safe_controlled_total = sanitize_html_text(
+        f"{forecast['controlled_total']:,.0f}", max_chars=32
+    )
+    safe_runaway_total = sanitize_html_text(
+        f"{forecast['runaway_total']:,.0f}", max_chars=32
+    )
+    safe_variance_total = sanitize_html_text(
+        f"{forecast['sovereign_variance_total']:,.0f}", max_chars=32
+    )
+    safe_fiduciary_pct = sanitize_html_text(
+        f"{forecast['fiduciary_pct']:.1f}", max_chars=16
+    )
+
+    table_markup = f"""
+<div class="metric-box" style="border-left:4px solid #ef4444; padding:1.25rem;">
+  <div class="metric-label" style="color:#ef4444;">ACTUARIAL INACTION THREAT MATRIX · {horizon}-MONTH LIABILITY PROJECTION</div>
+  <div style="color:#8b949e; font-size:0.88rem; margin:0.35rem 0 0.85rem;">
+    Controlled Upgrade Modernization Engine vs Runaway Inaction — NZD sovereign exposure
+  </div>
+  <div style="overflow-x:auto;">
+    <table style="width:100%; border-collapse:collapse; font-size:0.92rem; min-width:560px;">
+      <thead>
+        <tr style="border-bottom:2px solid #484f58; text-align:left;">
+          <th style="padding:0.55rem; color:#8b949e; font-family:'IBM Plex Mono',monospace; font-size:0.75rem; text-transform:uppercase;">Cost Dimension</th>
+          <th style="padding:0.55rem; color:#10b981; font-family:'IBM Plex Mono',monospace; font-size:0.75rem; text-transform:uppercase; text-align:right;">Controlled Upgrade</th>
+          <th style="padding:0.55rem; color:#f59e0b; font-family:'IBM Plex Mono',monospace; font-size:0.75rem; text-transform:uppercase; text-align:right;">Runaway Inaction</th>
+          <th style="padding:0.55rem; color:#ef4444; font-family:'IBM Plex Mono',monospace; font-size:0.75rem; text-transform:uppercase; text-align:right;">Sovereign Variance</th>
+        </tr>
+      </thead>
+      <tbody>
+        {''.join(row_html)}
+        <tr style="background:#161b22;">
+          <td style="padding:0.75rem 0.55rem; color:#ffffff; font-weight:700;">36-Month Aggregate</td>
+          <td style="padding:0.75rem 0.55rem; color:#10b981; font-weight:700; text-align:right;">${safe_controlled_total}</td>
+          <td style="padding:0.75rem 0.55rem; color:#f59e0b; font-weight:700; text-align:right;">${safe_runaway_total}</td>
+          <td style="padding:0.75rem 0.55rem; text-align:right;">
+            <strong style="color:#ef4444; font-size:1.15rem;">${safe_variance_total}</strong>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+"""
+    st.markdown(table_markup, unsafe_allow_html=True)
+
+    warning_markup = f"""
+<blockquote style="
+  margin:1rem 0 0;
+  padding:1.15rem 1.25rem;
+  background:linear-gradient(135deg,#1c1012 0%,#3f1215 55%,#1a0e10 100%);
+  border-left:6px solid #dc2626;
+  border:1px solid #7f1d1d;
+  border-left-width:6px;
+  border-radius:6px;
+  color:#fecaca;
+  font-size:1.02rem;
+  line-height:1.55;
+">
+  <div style="font-family:'IBM Plex Mono',monospace; font-size:0.72rem; letter-spacing:0.08em;
+              text-transform:uppercase; color:#f87171; font-weight:700; margin-bottom:0.45rem;">
+    Fiduciary Warning · Executive Callout
+  </div>
+  <strong style="color:#ffffff;">Fiduciary Warning:</strong>
+  Maintaining the status quo locks in an unmitigated liability exposure evaluated at
+  <strong style="color:#ef4444; font-size:1.15rem;">{safe_fiduciary_pct}%</strong>
+  higher than the modern cloud deployment pathway.
+  Sovereign variance locked at
+  <strong style="color:#ef4444;">${safe_variance_total} NZD</strong>
+  across the {horizon}-month runway.
+</blockquote>
+"""
+    st.markdown(warning_markup, unsafe_allow_html=True)
+
+
 @st.cache_data
 def load_internal_portfolio_ledger():
     return pd.DataFrame(
@@ -1144,6 +1288,26 @@ if SCHEME_CRITICAL_SUBJECTS > 0:
         kwargs={"status": "CRITICAL DRIFT", "cohort": True},
     ):
         pass
+
+st.markdown("---")
+
+# --- RUNAWAY INACTION vs CONTROLLED UPGRADE MODERNIZATION ENGINE ---
+st.markdown("### RUNAWAY INACTION vs CONTROLLED UPGRADE MODERNIZATION ENGINE")
+st.caption(
+    "High-clearance actuarial forecast · 36-month sovereign liability projection (NZD)"
+)
+init_threat_matrix = st.checkbox(
+    "📊 Initialize Actuarial Inaction Threat Matrix (36-Month Liability Projection)",
+    value=False,
+    key="init_actuarial_inaction_threat_matrix",
+)
+if init_threat_matrix:
+    portfolio_spend_nzd = float(df_master_ledger["Spend_To_Date"].sum())
+    forecast = compute_actuarial_inaction_threat_matrix(
+        portfolio_spend=portfolio_spend_nzd,
+        critical_subjects=int(SCHEME_CRITICAL_SUBJECTS),
+    )
+    render_actuarial_inaction_threat_matrix(forecast)
 
 st.markdown("---")
 
