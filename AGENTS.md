@@ -1,9 +1,9 @@
 # Simulation Factory
 
-A Streamlit multipage app. `app.py` is the "Match Report Audit" page (upload a rugby telemetry CSV and review player standards). `pages/1_Factory_Floor.py` is a live factory-floor tick simulation console backed by `simulation.py`.
+A Streamlit multipage app. `app.py` is the home page **"Match Report Audit" v2.0** (upload a rugby telemetry CSV and review player standards; includes a sample-data button). `pages/1_Factory_Floor.py` is a live factory-floor tick simulation console backed by `simulation.py`.
 
 Alerts answer **when** / **where** / **why**:
-- Match Report Audit: optional CSV columns `observed_at`, `team`, `position`, `venue`; derived why codes `sprint_below_standard`, `reload_above_standard`, `sprint_below+reload_above`.
+- Match Report Audit (home, `APP_VERSION = 2.0.0`): optional CSV columns `observed_at`, `team`, `position`, `venue`; derived why codes `sprint_below_standard`, `reload_above_standard`, `sprint_below+reload_above`.
 - Factory Floor: station location is `line / bay / name`; alert why codes include `downstream_blocked`, `planned_maintenance`, `tooling_failure`, `sensor_fault`, `quality_defect`, `misassembly`, `material_fault`.
 
 A sibling app with the same architecture lives in `datacenter_ops/` (Server Health Audit + Cluster Console).

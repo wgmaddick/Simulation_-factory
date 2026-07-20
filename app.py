@@ -1,13 +1,18 @@
 """Rugby match report audit — upload raw CSV telemetry and review player standards.
 
-Each retraining alert answers when (observed_at), where (team / position / venue / player),
-and why (sprint_below_standard, reload_above_standard, or both).
+Home page v2.0: each retraining alert answers when (observed_at), where
+(team / position / venue / player), and why (sprint_below_standard,
+reload_above_standard, or both).
 """
 
 from __future__ import annotations
 
+from io import StringIO
+
 import pandas as pd
 import streamlit as st
+
+APP_VERSION = "2.0.0"
 
 RELOAD_LATENCY_STANDARD_S = 2.2
 SPRINT_SPEED_STANDARD_M_S = 9.0
@@ -50,6 +55,13 @@ OPTIONAL_ALIASES: dict[str, list[str]] = {
     "position": ["position", "pos", "role", "jersey_position"],
     "venue": ["venue", "ground", "stadium", "pitch", "location"],
 }
+
+SAMPLE_MATCH_REPORT_CSV = """observed_at,player_name,team,position,venue,sprint_speed_m_s,reload_latency_s
+2026-07-20 15:00:00,Alex Turner,Blues,Wing,Eden Park,9.4,1.8
+2026-07-20 15:00:30,Ben Carter,Blues,Flanker,Eden Park,8.1,2.6
+2026-07-20 15:01:00,Chris Owen,Reds,Centre,Eden Park,9.8,2.0
+2026-07-20 15:01:30,David Lee,Reds,Prop,Eden Park,7.5,3.1
+"""
 
 
 def _resolve_aliases(raw: pd.DataFrame, aliases: dict[str, list[str]]) -> dict[str, str]:
@@ -135,8 +147,7 @@ def _format_where(row: pd.Series) -> str:
     return " / ".join(parts) if parts else row["Player Name"]
 
 
-def _load_match_report(uploaded_file) -> pd.DataFrame:
-    raw = pd.read_csv(uploaded_file)
+def _build_report(raw: pd.DataFrame) -> pd.DataFrame:
     report = _normalize_columns(raw)
     report["Why"] = report.apply(_classify_why, axis=1)
     report["Where"] = report.apply(_format_where, axis=1)
@@ -144,17 +155,108 @@ def _load_match_report(uploaded_file) -> pd.DataFrame:
     return report
 
 
+def _load_match_report(uploaded_file) -> pd.DataFrame:
+    raw = pd.read_csv(uploaded_file)
+    return _build_report(raw)
+
+
+def _format_when(value) -> str:
+    return value.strftime("%Y-%m-%d %H:%M:%S") if pd.notna(value) else "—"
+
+
+def _render_report(report: pd.DataFrame) -> None:
+    passed = int((report["Standard Assessment"] == "Passed Standard").sum())
+    total = len(report)
+
+    summary_col1, summary_col2, summary_col3 = st.columns(3)
+    summary_col1.metric("Players Assessed", total)
+    summary_col2.metric("Passed Standard", f"{passed} / {total}")
+    summary_col3.metric("App Version", f"v{APP_VERSION}")
+
+    display = report[
+        [
+            "When",
+            "Where",
+            "Why",
+            "Player Name",
+            "Team",
+            "Position",
+            "Venue",
+            "Sprint Speed (m/s)",
+            "Reload Latency (s)",
+            "Standard Assessment",
+        ]
+    ].copy()
+    display["When"] = display["When"].map(_format_when)
+    display["Sprint Speed (m/s)"] = display["Sprint Speed (m/s)"].map(
+        lambda value: f"{value:.2f}"
+    )
+    display["Reload Latency (s)"] = display["Reload Latency (s)"].map(
+        lambda value: f"{value:.2f}"
+    )
+
+    st.subheader("Player Assessment")
+    st.dataframe(display, use_container_width=True, hide_index=True)
+
+    retraining_required = report[
+        report["Standard Assessment"] == "Requires Retraining"
+    ].copy()
+    if not retraining_required.empty:
+        st.warning(
+            f"{len(retraining_required)} player(s) require retraining — "
+            "each alert below includes when / where / why."
+        )
+        alerts = retraining_required[["When", "Where", "Why"]].copy()
+        alerts["When"] = alerts["When"].map(_format_when)
+        st.subheader("Retraining Alerts (When / Where / Why)")
+        st.dataframe(alerts, use_container_width=True, hide_index=True)
+
+
 st.set_page_config(
-    page_title="Match Report Audit",
+    page_title=f"Match Report Audit v{APP_VERSION}",
     page_icon="📋",
     layout="wide",
 )
 
-st.title("Match Report Audit")
-st.caption(
-    f"Standards: sprint speed ≥ {SPRINT_SPEED_STANDARD_M_S} m/s, "
-    f"reload latency ≤ {RELOAD_LATENCY_STANDARD_S} s  ·  "
-    "Alerts answer when / where / why"
+title_col, version_col = st.columns([4, 1])
+with title_col:
+    st.title("Match Report Audit")
+    st.caption(
+        f"Standards: sprint speed ≥ {SPRINT_SPEED_STANDARD_M_S} m/s, "
+        f"reload latency ≤ {RELOAD_LATENCY_STANDARD_S} s"
+    )
+with version_col:
+    st.markdown(
+        f"""
+        <div style="
+            margin-top: 1.2rem;
+            text-align: right;
+            font-size: 0.85rem;
+            color: #9ca3af;
+        ">
+            Home page<br/>
+            <span style="
+                display: inline-block;
+                margin-top: 4px;
+                padding: 4px 10px;
+                border-radius: 999px;
+                background: #1f2937;
+                color: #e5e7eb;
+                font-weight: 600;
+                letter-spacing: 0.02em;
+            ">v{APP_VERSION}</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+st.markdown(
+    """
+**v2.0 — When / Where / Why alerts.** Every retraining flag now answers:
+- **When** — observation timestamp
+- **Where** — team / position / venue / player
+- **Why** — `sprint_below_standard`, `reload_above_standard`, or both
+"""
 )
 
 uploaded_csv = st.file_uploader(
@@ -162,71 +264,41 @@ uploaded_csv = st.file_uploader(
     type=["csv"],
 )
 
-if uploaded_csv is None:
-    st.info("Upload a match report CSV to generate the player standards table.")
+load_sample = st.button("Load sample match report (v2 demo)", use_container_width=False)
+
+if uploaded_csv is None and not load_sample and "home_report" not in st.session_state:
+    st.info(
+        "Upload a match report CSV, or load the sample, to generate the player "
+        "standards table with when / where / why alerts."
+    )
+    col_a, col_b, col_c = st.columns(3)
+    col_a.markdown("**When**\n\n`observed_at` / `timestamp` / `match_date`")
+    col_b.markdown("**Where**\n\n`team`, `position`, `venue` + player")
+    col_c.markdown(
+        "**Why**\n\n`sprint_below_standard` · `reload_above_standard` · "
+        "`sprint_below+reload_above`"
+    )
     st.markdown(
         "**Required columns** (aliases supported): "
         "`player_name`, `sprint_speed_m_s`, `reload_latency_s`"
     )
-    st.markdown(
-        "**Optional when/where columns**: "
-        "`observed_at` (or `timestamp` / `match_date`), `team`, `position`, `venue`"
+    st.download_button(
+        "Download sample CSV",
+        data=SAMPLE_MATCH_REPORT_CSV,
+        file_name="sample_match_report_v2.csv",
+        mime="text/csv",
     )
 else:
     try:
-        report = _load_match_report(uploaded_csv)
+        if uploaded_csv is not None:
+            report = _load_match_report(uploaded_csv)
+            st.session_state.home_report = report
+        elif load_sample:
+            report = _build_report(pd.read_csv(StringIO(SAMPLE_MATCH_REPORT_CSV)))
+            st.session_state.home_report = report
+        else:
+            report = st.session_state.home_report
     except (ValueError, pd.errors.ParserError) as exc:
         st.error(str(exc))
     else:
-        passed = int((report["Standard Assessment"] == "Passed Standard").sum())
-        total = len(report)
-
-        summary_col1, summary_col2 = st.columns(2)
-        summary_col1.metric("Players Assessed", total)
-        summary_col2.metric("Passed Standard", f"{passed} / {total}")
-
-        display = report[
-            [
-                "When",
-                "Where",
-                "Why",
-                "Player Name",
-                "Team",
-                "Position",
-                "Venue",
-                "Sprint Speed (m/s)",
-                "Reload Latency (s)",
-                "Standard Assessment",
-            ]
-        ].copy()
-        display["When"] = display["When"].map(
-            lambda value: value.strftime("%Y-%m-%d %H:%M:%S")
-            if pd.notna(value)
-            else "—"
-        )
-        display["Sprint Speed (m/s)"] = display["Sprint Speed (m/s)"].map(
-            lambda value: f"{value:.2f}"
-        )
-        display["Reload Latency (s)"] = display["Reload Latency (s)"].map(
-            lambda value: f"{value:.2f}"
-        )
-
-        st.subheader("Player Assessment")
-        st.dataframe(display, use_container_width=True, hide_index=True)
-
-        retraining_required = report[
-            report["Standard Assessment"] == "Requires Retraining"
-        ].copy()
-        if not retraining_required.empty:
-            st.warning(
-                f"{len(retraining_required)} player(s) require retraining — "
-                "each alert below includes when / where / why."
-            )
-            alerts = retraining_required[["When", "Where", "Why"]].copy()
-            alerts["When"] = alerts["When"].map(
-                lambda value: value.strftime("%Y-%m-%d %H:%M:%S")
-                if pd.notna(value)
-                else "—"
-            )
-            st.subheader("Retraining Alerts (When / Where / Why)")
-            st.dataframe(alerts, use_container_width=True, hide_index=True)
+        _render_report(report)
