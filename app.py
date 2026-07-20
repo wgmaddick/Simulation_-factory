@@ -257,6 +257,53 @@ st.markdown(
       padding: 0.25rem 0.6rem;
       margin-bottom: 0.65rem;
     }
+    .claim-id-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.65rem;
+      background: #0c1017;
+      border: 1px solid #30363d;
+      padding: 0.75rem 0.95rem;
+      margin: 0.35rem 0 0.85rem 0;
+      font-family: "IBM Plex Mono", monospace;
+    }
+    .claim-id-bar .id-label {
+      color: #8b949e;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .claim-id-bar .id-token {
+      color: #ffffff;
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+    .claim-id-bar .id-native {
+      color: #10b981;
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+    .claim-id-bar .resolve-chip {
+      display: inline-block;
+      border: 1px solid #10b981;
+      color: #10b981;
+      background: rgba(16, 185, 129, 0.12);
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 0.35rem 0.7rem;
+      letter-spacing: 0.02em;
+    }
+    .claim-id-bar .masked-chip {
+      display: inline-block;
+      border: 1px solid #8b949e;
+      color: #e2e8f0;
+      background: #161b22;
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 0.35rem 0.7rem;
+    }
 
     /* Tablet / mobile: hard floor — top-left hit targets ≥40px from edges */
     @media (max-width: 1024px) {
@@ -325,6 +372,22 @@ REVIEWING_SPECIALIST = "Reviewing Specialist"
 STATUTORY_NOMINAL = "Nominal"
 STATUTORY_MINISTERIAL = "Ministerial Escalation Required"
 STATUTORY_CABINET = "Cabinet Threshold Exceeded"
+
+# Anonymized AAT tokens → Native ACC claim identifiers (tiered unlock)
+NATIVE_ACC_CLAIM_REGISTRY: dict[str, str] = {
+    "AAT-Claimant-Delta-2026": "ACC-NZ-2026-481739",
+    "AAT-Claimant-Epsilon-2026": "ACC-NZ-2026-552018",
+    "AAT-Claimant-Zeta-2026": "ACC-NZ-2026-619447",
+    "AAT-Claimant-Eta-2026": "ACC-NZ-2026-703882",
+}
+
+
+def resolve_native_acc_claim_id(aat_token: str) -> str:
+    """Map anonymized AAT scheme token to Native ACC Claim ID."""
+    return NATIVE_ACC_CLAIM_REGISTRY.get(
+        str(aat_token),
+        f"ACC-NZ-PENDING-{abs(hash(str(aat_token))) % 10_000_000:07d}",
+    )
 
 
 @st.cache_data
@@ -900,12 +963,76 @@ Baseline capacity holds. Pre-injury CV requires zero structural alterations. Nat
 </p>
 </div>"""
 
-    st.markdown("## 📡 PREVENTATIVE DRIFT RADAR DEEP-DIVE")
+    st.markdown("## PREVENTATIVE DRIFT RADAR DEEP-DIVE")
 
     # --- STACKED BLOCK 1: MASTER LEDGER DOSSIER BOX ---
     st.markdown("#### Comprehensive Scheme Ledger Dossier")
 
-    if role == "Scheme Director (GM)":
+    native_acc_id = resolve_native_acc_claim_id(subject_token)
+    resolve_key = f"resolve_native_{subject_token}"
+    if resolve_key not in st.session_state:
+        st.session_state[resolve_key] = False
+
+    id_col, btn_col = st.columns([2.4, 1.2])
+    with id_col:
+        if st.session_state[resolve_key]:
+            st.markdown(
+                f"""
+                <div class="claim-id-bar">
+                  <span class="id-label">ID</span>
+                  <span class="id-token">{subject_token}</span>
+                  <span class="resolve-chip">RESOLVED</span>
+                  <span class="id-label">Native ACC Claim ID</span>
+                  <span class="id-native">{native_acc_id}</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                f"""
+                <div class="claim-id-bar">
+                  <span class="id-label">ID</span>
+                  <span class="id-token">{subject_token}</span>
+                  <span class="masked-chip">MASKED TOKEN</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+    with btn_col:
+        if st.session_state[resolve_key]:
+            if st.button(
+                "Re-mask AAT Token",
+                key=f"remask_{subject_token}",
+                use_container_width=True,
+            ):
+                st.session_state[resolve_key] = False
+                st.rerun()
+        else:
+            if st.button(
+                "Resolve to Native ACC Claim ID",
+                key=f"resolve_{subject_token}",
+                type="primary",
+                use_container_width=True,
+            ):
+                st.session_state[resolve_key] = True
+                st.rerun()
+
+    id_status_line = (
+        f'<span style="font-size:0.9rem; color:#8b949e;">ID:</span> '
+        f'<span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{subject_token}</span> '
+        f'<span class="resolve-chip">Resolve to Native ACC Claim ID</span><br/>'
+        f'<span style="font-size:0.9rem; color:#8b949e;">Native ACC Claim ID:</span> '
+        f'<span style="font-size:0.9rem; color:#10b981; font-weight:700;">{native_acc_id}</span><br/>'
+        if st.session_state[resolve_key]
+        else (
+            f'<span style="font-size:0.9rem; color:#8b949e;">ID:</span> '
+            f'<span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{subject_token}</span> '
+            f'<span class="masked-chip">Resolve to Native ACC Claim ID</span><br/>'
+        )
+    )
+
+    if role == SCHEME_DIRECTOR:
         fee_line = f"""<div class="metric-label" style="margin-top:0.6rem;">Dynamic Lookback Valuation Basis</div>
 <div class="metric-value-green" style="font-size:1.4rem;">${(5000 + (projected_final_cost * 0.12)):,.2f} NZD</div>"""
     else:
@@ -918,7 +1045,7 @@ Baseline capacity holds. Pre-injury CV requires zero structural alterations. Nat
 <div style="color:{status_color}; font-weight:700; font-size:1.2rem; margin-bottom:0.8rem;">{status_label}</div>
 <div style="background-color:#0c1017; padding:0.8rem; border-radius:4px; border:1px solid #30363d; margin-bottom:0.8rem;">
 <div class="metric-label" style="color:#ffffff;">Claimant File Dossier Matrix</div>
-<span style="font-size:0.9rem; color:#8b949e;">ID:</span> <span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{subject_token}</span><br/>
+{id_status_line}
 <span style="font-size:0.9rem; color:#8b949e;">Target Anatomy:</span> <span style="font-size:0.9rem; color:#ffffff;">{anatomy}</span><br/>
 <span style="font-size:0.9rem; color:#8b949e;">Demands / Age:</span> <span style="font-size:0.9rem; color:#ffffff;">{duty_tier} (Age {age})</span><br/>
 <p style="font-size:0.85rem; color:#8b949e; font-style:italic; margin-top:0.4rem; margin-bottom:0;"><strong>NLP Ingest:</strong> {dict_txt}</p>
