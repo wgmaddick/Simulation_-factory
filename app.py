@@ -1,20 +1,75 @@
-"""NZ ACC Risk Orchestration Engine — AAT Scheme Performance (localized).
+"""NZ AAT Sovereign Orchestration Engine — secure Crown claims governance.
 
 New Zealand Accident Compensation Corporation operational surface with
 All-of-Government grids: IRD Income Exchange, MSD Workforce Pipeline, and
-Health NZ Clinical Grid. NZD ledger, MSD certified CV pivot matrices.
+Health NZ Clinical Grid. NZD ledger, MSD certified CV pivot matrices,
+Cabinet Minister statutory overrides, and PR #24 HTML sanitation.
 """
 
 from __future__ import annotations
+
+import html
+import re
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import streamlit as st
 
+# Defensive bounds for intake / dossier surfaces (PR #24 compliance).
+MAX_TOKEN_CHARS = 96
+MAX_STATUS_CHARS = 64
+MAX_NOTES_CHARS = 4000
+MAX_MANDATE_CHARS = 280
+MAX_INTAKE_ROWS = 500
+MAX_FIELD_CHARS = 120
+_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def sanitize_plain_text(value: Any, *, max_chars: int) -> str:
+    """Strip control chars and truncate free-form intake before render/store."""
+    text = _CONTROL_CHARS.sub("", str(value if value is not None else "")).strip()
+    return text[:max_chars]
+
+
+def sanitize_html_text(value: Any, *, max_chars: int | None = None) -> str:
+    """HTML-escape dynamic values injected into custom metric-box markup."""
+    text = sanitize_plain_text(
+        value, max_chars=max_chars if max_chars is not None else MAX_FIELD_CHARS
+    )
+    return html.escape(text, quote=True)
+
+
+def sanitize_claim_token(value: Any) -> str:
+    """Bound participant / claim identifiers used across dossier + tables."""
+    return sanitize_plain_text(value, max_chars=MAX_TOKEN_CHARS)
+
+
+def sanitize_status_label(value: Any) -> str:
+    return sanitize_plain_text(value, max_chars=MAX_STATUS_CHARS)
+
+
+def sanitize_for_markdown(value: Any, *, max_chars: int = MAX_TOKEN_CHARS) -> str:
+    """Neutralize markdown metacharacters in claim labels rendered via st.markdown."""
+    text = sanitize_plain_text(value, max_chars=max_chars)
+    for ch in ("*", "_", "`", "[", "]", "<", ">", "|"):
+        text = text.replace(ch, "")
+    return text
+
+
+def bound_intake_frame(frame: pd.DataFrame) -> pd.DataFrame:
+    """Cap row count for any corporate / matrix intake parse to avoid unbounded load."""
+    if frame is None or frame.empty:
+        return frame
+    if len(frame) > MAX_INTAKE_ROWS:
+        return frame.iloc[:MAX_INTAKE_ROWS].copy()
+    return frame
+
+
 # 1. High-Contrast Sovereign Dark Theme Configuration
 st.set_page_config(
     layout="wide",
-    page_title="NZ ACC Risk Orchestration Engine",
+    page_title="NZ AAT Sovereign Orchestration Engine",
     page_icon="⬡",
     initial_sidebar_state="expanded",
 )
@@ -408,7 +463,7 @@ st.markdown(
 )
 
 # --- MASTER CLAIMS DATABASE CORE ---
-MINISTER_ROLE = "Minister for ACC / Crown Governance"
+MINISTER_ROLE = "Cabinet Minister (Executive Authority)"
 SCHEME_DIRECTOR = "Scheme Director (GM)"
 CLAIMS_OFFICER = "Claims Officer / Analyst"
 REVIEWING_SPECIALIST = "Reviewing Specialist"
@@ -684,25 +739,27 @@ def render_cohort_analysis_panel(
     cumulative_risk = float(focus["Spend_To_Date"].sum()) if len(focus) else 0.0
     primary_velocity = float(focus["Drift_Velocity"].mean()) if len(focus) else 0.0
 
+    safe_anatomy_cohort = sanitize_html_text(anatomy, max_chars=MAX_FIELD_CHARS)
+    safe_role_cohort = sanitize_html_text(role, max_chars=64)
     st.markdown(
         f"""
         <div class="metric-box" style="border-left: 4px solid #ef4444;">
           <div class="metric-label" style="color:#ef4444;">COHORT ANALYSIS</div>
           <div style="color:#ffffff; font-size:1.25rem; font-weight:700; margin-bottom:0.55rem;">
-            Cohort Analysis: {anatomy} — {n_critical} Critical Drift Subjects
+            Cohort Analysis: {safe_anatomy_cohort} — {n_critical} Critical Drift Subjects
           </div>
           <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0.75rem;">
             <div>
               <div class="metric-label">Average Days Elapsed</div>
-              <div class="metric-value-silver" style="font-size:1.45rem;">{avg_days:.1f}</div>
+              <div class="metric-value-silver" style="font-size:1.45rem;">{sanitize_html_text(f"{avg_days:.1f}", max_chars=16)}</div>
             </div>
             <div>
               <div class="metric-label">Cumulative Financial Risk (NZD)</div>
-              <div class="metric-value-crimson" style="font-size:1.45rem;">${cumulative_risk:,.0f}</div>
+              <div class="metric-value-crimson" style="font-size:1.45rem;">${sanitize_html_text(f"{cumulative_risk:,.0f}", max_chars=32)}</div>
             </div>
             <div>
               <div class="metric-label">Primary Drift Velocity</div>
-              <div class="metric-value-silver" style="font-size:1.45rem;">{primary_velocity:.2f}×</div>
+              <div class="metric-value-silver" style="font-size:1.45rem;">{sanitize_html_text(f"{primary_velocity:.2f}", max_chars=16)}×</div>
             </div>
           </div>
         </div>
@@ -714,8 +771,16 @@ def render_cohort_analysis_panel(
     st.markdown("### SYNTHESIZED DRIFT CAUSE BREAKDOWN")
     if causes:
         bullets = "".join(
-            f"<li><strong>{cause}</strong> — signal weight {weight}"
-            f"{f' · “{snippet}…”' if snippet else ''}</li>"
+            (
+                f"<li><strong>{sanitize_html_text(cause, max_chars=120)}</strong> — "
+                f"signal weight {sanitize_html_text(weight, max_chars=16)}"
+                + (
+                    f" · “{sanitize_html_text(snippet, max_chars=180)}…”"
+                    if snippet
+                    else ""
+                )
+                + "</li>"
+            )
             for cause, weight, snippet in causes
         )
         st.markdown(
@@ -723,7 +788,7 @@ def render_cohort_analysis_panel(
             <div class="metric-box" style="border-left: 4px solid #a855f7;">
               <div class="metric-label" style="color:#c084fc;">NLP ROOT-CAUSE SUMMARIZER</div>
               <div style="color:#8b949e; font-size:0.88rem; margin-bottom:0.45rem;">
-                Scanned {len(focus)} cohort NLP Ingest field(s) · Role: {role}
+                Scanned {len(focus)} cohort NLP Ingest field(s) · Role: {safe_role_cohort}
               </div>
               <ul style="color:#f8fafc; font-size:0.95rem; line-height:1.45; margin:0; padding-left:1.2rem;">
                 {bullets}
@@ -860,19 +925,19 @@ def _append_identity_audit(actor: str, action: str, token: str, native_id: str) 
 
 # --- SIDEBAR: GOVERNANCE LAYER FILTERS ---
 with st.sidebar:
-    st.markdown("### NZ ACC SCHEME GOVERNANCE")
+    st.markdown("### AAT SCHEME GOVERNANCE")
     role = st.selectbox(
         "Active User Role Matrix",
         [
+            MINISTER_ROLE,
             SCHEME_DIRECTOR,
             CLAIMS_OFFICER,
             REVIEWING_SPECIALIST,
-            MINISTER_ROLE,
         ],
         key="active_user_role_matrix",
     )
     statutory_briefing_mode = role == MINISTER_ROLE
-    # GM + caseworkers/specialists may unmask; Minister retains tokenized aliases only
+    # GM + caseworkers/specialists may unmask; Cabinet Minister retains tokenized aliases only
     can_unmask_identity = role in {
         SCHEME_DIRECTOR,
         CLAIMS_OFFICER,
@@ -881,9 +946,10 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### SCHEME MANDATE INJECTION")
     cap_floor = st.slider("Enforce Liability Mitigation Floor (%)", 0, 50, 15)
-    st.text_input(
+    performance_mandate = st.text_input(
         "Disseminate Performance Mandate",
         placeholder="e.g., Accelerate Pathway Interventions",
+        max_chars=MAX_MANDATE_CHARS,
     )
     if statutory_briefing_mode:
         st.info("Statutory Briefing Mode active — Crown Entity Act compliance view.")
@@ -891,7 +957,7 @@ with st.sidebar:
             "Aggregated cohort & root-cause analysis permitted. "
             "Individual PII / Native ACC Claim ID unmasking restricted."
         )
-    st.caption("Localized NZ ACC · IRD · MSD · Health NZ · Ministerial AoG grids")
+    st.caption("Localized NZ ACC · IRD · MSD · Health NZ · Cabinet Minister AoG grids")
     if st.session_state.identity_audit_log:
         with st.expander("Identity Unmask Audit Log", expanded=False):
             for entry in reversed(st.session_state.identity_audit_log[-8:]):
@@ -901,10 +967,10 @@ with st.sidebar:
                 )
 
 # --- MAIN PERFORMANCE DASHBOARD TITLE ---
-st.title("NZ ACC RISK ORCHESTRATION ENGINE")
+st.title("NZ AAT SOVEREIGN ORCHESTRATION ENGINE")
 st.markdown(
     "<p class='statutory-meta'>"
-    "Statutory Governance: Answerable to Minister for ACC | "
+    "Statutory Governance: Answerable to Cabinet Minister (Executive Authority) | "
     "Crown Entity Act Compliance Mode</p>",
     unsafe_allow_html=True,
 )
@@ -916,10 +982,54 @@ st.markdown(
 )
 if statutory_briefing_mode:
     st.markdown(
-        '<div class="briefing-mode-chip">STATUTORY BRIEFING MODE · MINISTERIAL OVERLAY</div>',
+        '<div class="briefing-mode-chip">STATUTORY BRIEFING MODE · CABINET EXECUTIVE OVERLAY</div>',
         unsafe_allow_html=True,
     )
 st.markdown("---")
+
+# --- CABINET MINISTER DIRECTIVE PANEL (top-down statutory override controls) ---
+if "ministerial_override" not in st.session_state:
+    st.session_state.ministerial_override = False
+if role == MINISTER_ROLE:
+    st.markdown(
+        """
+        <div style="background-color:#1c1112; border:1px solid #dc2626; padding:1.2rem;
+                    border-radius:6px; margin-bottom:1.5rem;">
+          <div style="font-family:'IBM Plex Mono', monospace; font-size:0.75rem; color:#ef4444;
+                      font-weight:700; letter-spacing:0.05em; text-transform:uppercase;">
+            STATUTORY CABINET AUTHORITY PORTAL
+          </div>
+          <h3 style="margin-top:0.2rem; margin-bottom:0.5rem; color:#ffffff;">
+            Ministerial Executive Directive Matrix
+          </h3>
+          <p style="color:#8b949e; font-size:0.88rem; margin-bottom:0;">
+            As the Crown Executive, your input bypasses standard inter-departmental friction.
+            Activating systemic overrides will force institutional data reconciliation and
+            re-allocate capital reserves immediately.
+          </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    col_min1, col_min2 = st.columns(2)
+    with col_min1:
+        st.session_state.ministerial_override = st.checkbox(
+            "Force Cross-Agency Data Integration Share Mandate (Bypass Bureaucratic Silos)",
+            value=st.session_state.ministerial_override,
+            key="cabinet_force_cross_agency",
+        )
+    with col_min2:
+        st.selectbox(
+            "Execute Macro Statutory Intervention",
+            [
+                "Maintain Standard Operations runway",
+                "Emergency CapEx Liquidity Release (Settle P0 Drift Blocks In Bulk)",
+                "Direct MSD to Open 500 Immediate Training Cert Slots",
+                "Fast-Track Crown Clinical Network Triage Mandate",
+            ],
+            key="cabinet_macro_intervention",
+        )
+    st.markdown("---")
 
 # --- WHAT / WHERE / WHEN SEQUENCE (US Risk viewport container layout · Crown metrics) ---
 # Exact visual port of the US Layer-1 metric-box row; labels remapped to AoG agencies.
@@ -1175,7 +1285,7 @@ if view_selection == GLOBAL_VIEW:
         st.markdown(
             """
             <div class="metric-box" style="border-left: 4px solid #38bdf8;">
-              <div class="metric-label" style="color:#38bdf8;">MINISTER FOR ACC · HIGH-LEVEL OVERSIGHT</div>
+              <div class="metric-label" style="color:#38bdf8;">CABINET MINISTER · HIGH-LEVEL OVERSIGHT</div>
               <div style="color:#ffffff; font-weight:600; margin-bottom:0.55rem;">
                 Tactical case-worker widgets suppressed. Displaying statutory metrics,
                 long-tail financial liability trajectories, and Cabinet briefing tools.
@@ -1231,7 +1341,7 @@ if view_selection == GLOBAL_VIEW:
         html_task_co = f"""<div class="metric-box" style="border-left: 4px solid #ef4444; padding: 1.2rem;">
 <div class="metric-label" style="color:#ef4444;">TASK ID: CO-AAT-2026-031</div>
 <div class="metric-subtext" style="color:#ffffff; font-weight:600; margin-bottom:0.4rem;">Clear the CRITICAL DRIFT files before they harden into long-tail PPD exposure.</div>
-<div style="font-size:0.85rem; color:#8b949e;">Active Mandate: {cap_floor}% CapEx Mitigation Control Active</div>
+<div style="font-size:0.85rem; color:#8b949e;">Active Mandate: {sanitize_html_text(int(cap_floor), max_chars=8)}% CapEx Mitigation Control Active</div>
 </div>"""
         st.markdown(html_task_co, unsafe_allow_html=True)
 
@@ -1269,10 +1379,10 @@ if view_selection == GLOBAL_VIEW:
     header_cols[4].markdown("**Open**")
 
     for _, row in ledger_view.iterrows():
-        token = str(row["Claim ID"])
-        anatomy = str(row["Anatomy Target"])
-        status = str(row["Status"])
-        rating = str(row["Statutory Risk Rating"])
+        token = sanitize_claim_token(row["Claim ID"])
+        anatomy = sanitize_plain_text(row["Anatomy Target"], max_chars=MAX_FIELD_CHARS)
+        status = sanitize_status_label(row["Status"])
+        rating = sanitize_plain_text(row["Statutory Risk Rating"], max_chars=MAX_FIELD_CHARS)
         r1, r2, r3, r4, r5 = st.columns([2.0, 1.6, 1.3, 1.5, 0.9])
         r1.code(token, language=None)
         r2.button(
@@ -1329,13 +1439,15 @@ else:
         df_master_ledger["Claim ID"] == view_selection
     ].iloc[0]
 
-    subject_token = selected_row["Claim ID"]
-    anatomy = selected_row["Anatomy Target"]
+    subject_token = sanitize_claim_token(selected_row["Claim ID"])
+    anatomy = sanitize_plain_text(selected_row["Anatomy Target"], max_chars=MAX_FIELD_CHARS)
     age = int(selected_row["Age"])
-    duty_tier = selected_row["Demands"]
+    duty_tier = sanitize_plain_text(selected_row["Demands"], max_chars=MAX_FIELD_CHARS)
     actual_rom = float(selected_row["ROM_Actual"])
     actual_spend = float(selected_row["Spend_To_Date"])
-    dict_txt = str(selected_row.get("NLP_Ingest") or "")
+    dict_txt = sanitize_plain_text(
+        selected_row.get("NLP_Ingest") or "", max_chars=MAX_NOTES_CHARS
+    )
 
     # Core Backend Calculations Matrix
     job_multiplier = (
@@ -1369,39 +1481,56 @@ else:
         impact_class = "nominal-impact-value"
 
     # Prescriptive AI Protocol Engine & Adaptive CV Trajectory Loops
-    if "Zeta" in subject_token or "Knee" in str(anatomy):
-        protocol_html = f"""<div style="background-color:#1b1416; padding:0.8rem; border-radius:4px; border:1px solid #6b21a8; margin-bottom:0.8rem;">
-<div class="metric-label" style="color:#ef4444; font-weight:700;">AUTOMATED MITIGATION PROTOCOL</div>
-<ul style="color:#f8fafc; font-size:0.88rem; margin:0; padding-left:1.2rem; line-height:1.4;">
-<li><strong>Commutation Target:</strong> Initiate immediate Lump-Sum settlement review range (${mitigated_reserve_target:,.0f} - ${projected_final_cost:,.0f} NZD).</li>
-<li><strong>IME Authorization:</strong> Issue urgent Independent Medical Examination directive.</li>
-<li><strong>Demands Override:</strong> Force immediate drop in Occupational Tier from Heavy Manual to Clerical/Supervisory.</li>
+    # High-contrast purple recommendations banner: MSD Vocational Re-Allocation,
+    # Crown Commutation settlement metrics, private clinical network bypass.
+    safe_commutation_low = sanitize_html_text(f"{mitigated_reserve_target:,.0f}", max_chars=32)
+    safe_commutation_high = sanitize_html_text(f"{projected_final_cost:,.0f}", max_chars=32)
+    crown_commutation_band = f"${safe_commutation_low} – ${safe_commutation_high} NZD"
+    private_bypass_armed = bool(st.session_state.get("ministerial_override", False)) or role == MINISTER_ROLE
+    bypass_status = (
+        "ARMED — private clinical network triage window open (Crown override)"
+        if private_bypass_armed
+        else "STANDBY — requires Cabinet Minister statutory override to fire"
+    )
+    safe_bypass_status = sanitize_html_text(bypass_status, max_chars=160)
+
+    if "Zeta" in subject_token or "Knee" in str(anatomy) or functional_drift > 15.0:
+        protocol_html = f"""<div style="background:linear-gradient(135deg,#1b1024 0%,#2a1540 55%,#1b1416 100%); padding:1rem; border-radius:6px; border:2px solid #a855f7; box-shadow:0 0 0 1px #6b21a8 inset; margin-bottom:0.8rem;">
+<div class="metric-label" style="color:#e9d5ff; font-weight:700; letter-spacing:0.04em;">UPGRADED RECOMMENDATIONS · CROWN PRESCRIPTIVE ENGINE</div>
+<ul style="color:#f8fafc; font-size:0.9rem; margin:0.55rem 0 0; padding-left:1.2rem; line-height:1.5;">
+<li><strong style="color:#c084fc;">MSD Vocational Re-Allocation Path:</strong> Immediate pivot from Heavy Manual / Industrial into <em>Site Quality &amp; Safety Compliance Auditor</em> — MSD Registry Slot Reserved → Digital Site Log Systems Cert #AAT-2026.</li>
+<li><strong style="color:#c084fc;">Crown Commutation Settlement Metrics:</strong> Calculated lump-sum review band <strong>{crown_commutation_band}</strong> (mitigated reserve floor → total absolute system exposure) to transfer long-tail structural risk off ledger.</li>
+<li><strong style="color:#c084fc;">Private Clinical Network Bypass Trigger:</strong> {safe_bypass_status}. Fast-Track Crown Clinical Network Triage Mandate + Independent Medical Examination within 7 days.</li>
 </ul>
 </div>"""
         adaptive_cv_html = """<div style="background-color:#18141c; padding:0.8rem; border-radius:4px; border:1px solid #a855f7; margin-bottom:0.8rem;">
-<div class="metric-label" style="color:#c084fc; font-weight:700;">ADAPTIVE CAREER TRAJECTORY & CV PIVOT MATRIX</div>
-<div style="font-size:0.84rem; color:#8b949e; margin-bottom:0.4rem;">MSD Certified Adoption Mandatory · Inter-Agency Ingest</div>
-</div>"""
-    elif functional_drift > 15:
-        protocol_html = """<div style="background-color:#141b1f; padding:0.8rem; border-radius:4px; border:1px solid #0369a1; margin-bottom:0.8rem;">
-<div class="metric-label" style="color:#38bdf8; font-weight:700;">AUTOMATED MITIGATION PROTOCOL</div>
-<ul style="color:#f8fafc; font-size:0.88rem; margin:0; padding-left:1.2rem; line-height:1.4;">
-<li><strong>Clinical Triage:</strong> Deploy psychological resilience counseling within 7 days.</li>
-<li><strong>Light-Duty Matching:</strong> Initialize transitional employer-return tracking protocol.</li>
-</ul>
-</div>"""
-        adaptive_cv_html = """<div style="background-color:#141b1f; padding:0.8rem; border-radius:4px; border:1px solid #0284c7; margin-bottom:0.8rem;">
-<div class="metric-label" style="color:#38bdf8; font-weight:700;">ADAPTIVE CAREER TRAJECTORY & CV PIVOT MATRIX</div>
-<div style="font-size:0.84rem; color:#8b949e;">MSD Certified Adoption Mandatory</div>
+<div class="metric-label" style="color:#c084fc; font-weight:700; display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+<span>ADAPTIVE CAREER TRAJECTORY &amp; CV PIVOT MATRIX</span>
+<span style="background-color:#10b981; color:#0c1017; font-size:0.7rem; padding:1px 5px; border-radius:3px; font-weight:700;">MSD CERTIFIED ADOPTION MANDATORY</span>
+</div>
+<div style="font-size:0.84rem; color:#8b949e; margin-bottom:0.4rem; font-style:italic;">Mental Preparation Lifeline &amp; Supportive Path Forward via Inter-Agency Ingest. Adherence is state-certified.</div>
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem; color:#f8fafc;">
+<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">Obsolete Vector:</td><td>Heavy Industrial Operations (Physically Incapacitated)</td></tr>
+<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">Cognitive Harvest:</td><td>Blueprint Interpretation, Logistics Coordination, OHS Enforcement</td></tr>
+<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">New Target CV:</td><td><strong>Site Quality &amp; Safety Compliance Auditor</strong> (MSD Legally Registered Blueprint)</td></tr>
+<tr><td style="color:#8b949e; padding:4px 0; vertical-align:middle;">MSD Vocational Re-Allocation:</td><td>
+<div style="display:inline-block; background-color:#166534; color:#4ade80; border:1px solid #14532d; font-size:0.72rem; padding:1px 6px; border-radius:3px; font-weight:600; margin-bottom:3px;">SYSTEM AUTOMATION ACTIVE</div><br/>
+<span style="color:#38bdf8; font-family:monospace;">MSD Registry Slot Reserved → Digital Site Log Systems Cert #AAT-2026</span>
+</td></tr>
+</table>
 </div>"""
     else:
-        protocol_html = """<div style="background-color:#141f17; padding:0.8rem; border-radius:4px; border:1px solid #15803d; margin-bottom:0.8rem;">
-<div class="metric-label" style="color:#4ade80; font-weight:700;">AUTOMATED MITIGATION PROTOCOL</div>
-<p style="color:#f8fafc; font-size:0.88rem; margin:0;">Path Alignment Secure — maintain standard vocational rehabilitation baseline.</p>
+        protocol_html = f"""<div style="background:linear-gradient(135deg,#141f17 0%,#1a2a20 100%); padding:1rem; border-radius:6px; border:2px solid #166534; margin-bottom:0.8rem;">
+<div class="metric-label" style="color:#4ade80; font-weight:700;">UPGRADED RECOMMENDATIONS · PATH ALIGNMENT SECURE</div>
+<ul style="color:#f8fafc; font-size:0.9rem; margin:0.55rem 0 0; padding-left:1.2rem; line-height:1.5;">
+<li><strong>MSD Vocational Re-Allocation Path:</strong> Baseline capacity holds — no structural CV pivot required this cycle.</li>
+<li><strong>Crown Commutation Settlement Metrics:</strong> Contingent reserve band {crown_commutation_band} held on watch only.</li>
+<li><strong>Private Clinical Network Bypass Trigger:</strong> {safe_bypass_status}.</li>
+</ul>
 </div>"""
         adaptive_cv_html = """<div style="background-color:#141f17; padding:0.8rem; border-radius:4px; border:1px solid #166534; margin-bottom:0.8rem;">
 <div class="metric-label" style="color:#4ade80; font-weight:700;">ADAPTIVE CAREER TRAJECTORY STATUS</div>
-<p style="color:#f8fafc; font-size:0.88rem; margin:0;">Baseline capacity holds. Verified via MSD National Framework.</p>
+<p style="color:#f8fafc; font-size:0.88rem; margin:0;">Baseline capacity holds. Pre-injury CV requires zero structural alterations. Verified via MSD National Framework.</p>
 </div>"""
 
     # Quick anatomy cohort jump from dossier
@@ -1435,16 +1564,18 @@ else:
         st.session_state[resolve_key] = False
 
     id_col, btn_col = st.columns([2.4, 1.2])
+    safe_subject = sanitize_html_text(subject_token, max_chars=MAX_TOKEN_CHARS)
+    safe_native = sanitize_html_text(native_acc_id, max_chars=MAX_TOKEN_CHARS)
     with id_col:
         if st.session_state[resolve_key] and can_unmask_identity:
             st.markdown(
                 f"""
                 <div class="claim-id-bar">
                   <span class="id-label">ID</span>
-                  <span class="id-token">{subject_token}</span>
+                  <span class="id-token">{safe_subject}</span>
                   <span class="resolve-chip">RESOLVED</span>
                   <span class="id-label">Native ACC Claim ID</span>
-                  <span class="id-native">{native_acc_id}</span>
+                  <span class="id-native">{safe_native}</span>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -1454,7 +1585,7 @@ else:
                 f"""
                 <div class="claim-id-bar">
                   <span class="id-label">ID</span>
-                  <span class="id-token">{subject_token}</span>
+                  <span class="id-token">{safe_subject}</span>
                   <span class="locked-chip">IDENTITY UNMASKING RESTRICTED</span>
                 </div>
                 """,
@@ -1465,7 +1596,7 @@ else:
                 f"""
                 <div class="claim-id-bar">
                   <span class="id-label">ID</span>
-                  <span class="id-token">{subject_token}</span>
+                  <span class="id-token">{safe_subject}</span>
                   <span class="masked-chip">MASKED TOKEN</span>
                 </div>
                 """,
@@ -1484,7 +1615,7 @@ else:
                 )
             st.markdown("</div>", unsafe_allow_html=True)
             st.markdown(
-                '<div class="audit-toast">Minister for ACC · PII gate enforced</div>',
+                '<div class="audit-toast">Cabinet Minister · PII gate enforced</div>',
                 unsafe_allow_html=True,
             )
         elif can_unmask_identity:
@@ -1518,51 +1649,64 @@ else:
     if st.session_state[resolve_key] and can_unmask_identity:
         id_status_line = (
             f'<span style="font-size:0.9rem; color:#8b949e;">ID:</span> '
-            f'<span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{subject_token}</span> '
+            f'<span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{safe_subject}</span> '
             f'<span class="resolve-chip">Resolve to Native ACC Claim ID</span><br/>'
             f'<span style="font-size:0.9rem; color:#8b949e;">Native ACC Claim ID:</span> '
-            f'<span style="font-size:0.9rem; color:#10b981; font-weight:700;">{native_acc_id}</span><br/>'
+            f'<span style="font-size:0.9rem; color:#10b981; font-weight:700;">{safe_native}</span><br/>'
         )
     elif statutory_briefing_mode:
         id_status_line = (
             f'<span style="font-size:0.9rem; color:#8b949e;">ID:</span> '
-            f'<span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{subject_token}</span> '
+            f'<span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{safe_subject}</span> '
             f'<span class="locked-chip">Identity Unmasking Restricted</span><br/>'
         )
     else:
         id_status_line = (
             f'<span style="font-size:0.9rem; color:#8b949e;">ID:</span> '
-            f'<span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{subject_token}</span> '
+            f'<span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{safe_subject}</span> '
             f'<span class="masked-chip">Resolve to Native ACC Claim ID</span><br/>'
         )
 
+    safe_anatomy = sanitize_html_text(anatomy, max_chars=MAX_FIELD_CHARS)
+    safe_duty = sanitize_html_text(duty_tier, max_chars=MAX_FIELD_CHARS)
+    safe_age = sanitize_html_text(int(age), max_chars=8)
+    safe_status_label = sanitize_html_text(status_label, max_chars=MAX_STATUS_CHARS)
+    safe_dict_html = sanitize_html_text(dict_txt, max_chars=MAX_NOTES_CHARS)
+    safe_ppd = sanitize_html_text(f"{permanent_disability_prob * 100:.1f}", max_chars=16)
+    safe_tase = sanitize_html_text(f"{projected_final_cost:,.2f}", max_chars=32)
+    safe_reserve = sanitize_html_text(f"{mitigated_reserve_target:,.2f}", max_chars=32)
+    safe_cap_floor = sanitize_html_text(int(cap_floor), max_chars=8)
+    safe_lookback = sanitize_html_text(
+        f"{(5000 + (projected_final_cost * 0.12)):,.2f}", max_chars=32
+    )
+
     if role == SCHEME_DIRECTOR:
         fee_line = f"""<div class="metric-label" style="margin-top:0.6rem;">Dynamic Lookback Valuation Basis</div>
-<div class="metric-value-green" style="font-size:1.4rem;">${(5000 + (projected_final_cost * 0.12)):,.2f} NZD</div>"""
+<div class="metric-value-green" style="font-size:1.4rem;">${safe_lookback} NZD</div>"""
     else:
         fee_line = """<div class="metric-label" style="margin-top:0.6rem;">Dynamic Lookback Valuation Basis</div>
-<div style="color:#8b949e; font-style:italic; font-size:0.95rem;">🔒 SECURE LEDGER PROXIED TO EXECUTIVE SECTOR</div>"""
+<div style="color:#8b949e; font-style:italic; font-size:0.95rem;">SECURE LEDGER PROXIED TO EXECUTIVE SECTOR</div>"""
 
     # Left-aligned HTML — no indent so Streamlit does not code-fence it
     html_payload = f"""<div class="metric-box" style="border-left: 4px solid {status_color}; padding: 1.5rem; height: auto;">
 <div class="metric-label">Scheme Alignment Status</div>
-<div style="color:{status_color}; font-weight:700; font-size:1.2rem; margin-bottom:0.8rem;">{status_label}</div>
+<div style="color:{status_color}; font-weight:700; font-size:1.2rem; margin-bottom:0.8rem;">{safe_status_label}</div>
 <div style="background-color:#0c1017; padding:0.8rem; border-radius:4px; border:1px solid #30363d; margin-bottom:0.8rem;">
 <div class="metric-label" style="color:#ffffff;">Claimant File Dossier Matrix</div>
 {id_status_line}
-<span style="font-size:0.9rem; color:#8b949e;">Target Anatomy:</span> <span style="font-size:0.9rem; color:#ffffff;">{anatomy}</span><br/>
-<span style="font-size:0.9rem; color:#8b949e;">Demands / Age:</span> <span style="font-size:0.9rem; color:#ffffff;">{duty_tier} (Age {age})</span><br/>
-<p style="font-size:0.85rem; color:#8b949e; font-style:italic; margin-top:0.4rem; margin-bottom:0;"><strong>NLP Ingest:</strong> {dict_txt}</p>
+<span style="font-size:0.9rem; color:#8b949e;">Target Anatomy:</span> <span style="font-size:0.9rem; color:#ffffff;">{safe_anatomy}</span><br/>
+<span style="font-size:0.9rem; color:#8b949e;">Demands / Age:</span> <span style="font-size:0.9rem; color:#ffffff;">{safe_duty} (Age {safe_age})</span><br/>
+<p style="font-size:0.85rem; color:#8b949e; font-style:italic; margin-top:0.4rem; margin-bottom:0;"><strong>NLP Ingest:</strong> {safe_dict_html}</p>
 </div>
 {protocol_html}
 {adaptive_cv_html}
 <div class="metric-label">Probability of Permanent Disability (PPD)</div>
-<div class="{impact_class}">{permanent_disability_prob * 100:.1f}%</div>
+<div class="{impact_class}">{safe_ppd}%</div>
 <hr style="border:0; border-top:1px solid #30363d; margin: 0.8rem 0;"/>
 <div class="metric-label">Total Absolute System Exposure (TASE)</div>
-<div class="metric-value-silver" style="font-size:1.5rem; margin-bottom:0.3rem;">${projected_final_cost:,.2f} NZD</div>
-<div class="metric-label">Mitigated Capital Reserve Target ({cap_floor}% Floor Applied)</div>
-<div class="metric-value-green" style="font-size:1.5rem; margin-bottom:0.3rem;">${mitigated_reserve_target:,.2f} NZD</div>
+<div class="metric-value-silver" style="font-size:1.5rem; margin-bottom:0.3rem;">${safe_tase} NZD</div>
+<div class="metric-label">Mitigated Capital Reserve Target ({safe_cap_floor}% Floor Applied)</div>
+<div class="metric-value-green" style="font-size:1.5rem; margin-bottom:0.3rem;">${safe_reserve} NZD</div>
 {fee_line}
 </div>"""
 
