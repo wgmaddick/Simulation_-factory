@@ -245,10 +245,7 @@ view_selection = st.selectbox(
     "📂 AUDIT VIEW COMMAND SECTOR",
     [
         "Global Scheme Portfolio (All Active Claims)",
-        "AAT-Claimant-Delta-2026",
-        "AAT-Claimant-Epsilon-2026",
-        "AAT-Claimant-Zeta-2026",
-        "AAT-Claimant-Eta-2026",
+        *df_master_ledger["Claim ID"].tolist(),
     ],
 )
 st.markdown("<br>", unsafe_allow_html=True)
