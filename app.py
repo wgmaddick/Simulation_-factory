@@ -119,7 +119,151 @@ st.markdown(
     div[data-testid="stMetricValue"] {
         color: #e2e8f0 !important;
     }
+
+    /* ============================================================
+       iPadOS / mobile — top-left navigation overlay fix
+       ============================================================ */
+    html, body, .stApp, [data-testid="stAppViewContainer"] {
+      padding-top: max(16px, env(safe-area-inset-top, 0px)) !important;
+      box-sizing: border-box !important;
+    }
+
+    header[data-testid="stHeader"],
+    .stAppHeader,
+    [data-testid="stHeader"] {
+      position: relative !important;
+      top: auto !important;
+      left: auto !important;
+      right: auto !important;
+      width: 100% !important;
+      height: auto !important;
+      min-height: 52px !important;
+      padding-top: max(16px, env(safe-area-inset-top, 0px)) !important;
+      padding-bottom: 8px !important;
+      padding-left: max(12px, env(safe-area-inset-left, 0px)) !important;
+      padding-right: max(12px, env(safe-area-inset-right, 0px)) !important;
+      margin: 0 !important;
+      background: #0c1017 !important;
+      border-bottom: 1px solid #30363d !important;
+      z-index: 100 !important;
+      display: flex !important;
+      align-items: center !important;
+      overflow: visible !important;
+    }
+
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="collapsedControl"],
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="stExpandSidebarButton"],
+    button[kind="header"],
+    [data-testid="stBaseButton-headerNoPadding"],
+    [data-testid="stBaseButton-header"],
+    header[data-testid="stHeader"] button,
+    .stAppHeader button {
+      position: relative !important;
+      top: auto !important;
+      left: auto !important;
+      right: auto !important;
+      bottom: auto !important;
+      transform: none !important;
+      margin-top: max(24px, calc(env(safe-area-inset-top, 0px) + 8px)) !important;
+      margin-left: 4px !important;
+      min-width: 44px !important;
+      min-height: 44px !important;
+      z-index: 101 !important;
+    }
+
+    [data-testid="stSidebarHeader"] {
+      padding-top: max(16px, env(safe-area-inset-top, 0px)) !important;
+      margin-top: max(24px, env(safe-area-inset-top, 0px)) !important;
+    }
+
+    section[data-testid="stSidebar"] > div:first-child,
+    section[data-testid="stSidebar"] {
+      padding-top: max(16px, env(safe-area-inset-top, 0px)) !important;
+    }
+
+    .ipad-top-nav {
+      position: relative !important;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      width: 100%;
+      box-sizing: border-box;
+      padding-top: max(16px, env(safe-area-inset-top, 0px));
+      margin-top: max(24px, env(safe-area-inset-top, 0px));
+      padding-bottom: 0.65rem;
+      padding-left: 0.35rem;
+      padding-right: 0.35rem;
+      border-bottom: 1px solid #30363d;
+      background: #0c1017;
+      z-index: 50;
+    }
+    .ipad-top-nav .nav-mark {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: #10b981;
+      text-transform: uppercase;
+      min-height: 44px;
+      min-width: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 0.65rem;
+      border: 1px solid #30363d;
+      background: #161b22;
+    }
+    .ipad-top-nav .nav-hint {
+      color: #8b949e;
+      font-size: 0.82rem;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    @media (max-width: 1024px) {
+      header[data-testid="stHeader"],
+      .stAppHeader,
+      [data-testid="stHeader"],
+      .ipad-top-nav {
+        margin-top: max(24px, env(safe-area-inset-top, 0px)) !important;
+        padding-top: max(16px, env(safe-area-inset-top, 0px)) !important;
+      }
+
+      [data-testid="stSidebarCollapsedControl"],
+      [data-testid="collapsedControl"],
+      [data-testid="stSidebarCollapseButton"],
+      [data-testid="stExpandSidebarButton"],
+      header[data-testid="stHeader"] button,
+      .stAppHeader button,
+      [data-testid="stToolbar"] button,
+      [data-testid="stSidebarHeader"] button,
+      .ipad-top-nav .nav-mark {
+        margin-top: max(40px, calc(env(safe-area-inset-top, 0px) + 16px)) !important;
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+      }
+
+      div[data-testid="stMainBlockContainer"],
+      .block-container {
+        padding-top: max(1.5rem, calc(env(safe-area-inset-top, 0px) + 1rem)) !important;
+      }
+    }
     </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+# Dedicated top navigation bar — in-document flow (not absolute overlay)
+st.markdown(
+    """
+    <div class="ipad-top-nav" role="navigation" aria-label="Primary scheme navigation">
+      <span class="nav-mark" aria-hidden="true">☰ NAV</span>
+      <span class="nav-hint">US Risk · Scheme navigation — clear of iPadOS status bar &amp; Multitasking controls</span>
+    </div>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     """,
     unsafe_allow_html=True,
 )
