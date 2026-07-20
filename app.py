@@ -40,6 +40,15 @@ MAX_NOTES_CHARS = 4000
 MAX_MANDATE_CHARS = 280
 MAX_INTAKE_ROWS = 500
 MAX_FIELD_CHARS = 120
+PORTFOLIO_LEDGER_COLUMNS = [
+    "Claim ID",
+    "Anatomy Target",
+    "Age",
+    "Demands",
+    "ROM_Actual",
+    "Spend_To_Date",
+    "Status",
+]
 _CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 
@@ -74,9 +83,11 @@ def sanitize_for_markdown(value: Any, *, max_chars: int = MAX_TOKEN_CHARS) -> st
     return text
 
 
-def bound_intake_frame(frame: pd.DataFrame) -> pd.DataFrame:
+def bound_intake_frame(frame: pd.DataFrame | None) -> pd.DataFrame:
     """Cap row count for any corporate / matrix intake parse to avoid unbounded load."""
-    if frame is None or frame.empty:
+    if frame is None:
+        return pd.DataFrame(columns=PORTFOLIO_LEDGER_COLUMNS)
+    if frame.empty:
         return frame
     if len(frame) > MAX_INTAKE_ROWS:
         return frame.iloc[:MAX_INTAKE_ROWS].copy()
