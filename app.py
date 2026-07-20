@@ -656,7 +656,10 @@ def compute_nationwide_scalability_matrix(
     alignment_pilot = round(float(performance_index), 1)
     alignment_nation = round(min(96.5, alignment_pilot + 7.4), 1)
     value_pilot = round(spend * 1.15, 2)
-    value_nation = round(spend * scale_factor * 0.42, 2)
+    # Unit economics × full population with scale-efficiency haircut (not linear spend blow-up).
+    unit_capture = (spend / pilot_n) * 0.68
+    value_nation = round(unit_capture * nationwide_n, 2)
+    alignment_gain_pp = round(alignment_nation - alignment_pilot, 1)
     rows = [
         {
             "dimension": "Monitored Cohort Size",
@@ -694,11 +697,7 @@ def compute_nationwide_scalability_matrix(
         "scale_factor": round(scale_factor, 1),
         "value_pilot": value_pilot,
         "value_nation": value_nation,
-        "value_uplift_pct": round(
-            ((value_nation - value_pilot) / value_pilot) * 100.0, 1
-        )
-        if value_pilot
-        else 0.0,
+        "alignment_gain_pp": alignment_gain_pp,
     }
 
 
@@ -719,7 +718,7 @@ def render_nationwide_scalability_matrix(matrix: dict[str, Any]) -> None:
         )
 
     safe_scale = sanitize_html_text(f"{matrix['scale_factor']:.1f}", max_chars=16)
-    safe_uplift = sanitize_html_text(f"{matrix['value_uplift_pct']:.1f}", max_chars=16)
+    safe_gain = sanitize_html_text(f"{matrix['alignment_gain_pp']:.1f}", max_chars=16)
     safe_nation_value = sanitize_html_text(
         f"{matrix['value_nation']:,.0f}", max_chars=32
     )
@@ -774,9 +773,10 @@ def render_nationwide_scalability_matrix(matrix: dict[str, Any]) -> None:
   <div style="margin-top:0.65rem; color:#d8b4fe; font-size:0.92rem;">
     Captured nationwide financial value projected at
     <strong style="color:#f5d0fe;">${safe_nation_value} NZD</strong>
-    · value uplift
-    <strong style="color:#f5d0fe;">{safe_uplift}%</strong>
-    vs pilot baseline.
+    · geographic scale
+    <strong style="color:#f5d0fe;">{safe_scale}×</strong>
+    · functional alignment gain
+    <strong style="color:#f5d0fe;">+{safe_gain} pp</strong>.
   </div>
 </div>
 """
