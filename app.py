@@ -175,7 +175,7 @@ st.markdown(
       padding-top: max(16px, env(safe-area-inset-top, 0px)) !important;
     }
 
-    /* In-flow primary nav strip */
+    /* In-flow primary nav strip — ≥40px clear of top AND left edges */
     .ipad-top-nav {
       position: relative !important;
       display: flex;
@@ -184,7 +184,8 @@ st.markdown(
       width: 100%;
       box-sizing: border-box;
       padding-top: max(16px, env(safe-area-inset-top, 0px));
-      margin-top: max(24px, env(safe-area-inset-top, 0px));
+      margin-top: max(40px, calc(env(safe-area-inset-top, 0px) + 16px));
+      margin-left: max(40px, calc(env(safe-area-inset-left, 0px) + 16px));
       padding-bottom: 0.65rem;
       padding-left: 0.35rem;
       padding-right: 0.35rem;
@@ -207,6 +208,8 @@ st.markdown(
       padding: 0 0.65rem;
       border: 1px solid #30363d;
       background: #161b22;
+      margin-top: 0;
+      margin-left: 0;
     }
     .ipad-top-nav .nav-hint {
       color: #8b949e;
@@ -215,13 +218,54 @@ st.markdown(
       line-height: 1.35;
     }
 
-    /* Tablet / mobile: hard floor — top-left hit targets ≥40px from screen top */
+    .statutory-meta {
+      color: #38bdf8;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      margin: -0.35rem 0 0.85rem 0;
+      line-height: 1.45;
+    }
+    .ministerial-banner {
+      background: #1b1416;
+      border: 1px solid #ef4444;
+      border-left: 5px solid #ef4444;
+      padding: 1.15rem 1.25rem;
+      margin: 0.85rem 0 1.1rem 0;
+    }
+    .ministerial-badge {
+      display: inline-block;
+      background: #ef4444;
+      color: #ffffff;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 0.3rem 0.65rem;
+      margin-bottom: 0.55rem;
+    }
+    .briefing-mode-chip {
+      display: inline-block;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid #38bdf8;
+      color: #38bdf8;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 0.25rem 0.6rem;
+      margin-bottom: 0.65rem;
+    }
+
+    /* Tablet / mobile: hard floor — top-left hit targets ≥40px from edges */
     @media (max-width: 1024px) {
       header[data-testid="stHeader"],
       .stAppHeader,
       [data-testid="stHeader"],
       .ipad-top-nav {
-        margin-top: max(24px, env(safe-area-inset-top, 0px)) !important;
+        margin-top: max(40px, calc(env(safe-area-inset-top, 0px) + 16px)) !important;
+        margin-left: max(40px, calc(env(safe-area-inset-left, 0px) + 16px)) !important;
         padding-top: max(16px, env(safe-area-inset-top, 0px)) !important;
       }
 
@@ -234,8 +278,9 @@ st.markdown(
       [data-testid="stToolbar"] button,
       [data-testid="stSidebarHeader"] button,
       .ipad-top-nav .nav-mark {
-        /* Clear iPadOS Multitasking pill (...) and status bar */
+        /* Clear iPadOS Multitasking pill (...) , status bar, Stage Manager */
         margin-top: max(40px, calc(env(safe-area-inset-top, 0px) + 16px)) !important;
+        margin-left: max(40px, calc(env(safe-area-inset-left, 0px) + 16px)) !important;
         position: relative !important;
         top: auto !important;
         left: auto !important;
@@ -244,6 +289,7 @@ st.markdown(
       div[data-testid="stMainBlockContainer"],
       .block-container {
         padding-top: max(1.5rem, calc(env(safe-area-inset-top, 0px) + 1rem)) !important;
+        padding-left: max(1rem, calc(env(safe-area-inset-left, 0px) + 0.5rem)) !important;
       }
     }
     </style>
@@ -271,6 +317,16 @@ st.markdown(
 )
 
 # --- MASTER CLAIMS DATABASE CORE ---
+MINISTER_ROLE = "Minister for ACC / Crown Governance"
+SCHEME_DIRECTOR = "Scheme Director (GM)"
+CLAIMS_OFFICER = "Claims Officer / Analyst"
+REVIEWING_SPECIALIST = "Reviewing Specialist"
+
+STATUTORY_NOMINAL = "Nominal"
+STATUTORY_MINISTERIAL = "Ministerial Escalation Required"
+STATUTORY_CABINET = "Cabinet Threshold Exceeded"
+
+
 @st.cache_data
 def load_internal_portfolio_ledger():
     return pd.DataFrame(
@@ -283,6 +339,7 @@ def load_internal_portfolio_ledger():
                 "ROM_Actual": 62.0,
                 "Spend_To_Date": 28400.0,
                 "Status": "CRITICAL DRIFT",
+                "Statutory Risk Rating": STATUTORY_MINISTERIAL,
             },
             {
                 "Claim ID": "AAT-Claimant-Epsilon-2026",
@@ -292,6 +349,7 @@ def load_internal_portfolio_ledger():
                 "ROM_Actual": 94.0,
                 "Spend_To_Date": 12100.0,
                 "Status": "NOMINAL ALIGNMENT",
+                "Statutory Risk Rating": STATUTORY_NOMINAL,
             },
             {
                 "Claim ID": "AAT-Claimant-Zeta-2026",
@@ -301,6 +359,7 @@ def load_internal_portfolio_ledger():
                 "ROM_Actual": 48.0,
                 "Spend_To_Date": 41200.0,
                 "Status": "CRITICAL DRIFT",
+                "Statutory Risk Rating": STATUTORY_CABINET,
             },
             {
                 "Claim ID": "AAT-Claimant-Eta-2026",
@@ -310,20 +369,33 @@ def load_internal_portfolio_ledger():
                 "ROM_Actual": 88.0,
                 "Spend_To_Date": 19400.0,
                 "Status": "NOMINAL ALIGNMENT",
+                "Statutory Risk Rating": STATUTORY_NOMINAL,
             },
         ]
     )
 
 
 df_master_ledger = load_internal_portfolio_ledger()
+critical_drift_count = int(
+    (df_master_ledger["Status"] == "CRITICAL DRIFT").sum()
+)
+# Portfolio-level watchlist count for Ministerial banner (scheme-wide)
+SCHEME_CRITICAL_SUBJECTS = 18
 
 # --- SIDEBAR: GOVERNANCE LAYER FILTERS ---
 with st.sidebar:
     st.markdown("### NZ ACC SCHEME GOVERNANCE")
     role = st.selectbox(
         "Active User Role Matrix",
-        ["Scheme Director (GM)", "Claims Officer / Analyst", "Reviewing Specialist"],
+        [
+            SCHEME_DIRECTOR,
+            CLAIMS_OFFICER,
+            REVIEWING_SPECIALIST,
+            MINISTER_ROLE,
+        ],
+        key="active_user_role_matrix",
     )
+    statutory_briefing_mode = role == MINISTER_ROLE
     st.markdown("---")
     st.markdown("### SCHEME MANDATE INJECTION")
     cap_floor = st.slider("Enforce Liability Mitigation Floor (%)", 0, 50, 15)
@@ -331,29 +403,44 @@ with st.sidebar:
         "Disseminate Performance Mandate",
         placeholder="e.g., Accelerate Pathway Interventions",
     )
-    st.caption("Localized NZ ACC · IRD · MSD · Health NZ AoG grids")
+    if statutory_briefing_mode:
+        st.info("Statutory Briefing Mode active — Crown Entity Act compliance view.")
+    st.caption("Localized NZ ACC · IRD · MSD · Health NZ · Ministerial AoG grids")
 
 # --- MAIN PERFORMANCE DASHBOARD TITLE ---
 st.title("NZ ACC RISK ORCHESTRATION ENGINE")
 st.markdown(
-    "<p style='color:#8b949e; margin-top:-10px;'>"
+    "<p class='statutory-meta'>"
+    "Statutory Governance: Answerable to Minister for ACC | "
+    "Crown Entity Act Compliance Mode</p>",
+    unsafe_allow_html=True,
+)
+st.markdown(
+    "<p style='color:#8b949e; margin-top:-6px;'>"
     "AAT Scheme Performance · Predictive Operational Risk & Long-Tail Claims "
     "Governance (NZD) · All-of-Government Integration</p>",
     unsafe_allow_html=True,
 )
+if statutory_briefing_mode:
+    st.markdown(
+        '<div class="briefing-mode-chip">STATUTORY BRIEFING MODE · MINISTERIAL OVERLAY</div>',
+        unsafe_allow_html=True,
+    )
 st.markdown("---")
 
 # --- INITIATIVE 1: ALL-OF-GOVERNMENT DATA INTEGRATION GRID ---
-st.markdown("### 🛰️ ALL-OF-GOVERNMENT DATA INTEGRATION GRID")
+st.markdown("### ALL-OF-GOVERNMENT DATA INTEGRATION GRID")
 st.markdown(
-    "<p style='color:#8b949e; margin-top:-10px; font-size:0.9rem;'>Real-time inter-agency data synchronization pipeline and encrypted security verification tokens.</p>",
+    "<p style='color:#8b949e; margin-top:-10px; font-size:0.9rem;'>"
+    "Real-time inter-agency data synchronization pipeline and encrypted "
+    "security verification tokens.</p>",
     unsafe_allow_html=True,
 )
 
-gov_col1, gov_col2, gov_col3 = st.columns(3)
+gov_col1, gov_col2, gov_col3, gov_col4 = st.columns(4)
 
 with gov_col1:
-    with st.expander("🟢 IRD INCOME EXCHANGE", expanded=False):
+    with st.expander("IRD INCOME EXCHANGE", expanded=False):
         st.markdown(
             """
 <div style="font-family:monospace; font-size:0.8rem; color:#8b949e; line-height:1.4;">
@@ -368,7 +455,7 @@ with gov_col1:
         )
 
 with gov_col2:
-    with st.expander("🟢 MSD WORKFORCE PIPELINE", expanded=False):
+    with st.expander("MSD WORKFORCE PIPELINE", expanded=False):
         st.markdown(
             """
 <div style="font-family:monospace; font-size:0.8rem; color:#8b949e; line-height:1.4;">
@@ -383,7 +470,7 @@ with gov_col2:
         )
 
 with gov_col3:
-    with st.expander("🔵 HEALTH NZ CLINICAL GRID", expanded=False):
+    with st.expander("HEALTH NZ CLINICAL GRID", expanded=False):
         st.markdown(
             """
 <div style="font-family:monospace; font-size:0.8rem; color:#8b949e; line-height:1.4;">
@@ -397,11 +484,67 @@ with gov_col3:
             unsafe_allow_html=True,
         )
 
+with gov_col4:
+    with st.expander(
+        "● MINISTERIAL BRIEFING & CABINET PIPELINE",
+        expanded=statutory_briefing_mode,
+    ):
+        st.markdown(
+            """
+<div style="font-family:monospace; font-size:0.8rem; color:#8b949e; line-height:1.4;">
+<strong>Status:</strong> <span style="color:#38bdf8;">BLUE / ACTIVE</span><br/>
+<strong>Last Harvest:</strong> Today, 11:45 AM<br/>
+<strong>Channel Hash:</strong> CAB-BIM-2026-ACC<br/>
+<hr style="border:0; border-top:1px solid #30363d; margin:0.4rem 0;"/>
+<span style="color:#38bdf8;">● Cabinet paper pipeline armed · BIM escalation channel open.</span>
+</div>
+""",
+            unsafe_allow_html=True,
+        )
+
+# --- Ministerial Escalation Banner (between AoG grid and Audit Command) ---
+if SCHEME_CRITICAL_SUBJECTS > 0:
+    st.markdown(
+        f"""
+        <div class="ministerial-banner">
+          <div class="ministerial-badge">[MINISTERIAL WATCHLIST ACTIVE]</div>
+          <div style="color:#ffffff; font-size:1.15rem; font-weight:700; margin-bottom:0.35rem;">
+            Critical Pathway Drift — Statutory Escalation Surface
+          </div>
+          <div style="color:#e2e8f0; font-size:1rem; font-weight:600; margin-bottom:0.55rem;">
+            {SCHEME_CRITICAL_SUBJECTS} Subjects breaching long-tail liability thresholds
+          </div>
+          <div style="color:#8b949e; font-size:0.85rem; font-family:monospace;">
+            Crown Entity Act · Answerable to Minister for ACC · BIM / Statutory Escalation channel
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    if st.button(
+        "Generate Cabinet Briefing Note (BIM / Statutory Escalation)",
+        type="primary",
+        use_container_width=True,
+        key="generate_cabinet_briefing",
+    ):
+        st.success(
+            "Cabinet Briefing Note compiled — BIM / Statutory Escalation packet "
+            "staged for Minister for ACC. Provenance receipt sealed to Crown vault."
+        )
+        if statutory_briefing_mode:
+            st.code(
+                "BIM-ACC-2026 · Watchlist subjects: 18 · "
+                "Cabinet Threshold Exceeded files: "
+                f"{int((df_master_ledger['Statutory Risk Rating'] == STATUTORY_CABINET).sum())} · "
+                "Status: READY FOR TABLE",
+                language=None,
+            )
+
 st.markdown("---")
 
 # --- CENTRAL ROUTING SELECTOR ---
 view_selection = st.selectbox(
-    "📂 AUDIT VIEW COMMAND SECTOR",
+    "AUDIT VIEW COMMAND SECTOR",
     [
         "Global Scheme Portfolio (All Active Claims)",
         "AAT-Claimant-Delta-2026",
@@ -417,25 +560,111 @@ st.markdown("<br>", unsafe_allow_html=True)
 # ==============================================================================
 if view_selection == "Global Scheme Portfolio (All Active Claims)":
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.markdown(
-            '<div class="metric-box"><div class="metric-label">Total Scheme Claims</div><div class="metric-value-silver">142 Active</div><div class="metric-subtext">Regional Portfolio Intake</div></div>',
+            '<div class="metric-box"><div class="metric-label">Total Scheme Claims</div>'
+            '<div class="metric-value-silver">142 Active</div>'
+            '<div class="metric-subtext">Regional Portfolio Intake</div></div>',
             unsafe_allow_html=True,
         )
     with col2:
         st.markdown(
-            '<div class="metric-box"><div class="metric-label">Critical Pathway Drift</div><div class="metric-value-crimson">18 Subjects</div><div class="metric-subtext">Targeted Escalations Pending</div></div>',
+            '<div class="metric-box"><div class="metric-label">Critical Pathway Drift</div>'
+            '<div class="metric-value-crimson">18 Subjects</div>'
+            '<div class="metric-subtext">Targeted Escalations Pending</div></div>',
             unsafe_allow_html=True,
         )
     with col3:
         st.markdown(
-            '<div class="metric-box"><div class="metric-label">Performance Index</div><div class="metric-value-green">85.9%</div><div class="metric-subtext">Baseline Trajectory Alignment</div></div>',
+            '<div class="metric-box"><div class="metric-label">Performance Index</div>'
+            '<div class="metric-value-green">85.9%</div>'
+            '<div class="metric-subtext">Baseline Trajectory Alignment</div></div>',
+            unsafe_allow_html=True,
+        )
+    with col4:
+        st.markdown(
+            '<div class="metric-box"><div class="metric-label">Ministerial Expectations Match</div>'
+            '<div class="metric-value-silver" style="color:#38bdf8;">88%</div>'
+            '<div class="metric-subtext">Trajectory Alignment</div></div>',
             unsafe_allow_html=True,
         )
 
-    if role == "Claims Officer / Analyst":
-        st.markdown("### 📋 CLAIMS OFFICER / ANALYST — ACTION TASK")
+    if statutory_briefing_mode:
+        st.markdown("### STATUTORY BRIEFING MODE — CROWN GOVERNANCE SURFACE")
+        st.markdown(
+            """
+            <div class="metric-box" style="border-left: 4px solid #38bdf8;">
+              <div class="metric-label" style="color:#38bdf8;">MINISTER FOR ACC · HIGH-LEVEL OVERSIGHT</div>
+              <div style="color:#ffffff; font-weight:600; margin-bottom:0.55rem;">
+                Tactical case-worker widgets suppressed. Displaying statutory metrics,
+                long-tail financial liability trajectories, and Cabinet briefing tools.
+              </div>
+              <div style="font-size:0.9rem; color:#8b949e; line-height:1.45;">
+                Crown Entity Act Compliance Mode · Scheme Performance Index 85.9% ·
+                Ministerial Expectations Match 88% · Watchlist 18 subjects
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Long-Tail Liability Watchlist", f"{SCHEME_CRITICAL_SUBJECTS} subjects")
+        m2.metric("Cabinet Threshold Files", f"{int((df_master_ledger['Statutory Risk Rating'] == STATUTORY_CABINET).sum())}")
+        m3.metric("Ministerial Escalations", f"{int((df_master_ledger['Statutory Risk Rating'] == STATUTORY_MINISTERIAL).sum())}")
+
+        st.markdown("#### Long-Tail Financial Liability Trajectory (NZD)")
+        days_series = np.arange(0, 121, 10)
+        standard_macro = np.clip(25000 * 3 * (days_series / 90), 0, 25000 * 3)
+        actual_macro = 25000 * 3 * (days_series / 90) * (1.0 + (0.006 * days_series))
+        ministerial_ceiling = standard_macro * 1.12
+        df_macro_chart = pd.DataFrame(
+            {
+                "Days Elapsed": days_series,
+                "Target Operational Runway": standard_macro,
+                "Actual Scheme Outflow": actual_macro,
+                "Ministerial Liability Ceiling": ministerial_ceiling,
+            }
+        )
+        st.line_chart(
+            df_macro_chart,
+            x="Days Elapsed",
+            y=[
+                "Target Operational Runway",
+                "Actual Scheme Outflow",
+                "Ministerial Liability Ceiling",
+            ],
+        )
+
+        st.markdown("#### Cabinet Briefing Tools")
+        b1, b2 = st.columns(2)
+        with b1:
+            if st.button("Export BIM One-Pager", use_container_width=True):
+                st.info("BIM one-pager staged for Ministerial pouch.")
+        with b2:
+            if st.button("Table for Cabinet Committee", use_container_width=True):
+                st.success("Matter queued for Cabinet committee timetable.")
+
+        st.markdown("### MASTER CLAIMS ACCOUNTABILITY LEDGER · STATUTORY VIEW")
+        show_only_escalations = st.checkbox(
+            "Show Only Ministerial Escalations",
+            value=True,
+            key="filter_ministerial_escalations_briefing",
+        )
+        df_formatted_ledger = df_master_ledger[
+            ["Claim ID", "Anatomy Target", "Status", "Statutory Risk Rating"]
+        ].copy()
+        if show_only_escalations:
+            df_formatted_ledger = df_formatted_ledger[
+                df_formatted_ledger["Statutory Risk Rating"].isin(
+                    [STATUTORY_MINISTERIAL, STATUTORY_CABINET]
+                )
+            ]
+        st.table(df_formatted_ledger)
+
+    elif role == CLAIMS_OFFICER:
+        st.markdown("### CLAIMS OFFICER / ANALYST — ACTION TASK")
 
         html_task_co = f"""<div class="metric-box" style="border-left: 4px solid #ef4444; padding: 1.2rem;">
 <div class="metric-label" style="color:#ef4444;">TASK ID: CO-AAT-2026-031</div>
@@ -444,7 +673,7 @@ if view_selection == "Global Scheme Portfolio (All Active Claims)":
 </div>"""
         st.markdown(html_task_co, unsafe_allow_html=True)
 
-        st.markdown("#### 🚨 Operational Priority Queue")
+        st.markdown("#### Operational Priority Queue")
         df_co_queue = pd.DataFrame(
             {
                 "Priority": ["P0", "P1", "Watch"],
@@ -467,8 +696,8 @@ if view_selection == "Global Scheme Portfolio (All Active Claims)":
         )
         st.table(df_co_queue)
 
-    elif role == "Reviewing Specialist":
-        st.markdown("### 🩻 REVIEWING SPECIALIST — CLINICAL ESCALATION AUDIT DECK")
+    elif role == REVIEWING_SPECIALIST:
+        st.markdown("### REVIEWING SPECIALIST — CLINICAL ESCALATION AUDIT DECK")
 
         html_task_rs = """<div class="metric-box" style="border-left: 4px solid #a855f7; padding: 1.2rem;">
 <div class="metric-label" style="color:#a855f7;">TASK ID: RS-AAT-2026-042</div>
@@ -477,7 +706,7 @@ if view_selection == "Global Scheme Portfolio (All Active Claims)":
 </div>"""
         st.markdown(html_task_rs, unsafe_allow_html=True)
 
-        st.markdown("#### 📡 Clinical Escalation & Validation Matrix")
+        st.markdown("#### Clinical Escalation & Validation Matrix")
         df_rs_queue = pd.DataFrame(
             {
                 "Audit Class": ["Critical Triage", "Path Variance", "Nominal Clear"],
@@ -492,9 +721,9 @@ if view_selection == "Global Scheme Portfolio (All Active Claims)":
                     "ROM >85% • Natural Recovery Arc",
                 ],
                 "IME Verification State": [
-                    "⚠️ PENDING SPECIALIST AUDIT",
-                    "⚠️ VERIFICATION REQUIRED",
-                    "✅ CLINICALLY RESOLVED",
+                    "PENDING SPECIALIST AUDIT",
+                    "VERIFICATION REQUIRED",
+                    "CLINICALLY RESOLVED",
                 ],
                 "Required Sign-Off Command": [
                     "Execute Independent Medical Audit",
@@ -506,14 +735,25 @@ if view_selection == "Global Scheme Portfolio (All Active Claims)":
         st.table(df_rs_queue)
 
     else:
-        st.markdown("### 📋 MASTER CLAIMS ACCOUNTABILITY LEDGER")
+        st.markdown("### MASTER CLAIMS ACCOUNTABILITY LEDGER")
+        show_only_escalations = st.checkbox(
+            "Show Only Ministerial Escalations",
+            value=False,
+            key="filter_ministerial_escalations_gm",
+        )
         df_formatted_ledger = df_master_ledger[
-            ["Claim ID", "Anatomy Target", "Status"]
+            ["Claim ID", "Anatomy Target", "Status", "Statutory Risk Rating"]
         ].copy()
+        if show_only_escalations:
+            df_formatted_ledger = df_formatted_ledger[
+                df_formatted_ledger["Statutory Risk Rating"].isin(
+                    [STATUTORY_MINISTERIAL, STATUTORY_CABINET]
+                )
+            ]
         st.table(df_formatted_ledger)
 
         st.markdown("---")
-        st.markdown("### 📈 AGGREGATE SCHEME CAPEX VELOCITY TRAJECTORY")
+        st.markdown("### AGGREGATE SCHEME CAPEX VELOCITY TRAJECTORY")
         days_series = np.arange(0, 121, 10)
         standard_macro = np.clip(25000 * 3 * (days_series / 90), 0, 25000 * 3)
         actual_macro = 25000 * 3 * (days_series / 90) * (1.0 + (0.006 * days_series))
