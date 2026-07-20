@@ -179,7 +179,7 @@ app.post('/api/analyze', (req, res) => {
 
   const speech =
     typeof userSpeech === 'string' && userSpeech.trim()
-      ? userSpeech.trim()
+      ? userSpeech.trim().replace(/[\u0000-\u001F\u007F]/g, '').slice(0, 2000)
       : '';
 
   if (!speech) {
@@ -220,7 +220,17 @@ app.post('/api/confirm-rotation', (req, res) => {
     });
   }
 
-  const name = String(candidateName).trim();
+  // Bound + strip control characters before reflection into UI payloads.
+  const name = String(candidateName)
+    .trim()
+    .replace(/[\u0000-\u001F\u007F]/g, '')
+    .slice(0, 96);
+  if (!name) {
+    return res.status(400).json({
+      success: false,
+      error: 'Candidate name is required',
+    });
+  }
   const loadPathId = buildLoadPathSignature(name);
   const weather = saturdayWeatherGrid();
   const dispatchedAt = new Date().toISOString();

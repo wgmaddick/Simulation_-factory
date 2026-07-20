@@ -8,5 +8,13 @@ font = "sans serif"
 
 [server]
 headless = true
-enableCORS = false
-enableXsrfProtection = false
+# Re-enable Streamlit form / websocket CSRF + CORS guards so sidebar role
+# toggles, triage intake, and any future data-matrix uploads cannot be forged
+# cross-origin. Pair with maxUploadSize to bound intake parsing.
+enableCORS = true
+enableXsrfProtection = true
+maxUploadSize = 5
+maxMessageSize = 50
+
+[browser]
+gatherUsageStats = false
