@@ -604,28 +604,49 @@ def synthesize_drift_causes(nlp_texts: list[str]) -> list[tuple[str, int, str]]:
 GLOBAL_VIEW = "Global Scheme Portfolio (All Active Claims)"
 
 
+def set_audit_view(claim_id: str) -> None:
+    """Streamlit on_click callback: open a specific claim in Audit View."""
+    st.session_state["audit_view_selection"] = claim_id
+    st.session_state["cohort_mode"] = False
+    st.session_state["audit_status_filter"] = "ALL"
+    st.session_state["audit_anatomy_filter"] = "ALL"
+    st.session_state["audit_focus_token"] = True
+    st.rerun()
+
+
 def jump_to_audit_sector(
-    *,
     status: str | None = None,
     anatomy: str | None = None,
     claim_id: str | None = None,
     cohort: bool = False,
 ) -> None:
-    """Cross-sector jump: sync Audit View Command Sector filters + focus."""
-    st.session_state.audit_focus_token = True
+    """Cross-sector jump callback: sync Audit View filters + focus.
+
+    Intended for ``st.button(..., on_click=jump_to_audit_sector, kwargs=...)``
+    so widget-keyed session state is updated before the next script run
+    instantiates the Audit View selectboxes.
+    """
+    st.session_state["audit_focus_token"] = True
     if claim_id:
-        st.session_state.audit_view_selection = claim_id
-        st.session_state.cohort_mode = False
-        st.session_state.audit_status_filter = "ALL"
-        st.session_state.audit_anatomy_filter = "ALL"
-    else:
-        st.session_state.audit_view_selection = GLOBAL_VIEW
-        st.session_state.cohort_mode = bool(cohort) or bool(anatomy) or bool(status)
-        if status:
-            st.session_state.audit_status_filter = status
-        if anatomy:
-            st.session_state.audit_anatomy_filter = anatomy
-            st.session_state.cohort_mode = True
+        set_audit_view(claim_id)
+        return
+    st.session_state["audit_view_selection"] = GLOBAL_VIEW
+    st.session_state["cohort_mode"] = bool(cohort) or bool(anatomy) or bool(status)
+    if status:
+        st.session_state["audit_status_filter"] = status
+    if anatomy:
+        st.session_state["audit_anatomy_filter"] = anatomy
+        st.session_state["cohort_mode"] = True
+    st.rerun()
+
+
+def clear_audit_filters() -> None:
+    """Reset Audit View Command Sector filters (on_click-safe)."""
+    st.session_state["audit_status_filter"] = "ALL"
+    st.session_state["audit_anatomy_filter"] = "ALL"
+    st.session_state["cohort_mode"] = False
+    st.session_state["audit_view_selection"] = GLOBAL_VIEW
+    st.session_state["audit_focus_token"] = True
     st.rerun()
 
 
@@ -782,8 +803,13 @@ def render_cohort_analysis_panel(
         c1.markdown(f"**{display_id}**")
         c2.caption(str(row["Status"]))
         c3.caption(f"${float(row['Spend_To_Date']):,.0f} NZD · Day {int(row['Days_Elapsed'])}")
-        if c4.button("Open", key=f"open_cohort_{token}", use_container_width=True):
-            jump_to_audit_sector(claim_id=token)
+        c4.button(
+            "Open",
+            key=f"open_cohort_{token}",
+            use_container_width=True,
+            on_click=set_audit_view,
+            args=(token,),
+        )
 
 
 df_master_ledger = load_internal_portfolio_ledger()
@@ -1002,8 +1028,10 @@ if SCHEME_CRITICAL_SUBJECTS > 0:
         "Open Critical Drift Cohort in Audit View",
         use_container_width=True,
         key="banner_jump_critical_drift",
+        on_click=jump_to_audit_sector,
+        kwargs={"status": "CRITICAL DRIFT", "cohort": True},
     ):
-        jump_to_audit_sector(status="CRITICAL DRIFT", cohort=True)
+        pass
 
 st.markdown("---")
 
@@ -1042,12 +1070,13 @@ with filter_c2:
         key="audit_anatomy_filter",
     )
 with filter_c3:
-    if st.button("Clear Audit Filters", use_container_width=True, key="clear_audit_filters"):
-        st.session_state.audit_status_filter = "ALL"
-        st.session_state.audit_anatomy_filter = "ALL"
-        st.session_state.cohort_mode = False
-        st.session_state.audit_view_selection = GLOBAL_VIEW
-        st.rerun()
+    if st.button(
+        "Clear Audit Filters",
+        use_container_width=True,
+        key="clear_audit_filters",
+        on_click=clear_audit_filters,
+    ):
+        pass
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -1076,8 +1105,10 @@ if view_selection == GLOBAL_VIEW:
             key="metric_jump_critical_drift",
             use_container_width=True,
             type="primary",
+            on_click=jump_to_audit_sector,
+            kwargs={"status": "CRITICAL DRIFT", "cohort": True},
         ):
-            jump_to_audit_sector(status="CRITICAL DRIFT", cohort=True)
+            pass
     with col3:
         st.markdown(
             '<div class="metric-box"><div class="metric-label">Performance Index</div>'
@@ -1108,12 +1139,14 @@ if view_selection == GLOBAL_VIEW:
                 f"{anatomy} ({n_crit} critical)",
                 key=f"anatomy_jump_{anatomy}",
                 use_container_width=True,
+                on_click=jump_to_audit_sector,
+                kwargs={
+                    "anatomy": anatomy,
+                    "status": "CRITICAL DRIFT",
+                    "cohort": True,
+                },
             ):
-                jump_to_audit_sector(
-                    anatomy=anatomy,
-                    status="CRITICAL DRIFT",
-                    cohort=True,
-                )
+                pass
 
     filtered_ledger = apply_ledger_filters(df_master_ledger)
     active_anatomy = st.session_state.get("audit_anatomy_filter", "ALL")
@@ -1240,17 +1273,32 @@ if view_selection == GLOBAL_VIEW:
         rating = str(row["Statutory Risk Rating"])
         r1, r2, r3, r4, r5 = st.columns([2.0, 1.6, 1.3, 1.5, 0.9])
         r1.code(token, language=None)
-        if r2.button(anatomy, key=f"ledger_anatomy_{token}", use_container_width=True):
-            jump_to_audit_sector(
-                anatomy=anatomy,
-                status="CRITICAL DRIFT",
-                cohort=True,
-            )
-        if r3.button(status, key=f"ledger_status_{token}", use_container_width=True):
-            jump_to_audit_sector(status=status, cohort=True)
+        r2.button(
+            anatomy,
+            key=f"ledger_anatomy_{token}",
+            use_container_width=True,
+            on_click=jump_to_audit_sector,
+            kwargs={
+                "anatomy": anatomy,
+                "status": "CRITICAL DRIFT",
+                "cohort": True,
+            },
+        )
+        r3.button(
+            status,
+            key=f"ledger_status_{token}",
+            use_container_width=True,
+            on_click=jump_to_audit_sector,
+            kwargs={"status": status, "cohort": True},
+        )
         r4.caption(rating)
-        if r5.button("Open", key=f"ledger_open_{token}", use_container_width=True):
-            jump_to_audit_sector(claim_id=token)
+        r5.button(
+            "Open",
+            key=f"ledger_open_{token}",
+            use_container_width=True,
+            on_click=set_audit_view,
+            args=(token,),
+        )
 
     if role == SCHEME_DIRECTOR and not statutory_briefing_mode:
         st.markdown("---")
@@ -1359,8 +1407,15 @@ else:
         f"Open Anatomical Cohort: {anatomy}",
         key=f"dossier_cohort_{subject_token}",
         use_container_width=True,
+        on_click=jump_to_audit_sector,
+        kwargs={
+            "anatomy": str(anatomy),
+            "status": "CRITICAL DRIFT",
+            "cohort": True,
+        },
     ):
-        jump_to_audit_sector(anatomy=str(anatomy), status="CRITICAL DRIFT", cohort=True)
+        pass
+
 
 
     st.markdown("## PREVENTATIVE DRIFT RADAR DEEP-DIVE")
@@ -1456,19 +1511,7 @@ else:
                     )
                     st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
-        else:
-            # Scheme Director — operational view without PII unmask (policy: CO/RS only)
-            st.markdown('<div class="locked-resolve-wrap">', unsafe_allow_html=True)
-            if st.button(
-                "🔒 Identity Unmasking Restricted",
-                key=f"resolve_gm_locked_{subject_token}",
-                use_container_width=True,
-            ):
-                st.info(
-                    "Native ACC Claim ID resolve is reserved for Claims Officer / "
-                    "Analyst and Reviewing Specialist roles. Audit-gated unmask required."
-                )
-            st.markdown("</div>", unsafe_allow_html=True)
+        # No additional fallback — only Minister is locked; GM/CO/RS unmask via can_unmask_identity
 
     if st.session_state[resolve_key] and can_unmask_identity:
         id_status_line = (
