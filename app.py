@@ -415,6 +415,9 @@ NATIVE_ACC_CLAIM_REGISTRY: dict[str, str] = {
     "AAT-Claimant-Epsilon-2026": "ACC-NZ-2026-552018",
     "AAT-Claimant-Zeta-2026": "ACC-NZ-2026-619447",
     "AAT-Claimant-Eta-2026": "ACC-NZ-2026-703882",
+    "AAT-Claimant-Theta-2026": "ACC-NZ-2026-774105",
+    "AAT-Claimant-Iota-2026": "ACC-NZ-2026-801336",
+    "AAT-Claimant-Kappa-2026": "ACC-NZ-2026-862559",
 }
 
 
@@ -437,8 +440,16 @@ def load_internal_portfolio_ledger():
                 "Demands": "Heavy Manual / Industrial",
                 "ROM_Actual": 62.0,
                 "Spend_To_Date": 28400.0,
+                "Days_Elapsed": 42,
+                "Drift_Velocity": 1.35,
                 "Status": "CRITICAL DRIFT",
                 "Statutory Risk Rating": STATUTORY_MINISTERIAL,
+                "NLP_Ingest": (
+                    "Claimant presents with severe shoulder disruption. Cellular age "
+                    "curves indicate prolonged recovery runway. Psychosocial fear of "
+                    "re-injury spike noted; workplace physical demand conflict with "
+                    "overhead lifting role unresolved."
+                ),
             },
             {
                 "Claim ID": "AAT-Claimant-Epsilon-2026",
@@ -447,8 +458,14 @@ def load_internal_portfolio_ledger():
                 "Demands": "Sedentary Clerical",
                 "ROM_Actual": 94.0,
                 "Spend_To_Date": 12100.0,
+                "Days_Elapsed": 28,
+                "Drift_Velocity": 0.22,
                 "Status": "NOMINAL ALIGNMENT",
                 "Statutory Risk Rating": STATUTORY_NOMINAL,
+                "NLP_Ingest": (
+                    "Favorable tissue consistency. Functional path trajectory arc "
+                    "tracking nominal. Low stress metrics."
+                ),
             },
             {
                 "Claim ID": "AAT-Claimant-Zeta-2026",
@@ -457,8 +474,16 @@ def load_internal_portfolio_ledger():
                 "Demands": "Heavy Manual / Industrial",
                 "ROM_Actual": 48.0,
                 "Spend_To_Date": 41200.0,
+                "Days_Elapsed": 67,
+                "Drift_Velocity": 2.10,
                 "Status": "CRITICAL DRIFT",
                 "Statutory Risk Rating": STATUTORY_CABINET,
+                "NLP_Ingest": (
+                    "Advanced structural vulnerability noted in knee construct. High "
+                    "manual occupational exposures compounding timeline variance. "
+                    "Surgical waitlist delays extending incapacity window; workplace "
+                    "physical demand conflict with kneeling/climbing duties."
+                ),
             },
             {
                 "Claim ID": "AAT-Claimant-Eta-2026",
@@ -467,11 +492,298 @@ def load_internal_portfolio_ledger():
                 "Demands": "Medium Logistics / Transport",
                 "ROM_Actual": 88.0,
                 "Spend_To_Date": 19400.0,
+                "Days_Elapsed": 35,
+                "Drift_Velocity": 0.40,
                 "Status": "NOMINAL ALIGNMENT",
                 "Statutory Risk Rating": STATUTORY_NOMINAL,
+                "NLP_Ingest": (
+                    "Favorable tissue consistency. Functional path trajectory arc "
+                    "tracking nominal. Low stress metrics."
+                ),
+            },
+            {
+                "Claim ID": "AAT-Claimant-Theta-2026",
+                "Anatomy Target": "Lower Extremity (Knee)",
+                "Age": 54,
+                "Demands": "Medium Logistics / Transport",
+                "ROM_Actual": 55.0,
+                "Spend_To_Date": 33800.0,
+                "Days_Elapsed": 51,
+                "Drift_Velocity": 1.72,
+                "Status": "CRITICAL DRIFT",
+                "Statutory Risk Rating": STATUTORY_MINISTERIAL,
+                "NLP_Ingest": (
+                    "Partial-thickness meniscal involvement with delayed MRI access. "
+                    "Surgical waitlist delays primary. Psychosocial spikes around "
+                    "income uncertainty; light-duty matching incomplete."
+                ),
+            },
+            {
+                "Claim ID": "AAT-Claimant-Iota-2026",
+                "Anatomy Target": "Shoulder (Glenohumeral)",
+                "Age": 44,
+                "Demands": "Heavy Manual / Industrial",
+                "ROM_Actual": 58.0,
+                "Spend_To_Date": 30150.0,
+                "Days_Elapsed": 49,
+                "Drift_Velocity": 1.48,
+                "Status": "CRITICAL DRIFT",
+                "Statutory Risk Rating": STATUTORY_MINISTERIAL,
+                "NLP_Ingest": (
+                    "Rotator cuff strain with workplace physical demand conflict. "
+                    "Psychosocial spikes and fear-avoidance; surgical waitlist "
+                    "delays secondary contributor."
+                ),
+            },
+            {
+                "Claim ID": "AAT-Claimant-Kappa-2026",
+                "Anatomy Target": "Lumbar Spine Matrix",
+                "Age": 39,
+                "Demands": "Heavy Manual / Industrial",
+                "ROM_Actual": 64.0,
+                "Spend_To_Date": 26750.0,
+                "Days_Elapsed": 44,
+                "Drift_Velocity": 1.25,
+                "Status": "CRITICAL DRIFT",
+                "Statutory Risk Rating": STATUTORY_MINISTERIAL,
+                "NLP_Ingest": (
+                    "Lumbar load intolerance with workplace physical demand conflict. "
+                    "Psychosocial spikes noted; conservative pathway preferred over "
+                    "surgical waitlist."
+                ),
             },
         ]
     )
+
+
+NLP_ROOT_CAUSE_TAXONOMY: dict[str, tuple[str, ...]] = {
+    "Surgical Waitlist Delays": (
+        "surgical waitlist",
+        "mri access",
+        "delayed mri",
+        "waitlist delay",
+    ),
+    "Workplace Physical Demand Conflict": (
+        "workplace physical demand",
+        "occupational exposure",
+        "overhead lifting",
+        "kneeling",
+        "climbing",
+        "manual occupational",
+    ),
+    "Psychosocial Spikes": (
+        "psychosocial",
+        "fear of re-injury",
+        "fear-avoidance",
+        "income uncertainty",
+        "stress",
+    ),
+}
+
+
+def synthesize_drift_causes(nlp_texts: list[str]) -> list[tuple[str, int, str]]:
+    """Aggregate NLP ingest fields into ranked root-cause drivers."""
+    scores: dict[str, int] = {k: 0 for k in NLP_ROOT_CAUSE_TAXONOMY}
+    snippets: dict[str, str] = {k: "" for k in NLP_ROOT_CAUSE_TAXONOMY}
+    for raw in nlp_texts:
+        text = str(raw or "").lower()
+        for cause, keywords in NLP_ROOT_CAUSE_TAXONOMY.items():
+            hits = sum(1 for kw in keywords if kw in text)
+            if hits:
+                scores[cause] += hits
+                if not snippets[cause]:
+                    snippets[cause] = str(raw or "")[:140]
+    ranked = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
+    return [
+        (cause, count, snippets[cause])
+        for cause, count in ranked
+        if count > 0
+    ]
+
+
+GLOBAL_VIEW = "Global Scheme Portfolio (All Active Claims)"
+
+
+def jump_to_audit_sector(
+    *,
+    status: str | None = None,
+    anatomy: str | None = None,
+    claim_id: str | None = None,
+    cohort: bool = False,
+) -> None:
+    """Cross-sector jump: sync Audit View Command Sector filters + focus."""
+    st.session_state.audit_focus_token = True
+    if claim_id:
+        st.session_state.audit_view_selection = claim_id
+        st.session_state.cohort_mode = False
+        st.session_state.audit_status_filter = "ALL"
+        st.session_state.audit_anatomy_filter = "ALL"
+    else:
+        st.session_state.audit_view_selection = GLOBAL_VIEW
+        st.session_state.cohort_mode = bool(cohort) or bool(anatomy) or bool(status)
+        if status:
+            st.session_state.audit_status_filter = status
+        if anatomy:
+            st.session_state.audit_anatomy_filter = anatomy
+            st.session_state.cohort_mode = True
+    st.rerun()
+
+
+def apply_ledger_filters(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    status = st.session_state.get("audit_status_filter", "ALL")
+    anatomy = st.session_state.get("audit_anatomy_filter", "ALL")
+    if status and status != "ALL":
+        out = out[out["Status"] == status]
+    if anatomy and anatomy != "ALL":
+        out = out[out["Anatomy Target"] == anatomy]
+    return out.reset_index(drop=True)
+
+
+def render_cohort_analysis_panel(
+    cohort_df: pd.DataFrame,
+    *,
+    anatomy: str,
+    can_unmask: bool,
+    role: str,
+) -> None:
+    """Anatomical cohort aggregation + NLP root-cause synthesis."""
+    critical_df = cohort_df[cohort_df["Status"] == "CRITICAL DRIFT"]
+    n_critical = int(len(critical_df))
+    focus = critical_df if n_critical else cohort_df
+    avg_days = float(focus["Days_Elapsed"].mean()) if len(focus) else 0.0
+    cumulative_risk = float(focus["Spend_To_Date"].sum()) if len(focus) else 0.0
+    primary_velocity = float(focus["Drift_Velocity"].mean()) if len(focus) else 0.0
+
+    st.markdown(
+        f"""
+        <div class="metric-box" style="border-left: 4px solid #ef4444;">
+          <div class="metric-label" style="color:#ef4444;">COHORT ANALYSIS</div>
+          <div style="color:#ffffff; font-size:1.25rem; font-weight:700; margin-bottom:0.55rem;">
+            Cohort Analysis: {anatomy} — {n_critical} Critical Drift Subjects
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0.75rem;">
+            <div>
+              <div class="metric-label">Average Days Elapsed</div>
+              <div class="metric-value-silver" style="font-size:1.45rem;">{avg_days:.1f}</div>
+            </div>
+            <div>
+              <div class="metric-label">Cumulative Financial Risk (NZD)</div>
+              <div class="metric-value-crimson" style="font-size:1.45rem;">${cumulative_risk:,.0f}</div>
+            </div>
+            <div>
+              <div class="metric-label">Primary Drift Velocity</div>
+              <div class="metric-value-silver" style="font-size:1.45rem;">{primary_velocity:.2f}×</div>
+            </div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    causes = synthesize_drift_causes(list(focus["NLP_Ingest"].astype(str)))
+    st.markdown("### SYNTHESIZED DRIFT CAUSE BREAKDOWN")
+    if causes:
+        bullets = "".join(
+            f"<li><strong>{cause}</strong> — signal weight {weight}"
+            f"{f' · “{snippet}…”' if snippet else ''}</li>"
+            for cause, weight, snippet in causes
+        )
+        st.markdown(
+            f"""
+            <div class="metric-box" style="border-left: 4px solid #a855f7;">
+              <div class="metric-label" style="color:#c084fc;">NLP ROOT-CAUSE SUMMARIZER</div>
+              <div style="color:#8b949e; font-size:0.88rem; margin-bottom:0.45rem;">
+                Scanned {len(focus)} cohort NLP Ingest field(s) · Role: {role}
+              </div>
+              <ul style="color:#f8fafc; font-size:0.95rem; line-height:1.45; margin:0; padding-left:1.2rem;">
+                {bullets}
+              </ul>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        st.info("No dominant NLP root-cause signals detected in this cohort.")
+
+    exp_c1, exp_c2 = st.columns(2)
+    export_df = focus[
+        [
+            "Claim ID",
+            "Anatomy Target",
+            "Status",
+            "Days_Elapsed",
+            "Spend_To_Date",
+            "Drift_Velocity",
+            "Statutory Risk Rating",
+            "NLP_Ingest",
+        ]
+    ].copy()
+    if not can_unmask:
+        # Ministerial / statutory: keep tokenized aliases only
+        export_df["Claim ID"] = export_df["Claim ID"].astype(str)
+    else:
+        export_df["Native ACC Claim ID"] = export_df["Claim ID"].map(
+            resolve_native_acc_claim_id
+        )
+
+    csv_bytes = export_df.to_csv(index=False).encode("utf-8")
+    with exp_c1:
+        st.download_button(
+            "Export Cohort Summary Report (CSV)",
+            data=csv_bytes,
+            file_name=f"cohort_{anatomy.replace(' ', '_').replace('(', '').replace(')', '')}.csv",
+            mime="text/csv",
+            use_container_width=True,
+            key=f"export_cohort_csv_{anatomy}",
+        )
+    report_txt = (
+        f"NZ ACC COHORT SUMMARY REPORT\n"
+        f"Anatomy: {anatomy}\n"
+        f"Critical Drift Subjects: {n_critical}\n"
+        f"Average Days Elapsed: {avg_days:.1f}\n"
+        f"Cumulative Financial Risk (NZD): ${cumulative_risk:,.0f}\n"
+        f"Primary Drift Velocity: {primary_velocity:.2f}\n"
+        f"Role: {role}\n"
+        f"PII Unmask Allowed: {can_unmask}\n\n"
+        f"SYNTHESIZED DRIFT CAUSE BREAKDOWN\n"
+        + "\n".join(f"- {c} (weight {w})" for c, w, _ in causes)
+        + "\n\nCLAIMANTS\n"
+        + "\n".join(export_df["Claim ID"].astype(str).tolist())
+    )
+    with exp_c2:
+        st.download_button(
+            "Export Cohort Summary Report (PDF/TXT)",
+            data=report_txt.encode("utf-8"),
+            file_name=f"cohort_{anatomy.replace(' ', '_')}_summary.txt",
+            mime="text/plain",
+            use_container_width=True,
+            key=f"export_cohort_txt_{anatomy}",
+        )
+
+    if st.button(
+        "Apply Batch Intervention Protocol to Cohort",
+        type="primary",
+        use_container_width=True,
+        key=f"batch_intervene_{anatomy}",
+    ):
+        st.success(
+            f"Batch intervention protocol armed for {n_critical or len(focus)} "
+            f"{anatomy} subject(s) — pathway acceleration + MSD light-duty match queued."
+        )
+
+    st.markdown("#### Cohort Claimant List")
+    for _, row in focus.iterrows():
+        token = str(row["Claim ID"])
+        display_id = token
+        if can_unmask and st.session_state.get(f"resolve_native_{token}", False):
+            display_id = f"{token} → {resolve_native_acc_claim_id(token)}"
+        c1, c2, c3, c4 = st.columns([2.2, 1.4, 1.2, 1.0])
+        c1.markdown(f"**{display_id}**")
+        c2.caption(str(row["Status"]))
+        c3.caption(f"${float(row['Spend_To_Date']):,.0f} NZD · Day {int(row['Days_Elapsed'])}")
+        if c4.button("Open", key=f"open_cohort_{token}", use_container_width=True):
+            jump_to_audit_sector(claim_id=token)
 
 
 df_master_ledger = load_internal_portfolio_ledger()
@@ -483,6 +795,16 @@ SCHEME_CRITICAL_SUBJECTS = 18
 
 if "identity_audit_log" not in st.session_state:
     st.session_state.identity_audit_log = []
+if "audit_view_selection" not in st.session_state:
+    st.session_state.audit_view_selection = GLOBAL_VIEW
+if "audit_status_filter" not in st.session_state:
+    st.session_state.audit_status_filter = "ALL"
+if "audit_anatomy_filter" not in st.session_state:
+    st.session_state.audit_anatomy_filter = "ALL"
+if "cohort_mode" not in st.session_state:
+    st.session_state.cohort_mode = False
+if "audit_focus_token" not in st.session_state:
+    st.session_state.audit_focus_token = False
 
 
 def _append_identity_audit(actor: str, action: str, token: str, native_id: str) -> None:
@@ -516,7 +838,12 @@ with st.sidebar:
         key="active_user_role_matrix",
     )
     statutory_briefing_mode = role == MINISTER_ROLE
-    can_unmask_identity = role in {CLAIMS_OFFICER, REVIEWING_SPECIALIST}
+    # GM + caseworkers/specialists may unmask; Minister retains tokenized aliases only
+    can_unmask_identity = role in {
+        SCHEME_DIRECTOR,
+        CLAIMS_OFFICER,
+        REVIEWING_SPECIALIST,
+    }
     st.markdown("---")
     st.markdown("### SCHEME MANDATE INJECTION")
     cap_floor = st.slider("Enforce Liability Mitigation Floor (%)", 0, 50, 15)
@@ -526,7 +853,10 @@ with st.sidebar:
     )
     if statutory_briefing_mode:
         st.info("Statutory Briefing Mode active — Crown Entity Act compliance view.")
-        st.caption("Identity unmasking restricted under Ministerial governance.")
+        st.caption(
+            "Aggregated cohort & root-cause analysis permitted. "
+            "Individual PII / Native ACC Claim ID unmasking restricted."
+        )
     st.caption("Localized NZ ACC · IRD · MSD · Health NZ · Ministerial AoG grids")
     if st.session_state.identity_audit_log:
         with st.expander("Identity Unmask Audit Log", expanded=False):
@@ -668,26 +998,63 @@ if SCHEME_CRITICAL_SUBJECTS > 0:
                 "Status: READY FOR TABLE",
                 language=None,
             )
+    if st.button(
+        "Open Critical Drift Cohort in Audit View",
+        use_container_width=True,
+        key="banner_jump_critical_drift",
+    ):
+        jump_to_audit_sector(status="CRITICAL DRIFT", cohort=True)
 
 st.markdown("---")
 
-# --- CENTRAL ROUTING SELECTOR ---
+# --- CENTRAL ROUTING SELECTOR (cross-sector jump target) ---
+st.markdown('<div id="audit-view-command-sector"></div>', unsafe_allow_html=True)
+if st.session_state.get("audit_focus_token"):
+    st.success("AUDIT VIEW COMMAND SECTOR focused — filters synced from cross-sector jump.")
+    st.session_state.audit_focus_token = False
+
+claim_options = [GLOBAL_VIEW] + sorted(
+    df_master_ledger["Claim ID"].astype(str).tolist()
+)
+if st.session_state.audit_view_selection not in claim_options:
+    st.session_state.audit_view_selection = GLOBAL_VIEW
+
 view_selection = st.selectbox(
     "AUDIT VIEW COMMAND SECTOR",
-    [
-        "Global Scheme Portfolio (All Active Claims)",
-        "AAT-Claimant-Delta-2026",
-        "AAT-Claimant-Epsilon-2026",
-        "AAT-Claimant-Zeta-2026",
-        "AAT-Claimant-Eta-2026",
-    ],
+    claim_options,
+    key="audit_view_selection",
 )
+
+filter_c1, filter_c2, filter_c3 = st.columns([1.2, 1.4, 1.0])
+with filter_c1:
+    st.selectbox(
+        "Status Pre-filter",
+        ["ALL", "CRITICAL DRIFT", "NOMINAL ALIGNMENT"],
+        key="audit_status_filter",
+    )
+with filter_c2:
+    anatomy_options = ["ALL"] + sorted(
+        df_master_ledger["Anatomy Target"].astype(str).unique().tolist()
+    )
+    st.selectbox(
+        "Anatomy Target Pre-filter",
+        anatomy_options,
+        key="audit_anatomy_filter",
+    )
+with filter_c3:
+    if st.button("Clear Audit Filters", use_container_width=True, key="clear_audit_filters"):
+        st.session_state.audit_status_filter = "ALL"
+        st.session_state.audit_anatomy_filter = "ALL"
+        st.session_state.cohort_mode = False
+        st.session_state.audit_view_selection = GLOBAL_VIEW
+        st.rerun()
+
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ==============================================================================
 # INTERFACE LAYER A: GLOBAL SCHEME PORTFOLIO VIEW
 # ==============================================================================
-if view_selection == "Global Scheme Portfolio (All Active Claims)":
+if view_selection == GLOBAL_VIEW:
 
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -701,9 +1068,16 @@ if view_selection == "Global Scheme Portfolio (All Active Claims)":
         st.markdown(
             '<div class="metric-box"><div class="metric-label">Critical Pathway Drift</div>'
             '<div class="metric-value-crimson">18 Subjects</div>'
-            '<div class="metric-subtext">Targeted Escalations Pending</div></div>',
+            '<div class="metric-subtext">Click to jump → Audit View</div></div>',
             unsafe_allow_html=True,
         )
+        if st.button(
+            "Jump: Critical Drift → Audit View",
+            key="metric_jump_critical_drift",
+            use_container_width=True,
+            type="primary",
+        ):
+            jump_to_audit_sector(status="CRITICAL DRIFT", cohort=True)
     with col3:
         st.markdown(
             '<div class="metric-box"><div class="metric-label">Performance Index</div>'
@@ -718,6 +1092,48 @@ if view_selection == "Global Scheme Portfolio (All Active Claims)":
             '<div class="metric-subtext">Trajectory Alignment</div></div>',
             unsafe_allow_html=True,
         )
+
+    st.markdown("#### Anatomical Cohort Jump Pads")
+    anatomy_vals = sorted(df_master_ledger["Anatomy Target"].astype(str).unique().tolist())
+    anatomy_cols = st.columns(max(len(anatomy_vals), 1))
+    for col, anatomy in zip(anatomy_cols, anatomy_vals):
+        n_crit = int(
+            (
+                (df_master_ledger["Anatomy Target"] == anatomy)
+                & (df_master_ledger["Status"] == "CRITICAL DRIFT")
+            ).sum()
+        )
+        with col:
+            if st.button(
+                f"{anatomy} ({n_crit} critical)",
+                key=f"anatomy_jump_{anatomy}",
+                use_container_width=True,
+            ):
+                jump_to_audit_sector(
+                    anatomy=anatomy,
+                    status="CRITICAL DRIFT",
+                    cohort=True,
+                )
+
+    filtered_ledger = apply_ledger_filters(df_master_ledger)
+    active_anatomy = st.session_state.get("audit_anatomy_filter", "ALL")
+    show_cohort = bool(st.session_state.get("cohort_mode")) and active_anatomy not in (
+        None,
+        "ALL",
+        "",
+    )
+
+    if show_cohort:
+        anatomy_cohort = df_master_ledger[
+            df_master_ledger["Anatomy Target"] == active_anatomy
+        ].copy()
+        render_cohort_analysis_panel(
+            anatomy_cohort,
+            anatomy=str(active_anatomy),
+            can_unmask=can_unmask_identity,
+            role=role,
+        )
+        st.markdown("---")
 
     if statutory_briefing_mode:
         st.markdown("### STATUTORY BRIEFING MODE — CROWN GOVERNANCE SURFACE")
@@ -775,26 +1191,8 @@ if view_selection == "Global Scheme Portfolio (All Active Claims)":
             if st.button("Table for Cabinet Committee", use_container_width=True):
                 st.success("Matter queued for Cabinet committee timetable.")
 
-        st.markdown("### MASTER CLAIMS ACCOUNTABILITY LEDGER · STATUTORY VIEW")
-        show_only_escalations = st.checkbox(
-            "Show Only Ministerial Escalations",
-            value=True,
-            key="filter_ministerial_escalations_briefing",
-        )
-        df_formatted_ledger = df_master_ledger[
-            ["Claim ID", "Anatomy Target", "Status", "Statutory Risk Rating"]
-        ].copy()
-        if show_only_escalations:
-            df_formatted_ledger = df_formatted_ledger[
-                df_formatted_ledger["Statutory Risk Rating"].isin(
-                    [STATUTORY_MINISTERIAL, STATUTORY_CABINET]
-                )
-            ]
-        st.table(df_formatted_ledger)
-
     elif role == CLAIMS_OFFICER:
         st.markdown("### CLAIMS OFFICER / ANALYST — ACTION TASK")
-
         html_task_co = f"""<div class="metric-box" style="border-left: 4px solid #ef4444; padding: 1.2rem;">
 <div class="metric-label" style="color:#ef4444;">TASK ID: CO-AAT-2026-031</div>
 <div class="metric-subtext" style="color:#ffffff; font-weight:600; margin-bottom:0.4rem;">Clear the CRITICAL DRIFT files before they harden into long-tail PPD exposure.</div>
@@ -802,91 +1200,64 @@ if view_selection == "Global Scheme Portfolio (All Active Claims)":
 </div>"""
         st.markdown(html_task_co, unsafe_allow_html=True)
 
-        st.markdown("#### Operational Priority Queue")
-        df_co_queue = pd.DataFrame(
-            {
-                "Priority": ["P0", "P1", "Watch"],
-                "Claim ID": [
-                    "AAT-Claimant-Zeta-2026",
-                    "AAT-Claimant-Delta-2026",
-                    "Eta / Epsilon Cohort",
-                ],
-                "Escalation Core": [
-                    "Highest PPD Risk Vector",
-                    "Critical Pathway Deviation",
-                    "Nominal Runway Alignment",
-                ],
-                "Target Operational Status": [
-                    "Action Required (Shift 1)",
-                    "Review Required (Shift 1)",
-                    "Watch-Only Status Log",
-                ],
-            }
-        )
-        st.table(df_co_queue)
-
     elif role == REVIEWING_SPECIALIST:
         st.markdown("### REVIEWING SPECIALIST — CLINICAL ESCALATION AUDIT DECK")
-
         html_task_rs = """<div class="metric-box" style="border-left: 4px solid #a855f7; padding: 1.2rem;">
 <div class="metric-label" style="color:#a855f7;">TASK ID: RS-AAT-2026-042</div>
 <div class="metric-subtext" style="color:#ffffff; font-weight:600; margin-bottom:0.4rem;">Validate physical telemetry variance anomalies and verify Independent Medical Examination (IME) compliance directives.</div>
-<div style="font-size:0.85rem; color:#8b949e;">Clinical Mandate: Audit structural tissue guarding thresholds and execute medical capacity validations.</div>
 </div>"""
         st.markdown(html_task_rs, unsafe_allow_html=True)
 
-        st.markdown("#### Clinical Escalation & Validation Matrix")
-        df_rs_queue = pd.DataFrame(
-            {
-                "Audit Class": ["Critical Triage", "Path Variance", "Nominal Clear"],
-                "Claim Token Target": [
-                    "AAT-Claimant-Zeta-2026",
-                    "AAT-Claimant-Delta-2026",
-                    "Epsilon / Eta Files",
-                ],
-                "Ingested Telemetry Drivers": [
-                    "ROM 48% • High Joint Guarding",
-                    "ROM 62% • Psychosocial Guarding",
-                    "ROM >85% • Natural Recovery Arc",
-                ],
-                "IME Verification State": [
-                    "PENDING SPECIALIST AUDIT",
-                    "VERIFICATION REQUIRED",
-                    "CLINICALLY RESOLVED",
-                ],
-                "Required Sign-Off Command": [
-                    "Execute Independent Medical Audit",
-                    "Verify Behavioral Compliance Log",
-                    "Authorize Standard Billing Track",
-                ],
-            }
-        )
-        st.table(df_rs_queue)
+    # Shared interactive Master Claims Accountability Ledger
+    st.markdown("### MASTER CLAIMS ACCOUNTABILITY LEDGER")
+    show_only_escalations = st.checkbox(
+        "Show Only Ministerial Escalations",
+        value=statutory_briefing_mode,
+        key="filter_ministerial_escalations_ledger",
+    )
+    ledger_view = filtered_ledger.copy()
+    if show_only_escalations:
+        ledger_view = ledger_view[
+            ledger_view["Statutory Risk Rating"].isin(
+                [STATUTORY_MINISTERIAL, STATUTORY_CABINET]
+            )
+        ]
 
-    else:
-        st.markdown("### MASTER CLAIMS ACCOUNTABILITY LEDGER")
-        show_only_escalations = st.checkbox(
-            "Show Only Ministerial Escalations",
-            value=False,
-            key="filter_ministerial_escalations_gm",
-        )
-        df_formatted_ledger = df_master_ledger[
-            ["Claim ID", "Anatomy Target", "Status", "Statutory Risk Rating"]
-        ].copy()
-        if show_only_escalations:
-            df_formatted_ledger = df_formatted_ledger[
-                df_formatted_ledger["Statutory Risk Rating"].isin(
-                    [STATUTORY_MINISTERIAL, STATUTORY_CABINET]
-                )
-            ]
-        st.table(df_formatted_ledger)
+    st.caption(
+        "Click Status or Anatomy Target to sync Audit View filters and open cohort analysis."
+    )
+    header_cols = st.columns([2.0, 1.6, 1.3, 1.5, 0.9])
+    header_cols[0].markdown("**Claim ID**")
+    header_cols[1].markdown("**Anatomy Target**")
+    header_cols[2].markdown("**Status**")
+    header_cols[3].markdown("**Statutory Risk Rating**")
+    header_cols[4].markdown("**Open**")
 
+    for _, row in ledger_view.iterrows():
+        token = str(row["Claim ID"])
+        anatomy = str(row["Anatomy Target"])
+        status = str(row["Status"])
+        rating = str(row["Statutory Risk Rating"])
+        r1, r2, r3, r4, r5 = st.columns([2.0, 1.6, 1.3, 1.5, 0.9])
+        r1.code(token, language=None)
+        if r2.button(anatomy, key=f"ledger_anatomy_{token}", use_container_width=True):
+            jump_to_audit_sector(
+                anatomy=anatomy,
+                status="CRITICAL DRIFT",
+                cohort=True,
+            )
+        if r3.button(status, key=f"ledger_status_{token}", use_container_width=True):
+            jump_to_audit_sector(status=status, cohort=True)
+        r4.caption(rating)
+        if r5.button("Open", key=f"ledger_open_{token}", use_container_width=True):
+            jump_to_audit_sector(claim_id=token)
+
+    if role == SCHEME_DIRECTOR and not statutory_briefing_mode:
         st.markdown("---")
         st.markdown("### AGGREGATE SCHEME CAPEX VELOCITY TRAJECTORY")
         days_series = np.arange(0, 121, 10)
         standard_macro = np.clip(25000 * 3 * (days_series / 90), 0, 25000 * 3)
         actual_macro = 25000 * 3 * (days_series / 90) * (1.0 + (0.006 * days_series))
-
         df_macro_chart = pd.DataFrame(
             {
                 "Days Elapsed": days_series,
@@ -914,6 +1285,7 @@ else:
     duty_tier = selected_row["Demands"]
     actual_rom = float(selected_row["ROM_Actual"])
     actual_spend = float(selected_row["Spend_To_Date"])
+    dict_txt = str(selected_row.get("NLP_Ingest") or "")
 
     # Core Backend Calculations Matrix
     job_multiplier = (
@@ -947,87 +1319,49 @@ else:
         impact_class = "nominal-impact-value"
 
     # Prescriptive AI Protocol Engine & Adaptive CV Trajectory Loops
-    if "Zeta" in subject_token:
-        dict_txt = (
-            "Advanced structural vulnerability noted in knee construct. High manual "
-            "occupational exposures compounding timeline variance."
-        )
-
+    if "Zeta" in subject_token or "Knee" in str(anatomy):
         protocol_html = f"""<div style="background-color:#1b1416; padding:0.8rem; border-radius:4px; border:1px solid #6b21a8; margin-bottom:0.8rem;">
-<div class="metric-label" style="color:#ef4444; font-weight:700;">🤖 AUTOMATED MITIGATION PROTOCOL</div>
+<div class="metric-label" style="color:#ef4444; font-weight:700;">AUTOMATED MITIGATION PROTOCOL</div>
 <ul style="color:#f8fafc; font-size:0.88rem; margin:0; padding-left:1.2rem; line-height:1.4;">
-<li><strong>⚠️ Commutation Target:</strong> Initiate immediate Lump-Sum settlement review range (${mitigated_reserve_target:,.0f} - ${projected_final_cost:,.0f} NZD) to transfer long-tail structural risk off ledger balance sheets.</li>
-<li><strong>🩺 IME Authorization:</strong> Issue urgent Independent Medical Examination directive to challenge current permanent incapacity ceiling.</li>
-<li><strong>⚙️ Demands Override:</strong> Force immediate drop in Occupational Tier from Heavy Manual to Clerical/Supervisory.</li>
+<li><strong>Commutation Target:</strong> Initiate immediate Lump-Sum settlement review range (${mitigated_reserve_target:,.0f} - ${projected_final_cost:,.0f} NZD).</li>
+<li><strong>IME Authorization:</strong> Issue urgent Independent Medical Examination directive.</li>
+<li><strong>Demands Override:</strong> Force immediate drop in Occupational Tier from Heavy Manual to Clerical/Supervisory.</li>
 </ul>
 </div>"""
-
         adaptive_cv_html = """<div style="background-color:#18141c; padding:0.8rem; border-radius:4px; border:1px solid #a855f7; margin-bottom:0.8rem;">
-<div class="metric-label" style="color:#c084fc; font-weight:700; display:flex; justify-content:between; align-items:center;">
-<span>💼 ADAPTIVE CAREER TRAJECTORY & CV PIVOT MATRIX</span>
-<span style="background-color:#10b981; color:#0c1017; font-size:0.7rem; padding:1px 5px; border-radius:3px; font-weight:700; margin-left:10px;">🎖️ MSD CERTIFIED ADOPTION MANDATORY</span>
-</div>
-<div style="font-size:0.84rem; color:#8b949e; margin-bottom:0.4rem; font-style:italic;">Mental Preparation Lifeline & Supportive Path Forward via Inter-Agency Ingest. Adherence is state-certified.</div>
-<table style="width:100%; border-collapse:collapse; font-size:0.85rem; color:#f8fafc;">
-<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">Obsolete Vector:</td><td>Heavy Industrial Operations (Physically Incapacitated)</td></tr>
-<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">Cognitive Harvest:</td><td>Blueprint Interpretation, Logistics Coordination, OHS Enforcement</td></tr>
-<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">New Target CV:</td><td><strong>Site Quality & Safety Compliance Auditor</strong> (MSD Legally Registered Blueprint)</td></tr>
-<tr><td style="color:#8b949e; padding:4px 0; vertical-align:middle;">MSD Training Bridge:</td><td>
-<div style="display:inline-block; background-color:#166534; color:#4ade80; border:1px solid #14532d; font-size:0.72rem; padding:1px 6px; border-radius:3px; font-weight:600; margin-bottom:3px;">⚡ SYSTEM AUTOMATION ACTIVE</div><br/>
-<span style="color:#38bdf8; font-family:monospace;">📁 MSD Registry Slot Reserved → Digital Site Log Systems Cert #AAT-2026</span>
-</td></tr>
-</table>
+<div class="metric-label" style="color:#c084fc; font-weight:700;">ADAPTIVE CAREER TRAJECTORY & CV PIVOT MATRIX</div>
+<div style="font-size:0.84rem; color:#8b949e; margin-bottom:0.4rem;">MSD Certified Adoption Mandatory · Inter-Agency Ingest</div>
 </div>"""
-
-    elif "Delta" in subject_token:
-        dict_txt = (
-            "Claimant presents with severe shoulder disruption. Cellular age curves "
-            "indicate prolonged recovery runway."
-        )
-
+    elif functional_drift > 15:
         protocol_html = """<div style="background-color:#141b1f; padding:0.8rem; border-radius:4px; border:1px solid #0369a1; margin-bottom:0.8rem;">
-<div class="metric-label" style="color:#38bdf8; font-weight:700;">🤖 AUTOMATED MITIGATION PROTOCOL</div>
+<div class="metric-label" style="color:#38bdf8; font-weight:700;">AUTOMATED MITIGATION PROTOCOL</div>
 <ul style="color:#f8fafc; font-size:0.88rem; margin:0; padding-left:1.2rem; line-height:1.4;">
-<li><strong>🧠 Clinical Triage:</strong> Deploy proactive psychological resilience and behavioral counseling within 7 days to address elevated psychosocial barrier spikes.</li>
-<li><strong>🤝 Light-Duty Matching:</strong> Initialize structured transitional employer-return tracking protocol to halt ongoing baseline drift velocity.</li>
+<li><strong>Clinical Triage:</strong> Deploy psychological resilience counseling within 7 days.</li>
+<li><strong>Light-Duty Matching:</strong> Initialize transitional employer-return tracking protocol.</li>
 </ul>
 </div>"""
-
         adaptive_cv_html = """<div style="background-color:#141b1f; padding:0.8rem; border-radius:4px; border:1px solid #0284c7; margin-bottom:0.8rem;">
-<div class="metric-label" style="color:#38bdf8; font-weight:700; display:flex; justify-content:between; align-items:center;">
-<span>💼 ADAPTIVE CAREER TRAJECTORY & CV PIVOT MATRIX</span>
-<span style="background-color:#10b981; color:#0c1017; font-size:0.7rem; padding:1px 5px; border-radius:3px; font-weight:700; margin-left:10px;">🎖️ MSD CERTIFIED ADOPTION MANDATORY</span>
-</div>
-<div style="font-size:0.84rem; color:#8b949e; margin-bottom:0.4rem; font-style:italic;">Mental Preparation Lifeline & Supportive Path Forward via Inter-Agency Ingest. Adherence is state-certified.</div>
-<table style="width:100%; border-collapse:collapse; font-size:0.85rem; color:#f8fafc;">
-<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">Obsolete Vector:</td><td>Active Logistics Manual Handling (Glenohumeral Traumatic Deviation)</td></tr>
-<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">Cognitive Harvest:</td><td>Fleet Routing Management, Procurement Sourcing, Manifest Tracking</td></tr>
-<tr style="border-bottom:1px solid #30363d;"><td style="color:#8b949e; padding:4px 0;">New Target CV:</td><td><strong>Supply Chain Procurement Analyst / Dispatch Supervisor</strong></td></tr>
-<tr><td style="color:#8b949e; padding:4px 0; vertical-align:middle;">MSD Training Bridge:</td><td>
-<div style="display:inline-block; background-color:#166534; color:#4ade80; border:1px solid #14532d; font-size:0.72rem; padding:1px 6px; border-radius:3px; font-weight:600; margin-bottom:3px;">⚡ SYSTEM AUTOMATION ACTIVE</div><br/>
-<span style="color:#38bdf8; font-family:monospace;">📁 MSD Registry Slot Reserved → Public Service Transit Admin Pipeline</span>
-</td></tr>
-</table>
+<div class="metric-label" style="color:#38bdf8; font-weight:700;">ADAPTIVE CAREER TRAJECTORY & CV PIVOT MATRIX</div>
+<div style="font-size:0.84rem; color:#8b949e;">MSD Certified Adoption Mandatory</div>
 </div>"""
-
     else:
-        dict_txt = (
-            "Favorable tissue consistency. Functional path trajectory arc tracking "
-            "nominal. Low stress metrics."
-        )
         protocol_html = """<div style="background-color:#141f17; padding:0.8rem; border-radius:4px; border:1px solid #15803d; margin-bottom:0.8rem;">
-<div class="metric-label" style="color:#4ade80; font-weight:700;">🤖 AUTOMATED MITIGATION PROTOCOL</div>
-<p style="color:#f8fafc; font-size:0.88rem; margin:0; line-height:1.4;">
-<strong>✅ Path Alignment Secure:</strong> Maintain standard vocational rehabilitation baseline track. Clear file for regular automated payment processing. No structural intervention required this cycle.
-</p>
+<div class="metric-label" style="color:#4ade80; font-weight:700;">AUTOMATED MITIGATION PROTOCOL</div>
+<p style="color:#f8fafc; font-size:0.88rem; margin:0;">Path Alignment Secure — maintain standard vocational rehabilitation baseline.</p>
+</div>"""
+        adaptive_cv_html = """<div style="background-color:#141f17; padding:0.8rem; border-radius:4px; border:1px solid #166534; margin-bottom:0.8rem;">
+<div class="metric-label" style="color:#4ade80; font-weight:700;">ADAPTIVE CAREER TRAJECTORY STATUS</div>
+<p style="color:#f8fafc; font-size:0.88rem; margin:0;">Baseline capacity holds. Verified via MSD National Framework.</p>
 </div>"""
 
-        adaptive_cv_html = """<div style="background-color:#141f17; padding:0.8rem; border-radius:4px; border:1px solid #166534; margin-bottom:0.8rem;">
-<div class="metric-label" style="color:#4ade80; font-weight:700;">💼 ADAPTIVE CAREER TRAJECTORY STATUS</div>
-<p style="color:#f8fafc; font-size:0.88rem; margin:0; line-height:1.4;">
-Baseline capacity holds. Pre-injury CV requires zero structural alterations. Natural track recovery trajectory validated. Verified via MSD National Framework.
-</p>
-</div>"""
+    # Quick anatomy cohort jump from dossier
+    if st.button(
+        f"Open Anatomical Cohort: {anatomy}",
+        key=f"dossier_cohort_{subject_token}",
+        use_container_width=True,
+    ):
+        jump_to_audit_sector(anatomy=str(anatomy), status="CRITICAL DRIFT", cohort=True)
+
 
     st.markdown("## PREVENTATIVE DRIFT RADAR DEEP-DIVE")
 
@@ -1084,7 +1418,7 @@ Baseline capacity holds. Pre-injury CV requires zero structural alterations. Nat
         if statutory_briefing_mode:
             st.markdown('<div class="locked-resolve-wrap">', unsafe_allow_html=True)
             if st.button(
-                "Identity Unmasking Restricted",
+                "🔒 Identity Unmasking Restricted",
                 key=f"resolve_locked_{subject_token}",
                 use_container_width=True,
             ):
@@ -1126,7 +1460,7 @@ Baseline capacity holds. Pre-injury CV requires zero structural alterations. Nat
             # Scheme Director — operational view without PII unmask (policy: CO/RS only)
             st.markdown('<div class="locked-resolve-wrap">', unsafe_allow_html=True)
             if st.button(
-                "Identity Unmasking Restricted",
+                "🔒 Identity Unmasking Restricted",
                 key=f"resolve_gm_locked_{subject_token}",
                 use_container_width=True,
             ):
