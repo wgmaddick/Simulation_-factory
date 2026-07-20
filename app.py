@@ -36,44 +36,52 @@ st.markdown(
         color: #ffffff !important;
         font-weight: 700 !important;
     }
-    /* Institutional Metric Box Grid Wrappers */
+    /* Industry Metric Card Highlights — matched to US Risk viewport */
     .metric-box {
         background-color: #161b22;
         border: 1px solid #30363d;
         border-radius: 6px;
-        padding: 1.2rem;
+        padding: 1.5rem;
         margin-bottom: 1rem;
         height: auto;
         overflow: visible;
     }
     .metric-label {
         font-family: "IBM Plex Mono", monospace;
-        font-size: 0.80rem;
+        font-size: 0.85rem;
         text-transform: uppercase;
         color: #8b949e;
         letter-spacing: 0.05em;
-        margin-bottom: 0.4rem;
+        margin-bottom: 0.45rem;
+    }
+    .metric-sequence-tag {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: #38bdf8;
+        margin-bottom: 0.35rem;
     }
     .metric-value-silver {
-        font-size: 1.8rem;
+        font-size: 2rem;
         font-weight: 700;
         color: #e2e8f0;
         line-height: 1.2;
     }
     .metric-value-crimson {
-        font-size: 1.8rem;
+        font-size: 2rem;
         font-weight: 700;
         color: #ef4444;
         line-height: 1.2;
     }
     .metric-value-green {
-        font-size: 1.8rem;
+        font-size: 2rem;
         font-weight: 700;
         color: #10b981;
         line-height: 1.2;
     }
     .metric-value-purple {
-        font-size: 1.8rem;
+        font-size: 2rem;
         font-weight: 700;
         color: #a855f7;
         line-height: 1.2;
@@ -81,7 +89,7 @@ st.markdown(
     .metric-subtext {
         font-size: 0.85rem;
         color: #8b949e;
-        margin-top: 0.3rem;
+        margin-top: 0.35rem;
     }
     /* Executive Large-Print Callout Focus Elements */
     .critical-impact-value {
@@ -913,79 +921,73 @@ if statutory_briefing_mode:
     )
 st.markdown("---")
 
-# --- INITIATIVE 1: ALL-OF-GOVERNMENT DATA INTEGRATION GRID ---
-st.markdown("### ALL-OF-GOVERNMENT DATA INTEGRATION GRID")
+# --- WHAT / WHERE / WHEN SEQUENCE (US Risk viewport container layout · Crown metrics) ---
+# Exact visual port of the US Layer-1 metric-box row; labels remapped to AoG agencies.
 st.markdown(
-    "<p style='color:#8b949e; margin-top:-10px; font-size:0.9rem;'>"
-    "Real-time inter-agency data synchronization pipeline and encrypted "
-    "security verification tokens.</p>",
+    "<p style='color:#8b949e; font-size:0.9rem; margin-bottom:0.35rem;'>"
+    "What · Where · When — Crown Agency Sync Surface · "
+    "Health NZ · MSD · IRD · Ministerial</p>",
     unsafe_allow_html=True,
 )
 
-gov_col1, gov_col2, gov_col3, gov_col4 = st.columns(4)
+www_col1, www_col2, www_col3, www_col4 = st.columns(4)
 
-with gov_col1:
-    with st.expander("IRD INCOME EXCHANGE", expanded=False):
-        st.markdown(
-            """
-<div style="font-family:monospace; font-size:0.8rem; color:#8b949e; line-height:1.4;">
-<strong>Status:</strong> SECURE LIVE SYNC<br/>
-<strong>Last Harvest:</strong> Today, 11:42 AM<br/>
-<strong>Channel Hash:</strong> IRD-2026-99X4<br/>
-<hr style="border:0; border-top:1px solid #30363d; margin:0.4rem 0;"/>
-<span style="color:#10b981;">✓ 12-Month wage ledger verified.</span>
-</div>
-""",
-            unsafe_allow_html=True,
-        )
+with www_col1:
+    st.markdown(
+        '<div class="metric-box">'
+        '<div class="metric-sequence-tag">What</div>'
+        '<div class="metric-label">Health NZ Clinical Grid</div>'
+        '<div class="metric-value-green">Operational</div>'
+        '<div class="metric-subtext">Orthopaedic records linked · HNZ-MED-4402</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+with www_col2:
+    st.markdown(
+        '<div class="metric-box">'
+        '<div class="metric-sequence-tag">Where</div>'
+        '<div class="metric-label">MSD Workforce Pipeline</div>'
+        '<div class="metric-value-silver">14 Matches</div>'
+        '<div class="metric-subtext">Modified light-duty · MSD-AX-7710</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+with www_col3:
+    st.markdown(
+        '<div class="metric-box">'
+        '<div class="metric-sequence-tag">When</div>'
+        '<div class="metric-label">IRD Income Exchange</div>'
+        '<div class="metric-value-green">Live Sync</div>'
+        '<div class="metric-subtext">12-month wage ledger · IRD-2026-99X4 · 11:42</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+with www_col4:
+    st.markdown(
+        '<div class="metric-box">'
+        '<div class="metric-sequence-tag">Crown</div>'
+        '<div class="metric-label">Ministerial Cabinet Pipeline</div>'
+        '<div class="metric-value-silver" style="color:#38bdf8;">Blue / Active</div>'
+        '<div class="metric-subtext">BIM escalation · CAB-BIM-2026-ACC</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
-with gov_col2:
-    with st.expander("MSD WORKFORCE PIPELINE", expanded=False):
-        st.markdown(
-            """
-<div style="font-family:monospace; font-size:0.8rem; color:#8b949e; line-height:1.4;">
-<strong>Status:</strong> LIVE INTEGRATION<br/>
-<strong>Last Harvest:</strong> Today, 11:40 AM<br/>
-<strong>Channel Hash:</strong> MSD-AX-7710<br/>
-<hr style="border:0; border-top:1px solid #30363d; margin:0.4rem 0;"/>
-<span style="color:#10b981;">✓ 14 Modified light-duty matches found.</span>
-</div>
-""",
-            unsafe_allow_html=True,
-        )
-
-with gov_col3:
-    with st.expander("HEALTH NZ CLINICAL GRID", expanded=False):
-        st.markdown(
-            """
-<div style="font-family:monospace; font-size:0.8rem; color:#8b949e; line-height:1.4;">
-<strong>Status:</strong> PROXIED / OPERATIONAL<br/>
-<strong>Last Harvest:</strong> Today, 10:15 AM<br/>
-<strong>Channel Hash:</strong> HNZ-MED-4402<br/>
-<hr style="border:0; border-top:1px solid #30363d; margin:0.4rem 0;"/>
-<span style="color:#38bdf8;">i Historical orthopaedic records linked.</span>
-</div>
-""",
-            unsafe_allow_html=True,
-        )
-
-with gov_col4:
-    with st.expander(
-        "● MINISTERIAL BRIEFING & CABINET PIPELINE",
-        expanded=statutory_briefing_mode,
-    ):
-        st.markdown(
-            """
-<div style="font-family:monospace; font-size:0.8rem; color:#8b949e; line-height:1.4;">
-<strong>Status:</strong> <span style="color:#38bdf8;">BLUE / ACTIVE</span><br/>
-<strong>Last Harvest:</strong> Today, 11:45 AM<br/>
-<strong>Channel Hash:</strong> CAB-BIM-2026-ACC<br/>
-<hr style="border:0; border-top:1px solid #30363d; margin:0.4rem 0;"/>
-<span style="color:#38bdf8;">● Cabinet paper pipeline armed · BIM escalation channel open.</span>
-</div>
-""",
-            unsafe_allow_html=True,
-        )
+# Channel detail expanders (secondary) — harvest hashes remain available without cluttering viewport
+with st.expander("All-of-Government channel hashes & harvest receipts", expanded=False):
+    d1, d2, d3, d4 = st.columns(4)
+    d1.markdown(
+        "**Health NZ** · PROXIED / OPERATIONAL · Last harvest 10:15 AM · HNZ-MED-4402"
+    )
+    d2.markdown(
+        "**MSD** · LIVE INTEGRATION · Last harvest 11:40 AM · MSD-AX-7710"
+    )
+    d3.markdown(
+        "**IRD** · SECURE LIVE SYNC · Last harvest 11:42 AM · IRD-2026-99X4"
+    )
+    d4.markdown(
+        "**Ministerial** · BLUE / ACTIVE · Last harvest 11:45 AM · CAB-BIM-2026-ACC"
+    )
 
 # --- Ministerial Escalation Banner (between AoG grid and Audit Command) ---
 if SCHEME_CRITICAL_SUBJECTS > 0:
