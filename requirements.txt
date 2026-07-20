@@ -1,4 +1,3 @@
-# Streamlit Community Cloud dependency pins for US Risk Orchestration Engine
 streamlit>=1.32.0
 pandas>=2.0.0,<3.0.0
 numpy>=1.26.0
