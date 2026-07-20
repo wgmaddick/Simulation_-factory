@@ -1,7 +1,8 @@
-"""AAT Scheme Performance Engine — predictive operational risk governance.
+"""NZ ACC Risk Orchestration Engine — AAT Scheme Performance (localized).
 
-Portrait-tablet optimized: slim 3-column global metrics, core-vector master
-ledger, and stacked drill-down viewports (dossier → alignment table → chart).
+New Zealand Accident Compensation Corporation operational surface with
+All-of-Government grids: IRD Income Exchange, MSD Workforce Pipeline, and
+Health NZ Clinical Grid. NZD ledger, MSD certified CV pivot matrices.
 """
 
 from __future__ import annotations
@@ -10,28 +11,10 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-LAYOUT_LOCKED = True
-SCHEME_DIRECTOR = "Scheme Director (GM)"
-CLAIMS_OFFICER = "Claims Officer / Analyst"
-REVIEWING_SPECIALIST = "Reviewing Specialist"
-GLOBAL_VIEW = "Global Scheme Portfolio (All Active Claims)"
-NEW_CLAIM_VIEW = "➕ Log New Claimant Profile"
-CO_TASK_ID = "CO-AAT-2026-031"
-DUTY_OPTIONS = [
-    "Heavy Manual / Industrial",
-    "Medium Logistics / Transport",
-    "Sedentary Clerical",
-]
-ANATOMY_OPTIONS = [
-    "Shoulder (Glenohumeral)",
-    "Lumbar Spine Matrix",
-    "Lower Extremity (Knee)",
-]
-
 # 1. High-Contrast Sovereign Dark Theme Configuration
 st.set_page_config(
     layout="wide",
-    page_title="AAT Scheme Performance Engine",
+    page_title="NZ ACC Risk Orchestration Engine",
     page_icon="⬡",
     initial_sidebar_state="expanded",
 )
@@ -39,7 +22,7 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
 
     .reportview-container, .main {
         background-color: #0c1017;
@@ -48,64 +31,67 @@ st.markdown(
     }
     .stApp {
         background-color: #0c1017;
-        color: #f8fafc;
-        font-family: "IBM Plex Sans", sans-serif;
-    }
-    [data-testid="stSidebar"] {
-        background-color: #0c1017;
-        border-right: 1px solid #30363d;
-    }
-    [data-testid="stSidebar"] *,
-    [data-testid="stSidebar"] label,
-    [data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {
-        color: #f8fafc !important;
     }
     h1, h2, h3, h4 {
         color: #ffffff !important;
         font-weight: 700 !important;
     }
-    /* Institutional Metric Box Grid Wrappers */
+    /* Industry Metric Card Highlights — matched to US Risk viewport */
     .metric-box {
         background-color: #161b22;
         border: 1px solid #30363d;
         border-radius: 6px;
-        padding: 1.2rem;
+        padding: 1.5rem;
         margin-bottom: 1rem;
         height: auto;
         overflow: visible;
     }
     .metric-label {
         font-family: "IBM Plex Mono", monospace;
-        font-size: 0.80rem;
+        font-size: 0.85rem;
         text-transform: uppercase;
         color: #8b949e;
         letter-spacing: 0.05em;
-        margin-bottom: 0.4rem;
+        margin-bottom: 0.45rem;
+    }
+    .metric-sequence-tag {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: #38bdf8;
+        margin-bottom: 0.35rem;
     }
     .metric-value-silver {
-        font-size: 1.8rem;
+        font-size: 2rem;
         font-weight: 700;
         color: #e2e8f0;
         line-height: 1.2;
     }
     .metric-value-crimson {
-        font-size: 1.8rem;
+        font-size: 2rem;
         font-weight: 700;
         color: #ef4444;
         line-height: 1.2;
     }
     .metric-value-green {
-        font-size: 1.8rem;
+        font-size: 2rem;
         font-weight: 700;
         color: #10b981;
+        line-height: 1.2;
+    }
+    .metric-value-purple {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #a855f7;
         line-height: 1.2;
     }
     .metric-subtext {
         font-size: 0.85rem;
         color: #8b949e;
-        margin-top: 0.3rem;
+        margin-top: 0.35rem;
     }
-    /* Executive Large-Print Callout Focus */
+    /* Executive Large-Print Callout Focus Elements */
     .critical-impact-value {
         font-size: 3.8rem;
         font-weight: 700;
@@ -124,43 +110,335 @@ st.markdown(
         font-family: "IBM Plex Mono", monospace;
         color: #10b981 !important;
     }
-    th, td,
-    [data-testid="stTable"] th,
-    [data-testid="stTable"] td {
+    th, td {
         color: #ffffff !important;
         font-size: 0.95rem !important;
-        white-space: normal !important;
-        overflow-wrap: anywhere !important;
-        word-break: break-word !important;
     }
-    label, [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] {
-        color: #ffffff !important;
-        font-weight: 700 !important;
+
+    /* ============================================================
+       iPadOS / mobile — top-left navigation overlay fix
+       ============================================================ */
+    html {
+      /* Enable env(safe-area-inset-*) with viewport-fit=cover */
     }
-    [data-baseweb="select"] > div,
-    .stTextInput input,
-    .stNumberInput input,
-    .stTextArea textarea {
-        background-color: #161b22 !important;
-        color: #ffffff !important;
-        border-color: #30363d !important;
+    html, body, .stApp, [data-testid="stAppViewContainer"] {
+      padding-top: max(16px, env(safe-area-inset-top, 0px)) !important;
+      box-sizing: border-box !important;
     }
-    [data-testid="stVegaLiteChart"],
-    [data-testid="stLineChart"] {
-        background-color: #161b22 !important;
-        border: 1px solid #30363d;
-        border-radius: 6px;
-        padding: 0.75rem 0.5rem 0.25rem 0.5rem;
+
+    /* Dedicated top navigation bar (flow layout — not absolute) */
+    header[data-testid="stHeader"],
+    .stAppHeader,
+    [data-testid="stHeader"] {
+      position: relative !important;
+      top: auto !important;
+      left: auto !important;
+      right: auto !important;
+      width: 100% !important;
+      height: auto !important;
+      min-height: 52px !important;
+      padding-top: max(16px, env(safe-area-inset-top, 0px)) !important;
+      padding-bottom: 8px !important;
+      padding-left: max(12px, env(safe-area-inset-left, 0px)) !important;
+      padding-right: max(12px, env(safe-area-inset-right, 0px)) !important;
+      margin: 0 !important;
+      background: #0c1017 !important;
+      border-bottom: 1px solid #30363d !important;
+      z-index: 100 !important;
+      display: flex !important;
+      align-items: center !important;
+      overflow: visible !important;
+    }
+
+    /* Pull Streamlit sidebar toggle / return into header flow */
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="collapsedControl"],
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="stExpandSidebarButton"],
+    button[kind="header"],
+    [data-testid="stBaseButton-headerNoPadding"],
+    [data-testid="stBaseButton-header"],
+    header[data-testid="stHeader"] button,
+    .stAppHeader button {
+      position: relative !important;
+      top: auto !important;
+      left: auto !important;
+      right: auto !important;
+      bottom: auto !important;
+      transform: none !important;
+      margin-top: max(24px, calc(env(safe-area-inset-top, 0px) + 8px)) !important;
+      margin-left: 4px !important;
+      min-width: 44px !important;
+      min-height: 44px !important;
+      z-index: 101 !important;
+    }
+
+    [data-testid="stSidebarHeader"] {
+      padding-top: max(16px, env(safe-area-inset-top, 0px)) !important;
+      margin-top: max(24px, env(safe-area-inset-top, 0px)) !important;
+    }
+
+    section[data-testid="stSidebar"] > div:first-child,
+    section[data-testid="stSidebar"] {
+      padding-top: max(16px, env(safe-area-inset-top, 0px)) !important;
+    }
+
+    /* In-flow primary nav strip — ≥40px clear of top AND left edges */
+    .ipad-top-nav {
+      position: relative !important;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      width: 100%;
+      box-sizing: border-box;
+      padding-top: max(16px, env(safe-area-inset-top, 0px));
+      margin-top: max(40px, calc(env(safe-area-inset-top, 0px) + 16px));
+      margin-left: max(40px, calc(env(safe-area-inset-left, 0px) + 16px));
+      padding-bottom: 0.65rem;
+      padding-left: 0.35rem;
+      padding-right: 0.35rem;
+      border-bottom: 1px solid #30363d;
+      background: #0c1017;
+      z-index: 50;
+    }
+    .ipad-top-nav .nav-mark {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: #10b981;
+      text-transform: uppercase;
+      min-height: 44px;
+      min-width: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 0.65rem;
+      border: 1px solid #30363d;
+      background: #161b22;
+      margin-top: 0;
+      margin-left: 0;
+    }
+    .ipad-top-nav .nav-hint {
+      color: #8b949e;
+      font-size: 0.82rem;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    .statutory-meta {
+      color: #38bdf8;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      margin: -0.35rem 0 0.85rem 0;
+      line-height: 1.45;
+    }
+    .ministerial-banner {
+      background: #1b1416;
+      border: 1px solid #ef4444;
+      border-left: 5px solid #ef4444;
+      padding: 1.15rem 1.25rem;
+      margin: 0.85rem 0 1.1rem 0;
+    }
+    .ministerial-badge {
+      display: inline-block;
+      background: #ef4444;
+      color: #ffffff;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 0.3rem 0.65rem;
+      margin-bottom: 0.55rem;
+    }
+    .briefing-mode-chip {
+      display: inline-block;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid #38bdf8;
+      color: #38bdf8;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 0.25rem 0.6rem;
+      margin-bottom: 0.65rem;
+    }
+    .claim-id-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.65rem;
+      background: #0c1017;
+      border: 1px solid #30363d;
+      padding: 0.75rem 0.95rem;
+      margin: 0.35rem 0 0.85rem 0;
+      font-family: "IBM Plex Mono", monospace;
+    }
+    .claim-id-bar .id-label {
+      color: #8b949e;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .claim-id-bar .id-token {
+      color: #ffffff;
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+    .claim-id-bar .id-native {
+      color: #10b981;
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+    .claim-id-bar .resolve-chip {
+      display: inline-block;
+      border: 1px solid #10b981;
+      color: #10b981;
+      background: rgba(16, 185, 129, 0.12);
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 0.35rem 0.7rem;
+      letter-spacing: 0.02em;
+    }
+    .claim-id-bar .masked-chip {
+      display: inline-block;
+      border: 1px solid #8b949e;
+      color: #e2e8f0;
+      background: #161b22;
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 0.35rem 0.7rem;
+    }
+    .claim-id-bar .locked-chip {
+      display: inline-block;
+      border: 1px solid #475569;
+      color: #94a3b8;
+      background: #1e293b;
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 0.35rem 0.7rem;
+    }
+    /* Ministerial locked resolve control — muted slate */
+    div[data-testid="stButton"] > button[kind="secondary"].locked-resolve,
+    .locked-resolve-wrap button {
+      background-color: #1e293b !important;
+      background-image: none !important;
+      color: #94a3b8 !important;
+      border: 1px solid #475569 !important;
+      font-weight: 700 !important;
+    }
+    .locked-resolve-wrap button:hover {
+      background-color: #334155 !important;
+      color: #cbd5e1 !important;
+      border-color: #64748b !important;
+    }
+    /* Claims Officer / Specialist — active green resolve */
+    .active-resolve-wrap button[kind="primary"] {
+      background-color: #10b981 !important;
+      border-color: #10b981 !important;
+      color: #0c1017 !important;
+      font-weight: 700 !important;
+    }
+    .audit-toast {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.8rem;
+      color: #8b949e;
+      margin-top: 0.35rem;
+    }
+
+    /* Tablet / mobile: hard floor — top-left hit targets ≥40px from edges */
+    @media (max-width: 1024px) {
+      header[data-testid="stHeader"],
+      .stAppHeader,
+      [data-testid="stHeader"],
+      .ipad-top-nav {
+        margin-top: max(40px, calc(env(safe-area-inset-top, 0px) + 16px)) !important;
+        margin-left: max(40px, calc(env(safe-area-inset-left, 0px) + 16px)) !important;
+        padding-top: max(16px, env(safe-area-inset-top, 0px)) !important;
+      }
+
+      [data-testid="stSidebarCollapsedControl"],
+      [data-testid="collapsedControl"],
+      [data-testid="stSidebarCollapseButton"],
+      [data-testid="stExpandSidebarButton"],
+      header[data-testid="stHeader"] button,
+      .stAppHeader button,
+      [data-testid="stToolbar"] button,
+      [data-testid="stSidebarHeader"] button,
+      .ipad-top-nav .nav-mark {
+        /* Clear iPadOS Multitasking pill (...) , status bar, Stage Manager */
+        margin-top: max(40px, calc(env(safe-area-inset-top, 0px) + 16px)) !important;
+        margin-left: max(40px, calc(env(safe-area-inset-left, 0px) + 16px)) !important;
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+      }
+
+      div[data-testid="stMainBlockContainer"],
+      .block-container {
+        padding-top: max(1.5rem, calc(env(safe-area-inset-top, 0px) + 1rem)) !important;
+        padding-left: max(1rem, calc(env(safe-area-inset-left, 0px) + 0.5rem)) !important;
+      }
     }
     </style>
+""",
+    unsafe_allow_html=True,
+)
+
+# Dedicated top navigation bar — in-document flow (not absolute overlay)
+st.markdown(
+    """
+    <div class="ipad-top-nav" role="navigation" aria-label="Primary scheme navigation">
+      <span class="nav-mark" aria-hidden="true">☰ NAV</span>
+      <span class="nav-hint">NZ ACC · Scheme navigation — clear of iPadOS status bar &amp; Multitasking controls</span>
+    </div>
     """,
     unsafe_allow_html=True,
 )
 
+# viewport-fit=cover so env(safe-area-inset-*) resolves on iPadOS Safari
+st.markdown(
+    """
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    """,
+    unsafe_allow_html=True,
+)
 
 # --- MASTER CLAIMS DATABASE CORE ---
+MINISTER_ROLE = "Minister for ACC / Crown Governance"
+SCHEME_DIRECTOR = "Scheme Director (GM)"
+CLAIMS_OFFICER = "Claims Officer / Analyst"
+REVIEWING_SPECIALIST = "Reviewing Specialist"
+
+STATUTORY_NOMINAL = "Nominal"
+STATUTORY_MINISTERIAL = "Ministerial Escalation Required"
+STATUTORY_CABINET = "Cabinet Threshold Exceeded"
+
+# Anonymized AAT tokens → Native ACC claim identifiers (tiered unlock)
+NATIVE_ACC_CLAIM_REGISTRY: dict[str, str] = {
+    "AAT-Claimant-Delta-2026": "ACC-NZ-2026-481739",
+    "AAT-Claimant-Epsilon-2026": "ACC-NZ-2026-552018",
+    "AAT-Claimant-Zeta-2026": "ACC-NZ-2026-619447",
+    "AAT-Claimant-Eta-2026": "ACC-NZ-2026-703882",
+    "AAT-Claimant-Theta-2026": "ACC-NZ-2026-774105",
+    "AAT-Claimant-Iota-2026": "ACC-NZ-2026-801336",
+    "AAT-Claimant-Kappa-2026": "ACC-NZ-2026-862559",
+}
+
+
+def resolve_native_acc_claim_id(aat_token: str) -> str:
+    """Map anonymized AAT scheme token to Native ACC Claim ID."""
+    return NATIVE_ACC_CLAIM_REGISTRY.get(
+        str(aat_token),
+        f"ACC-NZ-PENDING-{abs(hash(str(aat_token))) % 10_000_000:07d}",
+    )
+
+
 @st.cache_data
-def load_internal_portfolio_ledger() -> pd.DataFrame:
+def load_internal_portfolio_ledger():
     return pd.DataFrame(
         [
             {
@@ -170,7 +448,16 @@ def load_internal_portfolio_ledger() -> pd.DataFrame:
                 "Demands": "Heavy Manual / Industrial",
                 "ROM_Actual": 62.0,
                 "Spend_To_Date": 28400.0,
+                "Days_Elapsed": 42,
+                "Drift_Velocity": 1.35,
                 "Status": "CRITICAL DRIFT",
+                "Statutory Risk Rating": STATUTORY_MINISTERIAL,
+                "NLP_Ingest": (
+                    "Claimant presents with severe shoulder disruption. Cellular age "
+                    "curves indicate prolonged recovery runway. Psychosocial fear of "
+                    "re-injury spike noted; workplace physical demand conflict with "
+                    "overhead lifting role unresolved."
+                ),
             },
             {
                 "Claim ID": "AAT-Claimant-Epsilon-2026",
@@ -179,7 +466,14 @@ def load_internal_portfolio_ledger() -> pd.DataFrame:
                 "Demands": "Sedentary Clerical",
                 "ROM_Actual": 94.0,
                 "Spend_To_Date": 12100.0,
+                "Days_Elapsed": 28,
+                "Drift_Velocity": 0.22,
                 "Status": "NOMINAL ALIGNMENT",
+                "Statutory Risk Rating": STATUTORY_NOMINAL,
+                "NLP_Ingest": (
+                    "Favorable tissue consistency. Functional path trajectory arc "
+                    "tracking nominal. Low stress metrics."
+                ),
             },
             {
                 "Claim ID": "AAT-Claimant-Zeta-2026",
@@ -188,7 +482,16 @@ def load_internal_portfolio_ledger() -> pd.DataFrame:
                 "Demands": "Heavy Manual / Industrial",
                 "ROM_Actual": 48.0,
                 "Spend_To_Date": 41200.0,
+                "Days_Elapsed": 67,
+                "Drift_Velocity": 2.10,
                 "Status": "CRITICAL DRIFT",
+                "Statutory Risk Rating": STATUTORY_CABINET,
+                "NLP_Ingest": (
+                    "Advanced structural vulnerability noted in knee construct. High "
+                    "manual occupational exposures compounding timeline variance. "
+                    "Surgical waitlist delays extending incapacity window; workplace "
+                    "physical demand conflict with kneeling/climbing duties."
+                ),
             },
             {
                 "Claim ID": "AAT-Claimant-Eta-2026",
@@ -197,265 +500,594 @@ def load_internal_portfolio_ledger() -> pd.DataFrame:
                 "Demands": "Medium Logistics / Transport",
                 "ROM_Actual": 88.0,
                 "Spend_To_Date": 19400.0,
+                "Days_Elapsed": 35,
+                "Drift_Velocity": 0.40,
                 "Status": "NOMINAL ALIGNMENT",
+                "Statutory Risk Rating": STATUTORY_NOMINAL,
+                "NLP_Ingest": (
+                    "Favorable tissue consistency. Functional path trajectory arc "
+                    "tracking nominal. Low stress metrics."
+                ),
+            },
+            {
+                "Claim ID": "AAT-Claimant-Theta-2026",
+                "Anatomy Target": "Lower Extremity (Knee)",
+                "Age": 54,
+                "Demands": "Medium Logistics / Transport",
+                "ROM_Actual": 55.0,
+                "Spend_To_Date": 33800.0,
+                "Days_Elapsed": 51,
+                "Drift_Velocity": 1.72,
+                "Status": "CRITICAL DRIFT",
+                "Statutory Risk Rating": STATUTORY_MINISTERIAL,
+                "NLP_Ingest": (
+                    "Partial-thickness meniscal involvement with delayed MRI access. "
+                    "Surgical waitlist delays primary. Psychosocial spikes around "
+                    "income uncertainty; light-duty matching incomplete."
+                ),
+            },
+            {
+                "Claim ID": "AAT-Claimant-Iota-2026",
+                "Anatomy Target": "Shoulder (Glenohumeral)",
+                "Age": 44,
+                "Demands": "Heavy Manual / Industrial",
+                "ROM_Actual": 58.0,
+                "Spend_To_Date": 30150.0,
+                "Days_Elapsed": 49,
+                "Drift_Velocity": 1.48,
+                "Status": "CRITICAL DRIFT",
+                "Statutory Risk Rating": STATUTORY_MINISTERIAL,
+                "NLP_Ingest": (
+                    "Rotator cuff strain with workplace physical demand conflict. "
+                    "Psychosocial spikes and fear-avoidance; surgical waitlist "
+                    "delays secondary contributor."
+                ),
+            },
+            {
+                "Claim ID": "AAT-Claimant-Kappa-2026",
+                "Anatomy Target": "Lumbar Spine Matrix",
+                "Age": 39,
+                "Demands": "Heavy Manual / Industrial",
+                "ROM_Actual": 64.0,
+                "Spend_To_Date": 26750.0,
+                "Days_Elapsed": 44,
+                "Drift_Velocity": 1.25,
+                "Status": "CRITICAL DRIFT",
+                "Statutory Risk Rating": STATUTORY_MINISTERIAL,
+                "NLP_Ingest": (
+                    "Lumbar load intolerance with workplace physical demand conflict. "
+                    "Psychosocial spikes noted; conservative pathway preferred over "
+                    "surgical waitlist."
+                ),
             },
         ]
     )
 
 
-def dictation_for_claim(claim_id: str) -> str:
-    if "Delta" in claim_id:
-        return (
-            "Claimant presents with severe shoulder disruption. Cellular age curves "
-            "indicate prolonged recovery runway."
-        )
-    if "Zeta" in claim_id:
-        return (
-            "Advanced structural vulnerability noted in knee construct. High manual "
-            "occupational exposures compounding timeline variance."
-        )
-    return (
-        "Favorable tissue consistency. Functional path trajectory arc tracking "
-        "nominal. Low stress metrics."
-    )
+NLP_ROOT_CAUSE_TAXONOMY: dict[str, tuple[str, ...]] = {
+    "Surgical Waitlist Delays": (
+        "surgical waitlist",
+        "mri access",
+        "delayed mri",
+        "waitlist delay",
+    ),
+    "Workplace Physical Demand Conflict": (
+        "workplace physical demand",
+        "occupational exposure",
+        "overhead lifting",
+        "kneeling",
+        "climbing",
+        "manual occupational",
+    ),
+    "Psychosocial Spikes": (
+        "psychosocial",
+        "fear of re-injury",
+        "fear-avoidance",
+        "income uncertainty",
+        "stress",
+    ),
+}
 
 
-def _job_params(duty_tier: str) -> tuple[float, float, float]:
-    if "Heavy" in duty_tier:
-        return 1.30, 28.0, 1.35
-    if "Medium" in duty_tier:
-        return 1.10, 15.0, 1.12
-    return 0.90, 5.0, 0.95
+def synthesize_drift_causes(nlp_texts: list[str]) -> list[tuple[str, int, str]]:
+    """Aggregate NLP ingest fields into ranked root-cause drivers."""
+    scores: dict[str, int] = {k: 0 for k in NLP_ROOT_CAUSE_TAXONOMY}
+    snippets: dict[str, str] = {k: "" for k in NLP_ROOT_CAUSE_TAXONOMY}
+    for raw in nlp_texts:
+        text = str(raw or "").lower()
+        for cause, keywords in NLP_ROOT_CAUSE_TAXONOMY.items():
+            hits = sum(1 for kw in keywords if kw in text)
+            if hits:
+                scores[cause] += hits
+                if not snippets[cause]:
+                    snippets[cause] = str(raw or "")[:140]
+    ranked = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
+    return [
+        (cause, count, snippets[cause])
+        for cause, count in ranked
+        if count > 0
+    ]
 
 
-def emulate_live_telemetry(age: int, duty_tier: str) -> tuple[float, float]:
-    job_multiplier, rom_loss, spend_variance = _job_params(duty_tier)
-    age_factor = (age - 25) * 0.015
-    base_cost = 22500.0 * (1.0 + age_factor) * job_multiplier
-    actual_rom = max(40.0, 100.0 - rom_loss - (age_factor * 25.0))
-    actual_spend = base_cost * spend_variance * (1.0 + (age_factor * 0.2))
-    return float(actual_rom), float(actual_spend)
+GLOBAL_VIEW = "Global Scheme Portfolio (All Active Claims)"
 
 
-def compute_claim_metrics(
-    *,
-    age: int,
-    duty_tier: str,
-    actual_rom: float,
-    actual_spend: float,
-    cap_floor: int,
-) -> dict[str, float]:
-    job_multiplier, _, _ = _job_params(duty_tier)
-    age_factor = (age - 25) * 0.015
-    calibrated_base_cost = 22500.0 * (1.0 + age_factor) * job_multiplier
-    calibrated_base_days = max(1, int(90 * (1.0 + age_factor) * job_multiplier))
-    functional_drift = 100.0 - actual_rom
-    ivc = (actual_spend - calibrated_base_cost) / calibrated_base_cost
-    projected_final_cost = (
-        calibrated_base_cost
-        + (functional_drift * 185.0)
-        + (ivc * calibrated_base_cost)
-    )
-    mitigated_reserve_target = projected_final_cost * (1.0 - (cap_floor / 100.0))
-    permanent_disability_prob = 1.0 / (
-        1.0
-        + np.exp(-(-2.8 + (age * 0.045) + (functional_drift * 0.055)))
-    )
-    return {
-        "calibrated_base_cost": float(calibrated_base_cost),
-        "calibrated_base_days": float(calibrated_base_days),
-        "functional_drift": float(functional_drift),
-        "ivc": float(ivc),
-        "projected_final_cost": float(projected_final_cost),
-        "mitigated_reserve_target": float(mitigated_reserve_target),
-        "permanent_disability_prob": float(permanent_disability_prob),
-    }
+def set_audit_view(claim_id: str) -> None:
+    """Streamlit on_click callback: open a specific claim in Audit View."""
+    st.session_state["audit_view_selection"] = claim_id
+    st.session_state["cohort_mode"] = False
+    st.session_state["audit_status_filter"] = "ALL"
+    st.session_state["audit_anatomy_filter"] = "ALL"
+    st.session_state["audit_focus_token"] = True
+    st.rerun()
 
 
-def enrich_ledger_with_metrics(
-    ledger: pd.DataFrame, cap_floor: int
-) -> pd.DataFrame:
-    rows: list[dict] = []
-    for _, row in ledger.iterrows():
-        m = compute_claim_metrics(
-            age=int(row["Age"]),
-            duty_tier=str(row["Demands"]),
-            actual_rom=float(row["ROM_Actual"]),
-            actual_spend=float(row["Spend_To_Date"]),
-            cap_floor=int(cap_floor),
-        )
-        rows.append(
-            {
-                **row.to_dict(),
-                "Functional Drift": m["functional_drift"],
-                "PPD": m["permanent_disability_prob"],
-                "TASE": m["projected_final_cost"],
-                "Reserve Target": m["mitigated_reserve_target"],
-                "Base Days": int(m["calibrated_base_days"]),
-            }
-        )
-    return pd.DataFrame(rows)
-
-
-def render_claims_officer_action_task(
-    ledger_enriched: pd.DataFrame, cap_floor: int
+def jump_to_audit_sector(
+    status: str | None = None,
+    anatomy: str | None = None,
+    claim_id: str | None = None,
+    cohort: bool = False,
 ) -> None:
-    """Role-gated action board for Claims Officer / Analyst (CO-AAT-2026-031)."""
-    critical = ledger_enriched[
-        ledger_enriched["Status"].str.contains("CRITICAL", case=False, na=False)
-    ].sort_values("PPD", ascending=False)
-    watch = ledger_enriched[
-        ~ledger_enriched["Status"].str.contains("CRITICAL", case=False, na=False)
-    ].sort_values("PPD", ascending=False)
+    """Cross-sector jump callback: sync Audit View filters + focus.
 
-    st.markdown("### CLAIMS OFFICER / ANALYST — ACTION TASK")
+    Intended for ``st.button(..., on_click=jump_to_audit_sector, kwargs=...)``
+    so widget-keyed session state is updated before the next script run
+    instantiates the Audit View selectboxes.
+    """
+    st.session_state["audit_focus_token"] = True
+    if claim_id:
+        set_audit_view(claim_id)
+        return
+    st.session_state["audit_view_selection"] = GLOBAL_VIEW
+    st.session_state["cohort_mode"] = bool(cohort) or bool(anatomy) or bool(status)
+    if status:
+        st.session_state["audit_status_filter"] = status
+    if anatomy:
+        st.session_state["audit_anatomy_filter"] = anatomy
+        st.session_state["cohort_mode"] = True
+    st.rerun()
+
+
+def clear_audit_filters() -> None:
+    """Reset Audit View Command Sector filters (on_click-safe)."""
+    st.session_state["audit_status_filter"] = "ALL"
+    st.session_state["audit_anatomy_filter"] = "ALL"
+    st.session_state["cohort_mode"] = False
+    st.session_state["audit_view_selection"] = GLOBAL_VIEW
+    st.session_state["audit_focus_token"] = True
+    st.rerun()
+
+
+def apply_ledger_filters(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    status = st.session_state.get("audit_status_filter", "ALL")
+    anatomy = st.session_state.get("audit_anatomy_filter", "ALL")
+    if status and status != "ALL":
+        out = out[out["Status"] == status]
+    if anatomy and anatomy != "ALL":
+        out = out[out["Anatomy Target"] == anatomy]
+    return out.reset_index(drop=True)
+
+
+def render_cohort_analysis_panel(
+    cohort_df: pd.DataFrame,
+    *,
+    anatomy: str,
+    can_unmask: bool,
+    role: str,
+) -> None:
+    """Anatomical cohort aggregation + NLP root-cause synthesis."""
+    critical_df = cohort_df[cohort_df["Status"] == "CRITICAL DRIFT"]
+    n_critical = int(len(critical_df))
+    focus = critical_df if n_critical else cohort_df
+    avg_days = float(focus["Days_Elapsed"].mean()) if len(focus) else 0.0
+    cumulative_risk = float(focus["Spend_To_Date"].sum()) if len(focus) else 0.0
+    primary_velocity = float(focus["Drift_Velocity"].mean()) if len(focus) else 0.0
+
     st.markdown(
-        f"<div class='metric-box' style='border-left:4px solid #ef4444;'>"
-        f"<div class='metric-label'>Task ID</div>"
-        f"<div class='metric-value-silver' style='font-size:1.35rem;'>{CO_TASK_ID}</div>"
-        f"<div class='metric-subtext'>Role: Claims Officer / Analyst · "
-        f"Mandate floor: {cap_floor}% CapEx mitigation</div>"
-        f"<p style='color:#e2e8f0; margin:0.75rem 0 0 0;'>"
-        f"Clear the CRITICAL DRIFT files before they harden into long-tail PPD exposure."
-        f"</p></div>",
+        f"""
+        <div class="metric-box" style="border-left: 4px solid #ef4444;">
+          <div class="metric-label" style="color:#ef4444;">COHORT ANALYSIS</div>
+          <div style="color:#ffffff; font-size:1.25rem; font-weight:700; margin-bottom:0.55rem;">
+            Cohort Analysis: {anatomy} — {n_critical} Critical Drift Subjects
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0.75rem;">
+            <div>
+              <div class="metric-label">Average Days Elapsed</div>
+              <div class="metric-value-silver" style="font-size:1.45rem;">{avg_days:.1f}</div>
+            </div>
+            <div>
+              <div class="metric-label">Cumulative Financial Risk (NZD)</div>
+              <div class="metric-value-crimson" style="font-size:1.45rem;">${cumulative_risk:,.0f}</div>
+            </div>
+            <div>
+              <div class="metric-label">Primary Drift Velocity</div>
+              <div class="metric-value-silver" style="font-size:1.45rem;">{primary_velocity:.2f}×</div>
+            </div>
+          </div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
-    st.markdown("#### Priority Queue")
-    queue_rows: list[dict] = []
-    for idx, (_, row) in enumerate(critical.iterrows()):
-        priority = "P0" if idx == 0 else f"P{idx}"
-        why = (
-            "Highest PPD + spend"
-            if idx == 0
-            else "Critical pathway escalation"
+    causes = synthesize_drift_causes(list(focus["NLP_Ingest"].astype(str)))
+    st.markdown("### SYNTHESIZED DRIFT CAUSE BREAKDOWN")
+    if causes:
+        bullets = "".join(
+            f"<li><strong>{cause}</strong> — signal weight {weight}"
+            f"{f' · “{snippet}…”' if snippet else ''}</li>"
+            for cause, weight, snippet in causes
         )
-        queue_rows.append(
-            {
-                "Priority": priority,
-                "Claim ID": row["Claim ID"],
-                "Why now": why,
-                "Key metrics": (
-                    f"Age {int(row['Age'])} · {row['Anatomy Target']} · "
-                    f"{row['Demands']} · ROM {row['ROM_Actual']:.0f}% · "
-                    f"Drift −{row['Functional Drift']:.0f}% · "
-                    f"Spend ${row['Spend_To_Date']:,.0f} · "
-                    f"PPD {row['PPD'] * 100:.1f}% · "
-                    f"TASE ${row['TASE']:,.0f} NZD · "
-                    f"Reserve ${row['Reserve Target']:,.0f} NZD"
-                ),
-            }
-        )
-    if not watch.empty:
-        watch_ids = " / ".join(
-            str(c).replace("AAT-Claimant-", "").replace("-2026", "")
-            for c in watch["Claim ID"].tolist()
-        )
-        watch_ppd = " / ".join(f"{p * 100:.1f}%" for p in watch["PPD"].tolist())
-        queue_rows.append(
-            {
-                "Priority": "Watch",
-                "Claim ID": " / ".join(watch["Claim ID"].tolist()),
-                "Why now": f"Nominal — no action this cycle ({watch_ids})",
-                "Key metrics": f"PPD {watch_ppd}",
-            }
-        )
-    st.table(pd.DataFrame(queue_rows))
-
-    if not critical.empty:
-        p0 = critical.iloc[0]
-        p1 = critical.iloc[1] if len(critical) > 1 else None
-        p0_short = str(p0["Claim ID"]).replace("AAT-Claimant-", "").replace("-2026", "")
-        actions = [
-            (
-                f"Open **AUDIT VIEW → {p0_short}**, confirm Path B trigger and "
-                "document NLP note (clinical compounding factors)."
-            ),
-            (
-                f"Escalate **{p0_short}** for accelerated rehabilitation pathway; "
-                f"log variance vs {int(p0['Base Days'])}-day recovery runway."
-            ),
-        ]
-        if p1 is not None:
-            p1_short = (
-                str(p1["Claim ID"]).replace("AAT-Claimant-", "").replace("-2026", "")
-            )
-            actions.append(
-                f"Open **{p1_short}**; schedule pathway review and psychosocial "
-                "barrier check from NLP ingest."
-            )
-        actions.extend(
-            [
-                "Update escalated files with intervention status in the Master "
-                "Claims Accountability Ledger.",
-                "Do **not** attempt Lookback Valuation edits — proxied to Scheme Director.",
-            ]
-        )
-        st.markdown("#### Required Actions (This Shift)")
-        for i, action in enumerate(actions, start=1):
-            st.markdown(f"{i}. {action}")
-
-        critical_names = " and ".join(
-            str(c).replace("AAT-Claimant-", "").replace("-2026", "")
-            for c in critical["Claim ID"].tolist()
-        )
-        st.markdown("#### Done When")
         st.markdown(
-            f"- {critical_names} have dated remediation notes in-file\n"
-            "- Escalated claims flagged for Director lookback review if TASE "
-            "still rising after intervention\n"
-            "- Nominal files remain watch-only (no escalation)"
+            f"""
+            <div class="metric-box" style="border-left: 4px solid #a855f7;">
+              <div class="metric-label" style="color:#c084fc;">NLP ROOT-CAUSE SUMMARIZER</div>
+              <div style="color:#8b949e; font-size:0.88rem; margin-bottom:0.45rem;">
+                Scanned {len(focus)} cohort NLP Ingest field(s) · Role: {role}
+              </div>
+              <ul style="color:#f8fafc; font-size:0.95rem; line-height:1.45; margin:0; padding-left:1.2rem;">
+                {bullets}
+              </ul>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
-    st.markdown("---")
+    else:
+        st.info("No dominant NLP root-cause signals detected in this cohort.")
+
+    exp_c1, exp_c2 = st.columns(2)
+    export_df = focus[
+        [
+            "Claim ID",
+            "Anatomy Target",
+            "Status",
+            "Days_Elapsed",
+            "Spend_To_Date",
+            "Drift_Velocity",
+            "Statutory Risk Rating",
+            "NLP_Ingest",
+        ]
+    ].copy()
+    if not can_unmask:
+        # Ministerial / statutory: keep tokenized aliases only
+        export_df["Claim ID"] = export_df["Claim ID"].astype(str)
+    else:
+        export_df["Native ACC Claim ID"] = export_df["Claim ID"].map(
+            resolve_native_acc_claim_id
+        )
+
+    csv_bytes = export_df.to_csv(index=False).encode("utf-8")
+    with exp_c1:
+        st.download_button(
+            "Export Cohort Summary Report (CSV)",
+            data=csv_bytes,
+            file_name=f"cohort_{anatomy.replace(' ', '_').replace('(', '').replace(')', '')}.csv",
+            mime="text/csv",
+            use_container_width=True,
+            key=f"export_cohort_csv_{anatomy}",
+        )
+    report_txt = (
+        f"NZ ACC COHORT SUMMARY REPORT\n"
+        f"Anatomy: {anatomy}\n"
+        f"Critical Drift Subjects: {n_critical}\n"
+        f"Average Days Elapsed: {avg_days:.1f}\n"
+        f"Cumulative Financial Risk (NZD): ${cumulative_risk:,.0f}\n"
+        f"Primary Drift Velocity: {primary_velocity:.2f}\n"
+        f"Role: {role}\n"
+        f"PII Unmask Allowed: {can_unmask}\n\n"
+        f"SYNTHESIZED DRIFT CAUSE BREAKDOWN\n"
+        + "\n".join(f"- {c} (weight {w})" for c, w, _ in causes)
+        + "\n\nCLAIMANTS\n"
+        + "\n".join(export_df["Claim ID"].astype(str).tolist())
+    )
+    with exp_c2:
+        st.download_button(
+            "Export Cohort Summary Report (PDF/TXT)",
+            data=report_txt.encode("utf-8"),
+            file_name=f"cohort_{anatomy.replace(' ', '_')}_summary.txt",
+            mime="text/plain",
+            use_container_width=True,
+            key=f"export_cohort_txt_{anatomy}",
+        )
+
+    if st.button(
+        "Apply Batch Intervention Protocol to Cohort",
+        type="primary",
+        use_container_width=True,
+        key=f"batch_intervene_{anatomy}",
+    ):
+        st.success(
+            f"Batch intervention protocol armed for {n_critical or len(focus)} "
+            f"{anatomy} subject(s) — pathway acceleration + MSD light-duty match queued."
+        )
+
+    st.markdown("#### Cohort Claimant List")
+    for _, row in focus.iterrows():
+        token = str(row["Claim ID"])
+        display_id = token
+        if can_unmask and st.session_state.get(f"resolve_native_{token}", False):
+            display_id = f"{token} → {resolve_native_acc_claim_id(token)}"
+        c1, c2, c3, c4 = st.columns([2.2, 1.4, 1.2, 1.0])
+        c1.markdown(f"**{display_id}**")
+        c2.caption(str(row["Status"]))
+        c3.caption(f"${float(row['Spend_To_Date']):,.0f} NZD · Day {int(row['Days_Elapsed'])}")
+        c4.button(
+            "Open",
+            key=f"open_cohort_{token}",
+            use_container_width=True,
+            on_click=set_audit_view,
+            args=(token,),
+        )
 
 
 df_master_ledger = load_internal_portfolio_ledger()
-claim_ids = df_master_ledger["Claim ID"].tolist()
+critical_drift_count = int(
+    (df_master_ledger["Status"] == "CRITICAL DRIFT").sum()
+)
+# Portfolio-level watchlist count for Ministerial banner (scheme-wide)
+SCHEME_CRITICAL_SUBJECTS = 18
+
+if "identity_audit_log" not in st.session_state:
+    st.session_state.identity_audit_log = []
+if "audit_view_selection" not in st.session_state:
+    st.session_state.audit_view_selection = GLOBAL_VIEW
+if "audit_status_filter" not in st.session_state:
+    st.session_state.audit_status_filter = "ALL"
+if "audit_anatomy_filter" not in st.session_state:
+    st.session_state.audit_anatomy_filter = "ALL"
+if "cohort_mode" not in st.session_state:
+    st.session_state.cohort_mode = False
+if "audit_focus_token" not in st.session_state:
+    st.session_state.audit_focus_token = False
+
+
+def _append_identity_audit(actor: str, action: str, token: str, native_id: str) -> None:
+    from datetime import datetime, timezone
+
+    st.session_state.identity_audit_log.append(
+        {
+            "ts": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%SZ"),
+            "actor": actor,
+            "action": action,
+            "token": token,
+            "native_id": native_id,
+        }
+    )
+    # Keep a short rolling window for the session console
+    if len(st.session_state.identity_audit_log) > 40:
+        st.session_state.identity_audit_log = st.session_state.identity_audit_log[-40:]
+
 
 # --- SIDEBAR: GOVERNANCE LAYER FILTERS ---
 with st.sidebar:
-    st.markdown("### AAT SCHEME GOVERNANCE")
+    st.markdown("### NZ ACC SCHEME GOVERNANCE")
     role = st.selectbox(
         "Active User Role Matrix",
         [
             SCHEME_DIRECTOR,
             CLAIMS_OFFICER,
             REVIEWING_SPECIALIST,
+            MINISTER_ROLE,
         ],
+        key="active_user_role_matrix",
     )
+    statutory_briefing_mode = role == MINISTER_ROLE
+    # GM + caseworkers/specialists may unmask; Minister retains tokenized aliases only
+    can_unmask_identity = role in {
+        SCHEME_DIRECTOR,
+        CLAIMS_OFFICER,
+        REVIEWING_SPECIALIST,
+    }
     st.markdown("---")
     st.markdown("### SCHEME MANDATE INJECTION")
     cap_floor = st.slider("Enforce Liability Mitigation Floor (%)", 0, 50, 15)
-    strategic_note = st.text_input(
+    st.text_input(
         "Disseminate Performance Mandate",
         placeholder="e.g., Accelerate Pathway Interventions",
     )
-    st.caption(f"Active role: **{role}** · Liability floor **{cap_floor}%**")
-    if strategic_note:
-        st.caption(f"Mandate: {strategic_note}")
+    if statutory_briefing_mode:
+        st.info("Statutory Briefing Mode active — Crown Entity Act compliance view.")
+        st.caption(
+            "Aggregated cohort & root-cause analysis permitted. "
+            "Individual PII / Native ACC Claim ID unmasking restricted."
+        )
+    st.caption("Localized NZ ACC · IRD · MSD · Health NZ · Ministerial AoG grids")
+    if st.session_state.identity_audit_log:
+        with st.expander("Identity Unmask Audit Log", expanded=False):
+            for entry in reversed(st.session_state.identity_audit_log[-8:]):
+                st.text(
+                    f"{entry['ts']} · {entry['actor']} · {entry['action']} · "
+                    f"{entry['token']} → {entry['native_id']}"
+                )
 
 # --- MAIN PERFORMANCE DASHBOARD TITLE ---
-st.title("AAT SCHEME PERFORMANCE ENGINE")
+st.title("NZ ACC RISK ORCHESTRATION ENGINE")
 st.markdown(
-    "<p style='color:#8b949e; margin-top:-10px;'>"
-    "Predictive Operational Risk & Long-Tail Claims Governance Framework</p>",
+    "<p class='statutory-meta'>"
+    "Statutory Governance: Answerable to Minister for ACC | "
+    "Crown Entity Act Compliance Mode</p>",
     unsafe_allow_html=True,
 )
+st.markdown(
+    "<p style='color:#8b949e; margin-top:-6px;'>"
+    "AAT Scheme Performance · Predictive Operational Risk & Long-Tail Claims "
+    "Governance (NZD) · All-of-Government Integration</p>",
+    unsafe_allow_html=True,
+)
+if statutory_briefing_mode:
+    st.markdown(
+        '<div class="briefing-mode-chip">STATUTORY BRIEFING MODE · MINISTERIAL OVERLAY</div>',
+        unsafe_allow_html=True,
+    )
 st.markdown("---")
 
-# --- CENTRAL ROUTING SELECTOR ---
+# --- WHAT / WHERE / WHEN SEQUENCE (US Risk viewport container layout · Crown metrics) ---
+# Exact visual port of the US Layer-1 metric-box row; labels remapped to AoG agencies.
+st.markdown(
+    "<p style='color:#8b949e; font-size:0.9rem; margin-bottom:0.35rem;'>"
+    "What · Where · When — Crown Agency Sync Surface · "
+    "Health NZ · MSD · IRD · Ministerial</p>",
+    unsafe_allow_html=True,
+)
+
+www_col1, www_col2, www_col3, www_col4 = st.columns(4)
+
+with www_col1:
+    st.markdown(
+        '<div class="metric-box">'
+        '<div class="metric-sequence-tag">What</div>'
+        '<div class="metric-label">Health NZ Clinical Grid</div>'
+        '<div class="metric-value-green">Operational</div>'
+        '<div class="metric-subtext">Orthopaedic records linked · HNZ-MED-4402</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+with www_col2:
+    st.markdown(
+        '<div class="metric-box">'
+        '<div class="metric-sequence-tag">Where</div>'
+        '<div class="metric-label">MSD Workforce Pipeline</div>'
+        '<div class="metric-value-silver">14 Matches</div>'
+        '<div class="metric-subtext">Modified light-duty · MSD-AX-7710</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+with www_col3:
+    st.markdown(
+        '<div class="metric-box">'
+        '<div class="metric-sequence-tag">When</div>'
+        '<div class="metric-label">IRD Income Exchange</div>'
+        '<div class="metric-value-green">Live Sync</div>'
+        '<div class="metric-subtext">12-month wage ledger · IRD-2026-99X4 · 11:42</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+with www_col4:
+    st.markdown(
+        '<div class="metric-box">'
+        '<div class="metric-sequence-tag">Crown</div>'
+        '<div class="metric-label">Ministerial Cabinet Pipeline</div>'
+        '<div class="metric-value-silver" style="color:#38bdf8;">Blue / Active</div>'
+        '<div class="metric-subtext">BIM escalation · CAB-BIM-2026-ACC</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+# Channel detail expanders (secondary) — harvest hashes remain available without cluttering viewport
+with st.expander("All-of-Government channel hashes & harvest receipts", expanded=False):
+    d1, d2, d3, d4 = st.columns(4)
+    d1.markdown(
+        "**Health NZ** · PROXIED / OPERATIONAL · Last harvest 10:15 AM · HNZ-MED-4402"
+    )
+    d2.markdown(
+        "**MSD** · LIVE INTEGRATION · Last harvest 11:40 AM · MSD-AX-7710"
+    )
+    d3.markdown(
+        "**IRD** · SECURE LIVE SYNC · Last harvest 11:42 AM · IRD-2026-99X4"
+    )
+    d4.markdown(
+        "**Ministerial** · BLUE / ACTIVE · Last harvest 11:45 AM · CAB-BIM-2026-ACC"
+    )
+
+# --- Ministerial Escalation Banner (between AoG grid and Audit Command) ---
+if SCHEME_CRITICAL_SUBJECTS > 0:
+    st.markdown(
+        f"""
+        <div class="ministerial-banner">
+          <div class="ministerial-badge">[MINISTERIAL WATCHLIST ACTIVE]</div>
+          <div style="color:#ffffff; font-size:1.15rem; font-weight:700; margin-bottom:0.35rem;">
+            Critical Pathway Drift — Statutory Escalation Surface
+          </div>
+          <div style="color:#e2e8f0; font-size:1rem; font-weight:600; margin-bottom:0.55rem;">
+            {SCHEME_CRITICAL_SUBJECTS} Subjects breaching long-tail liability thresholds
+          </div>
+          <div style="color:#8b949e; font-size:0.85rem; font-family:monospace;">
+            Crown Entity Act · Answerable to Minister for ACC · BIM / Statutory Escalation channel
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    if st.button(
+        "Generate Cabinet Briefing Note (BIM / Statutory Escalation)",
+        type="primary",
+        use_container_width=True,
+        key="generate_cabinet_briefing",
+    ):
+        st.success(
+            "Cabinet Briefing Note compiled — BIM / Statutory Escalation packet "
+            "staged for Minister for ACC. Provenance receipt sealed to Crown vault."
+        )
+        if statutory_briefing_mode:
+            st.code(
+                "BIM-ACC-2026 · Watchlist subjects: 18 · "
+                "Cabinet Threshold Exceeded files: "
+                f"{int((df_master_ledger['Statutory Risk Rating'] == STATUTORY_CABINET).sum())} · "
+                "Status: READY FOR TABLE",
+                language=None,
+            )
+    if st.button(
+        "Open Critical Drift Cohort in Audit View",
+        use_container_width=True,
+        key="banner_jump_critical_drift",
+        on_click=jump_to_audit_sector,
+        kwargs={"status": "CRITICAL DRIFT", "cohort": True},
+    ):
+        pass
+
+st.markdown("---")
+
+# --- CENTRAL ROUTING SELECTOR (cross-sector jump target) ---
+st.markdown('<div id="audit-view-command-sector"></div>', unsafe_allow_html=True)
+if st.session_state.get("audit_focus_token"):
+    st.success("AUDIT VIEW COMMAND SECTOR focused — filters synced from cross-sector jump.")
+    st.session_state.audit_focus_token = False
+
+claim_options = [GLOBAL_VIEW] + sorted(
+    df_master_ledger["Claim ID"].astype(str).tolist()
+)
+if st.session_state.audit_view_selection not in claim_options:
+    st.session_state.audit_view_selection = GLOBAL_VIEW
+
 view_selection = st.selectbox(
     "AUDIT VIEW COMMAND SECTOR",
-    [GLOBAL_VIEW, NEW_CLAIM_VIEW, *claim_ids],
+    claim_options,
+    key="audit_view_selection",
 )
+
+filter_c1, filter_c2, filter_c3 = st.columns([1.2, 1.4, 1.0])
+with filter_c1:
+    st.selectbox(
+        "Status Pre-filter",
+        ["ALL", "CRITICAL DRIFT", "NOMINAL ALIGNMENT"],
+        key="audit_status_filter",
+    )
+with filter_c2:
+    anatomy_options = ["ALL"] + sorted(
+        df_master_ledger["Anatomy Target"].astype(str).unique().tolist()
+    )
+    st.selectbox(
+        "Anatomy Target Pre-filter",
+        anatomy_options,
+        key="audit_anatomy_filter",
+    )
+with filter_c3:
+    if st.button(
+        "Clear Audit Filters",
+        use_container_width=True,
+        key="clear_audit_filters",
+        on_click=clear_audit_filters,
+    ):
+        pass
+
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ==============================================================================
-# INTERFACE LAYER A: GLOBAL SCHEME PORTFOLIO VIEW (PORTRAIT TABLET OPTIMIZED)
+# INTERFACE LAYER A: GLOBAL SCHEME PORTFOLIO VIEW
 # ==============================================================================
 if view_selection == GLOBAL_VIEW:
-    # Text optimized to avoid text wrapping on tablet layouts
-    col1, col2, col3 = st.columns(3)
+
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.markdown(
             '<div class="metric-box"><div class="metric-label">Total Scheme Claims</div>'
@@ -467,9 +1099,18 @@ if view_selection == GLOBAL_VIEW:
         st.markdown(
             '<div class="metric-box"><div class="metric-label">Critical Pathway Drift</div>'
             '<div class="metric-value-crimson">18 Subjects</div>'
-            '<div class="metric-subtext">Targeted Escalations Pending</div></div>',
+            '<div class="metric-subtext">Click to jump → Audit View</div></div>',
             unsafe_allow_html=True,
         )
+        if st.button(
+            "Jump: Critical Drift → Audit View",
+            key="metric_jump_critical_drift",
+            use_container_width=True,
+            type="primary",
+            on_click=jump_to_audit_sector,
+            kwargs={"status": "CRITICAL DRIFT", "cohort": True},
+        ):
+            pass
     with col3:
         st.markdown(
             '<div class="metric-box"><div class="metric-label">Performance Index</div>'
@@ -477,110 +1118,245 @@ if view_selection == GLOBAL_VIEW:
             '<div class="metric-subtext">Baseline Trajectory Alignment</div></div>',
             unsafe_allow_html=True,
         )
+    with col4:
+        st.markdown(
+            '<div class="metric-box"><div class="metric-label">Ministerial Expectations Match</div>'
+            '<div class="metric-value-silver" style="color:#38bdf8;">88%</div>'
+            '<div class="metric-subtext">Trajectory Alignment</div></div>',
+            unsafe_allow_html=True,
+        )
 
-    # Claims Officer / Analyst role surface — action task CO-AAT-2026-031
-    if role == CLAIMS_OFFICER:
+    st.markdown("#### Anatomical Cohort Jump Pads")
+    anatomy_vals = sorted(df_master_ledger["Anatomy Target"].astype(str).unique().tolist())
+    anatomy_cols = st.columns(max(len(anatomy_vals), 1))
+    for col, anatomy in zip(anatomy_cols, anatomy_vals):
+        n_crit = int(
+            (
+                (df_master_ledger["Anatomy Target"] == anatomy)
+                & (df_master_ledger["Status"] == "CRITICAL DRIFT")
+            ).sum()
+        )
+        with col:
+            if st.button(
+                f"{anatomy} ({n_crit} critical)",
+                key=f"anatomy_jump_{anatomy}",
+                use_container_width=True,
+                on_click=jump_to_audit_sector,
+                kwargs={
+                    "anatomy": anatomy,
+                    "status": "CRITICAL DRIFT",
+                    "cohort": True,
+                },
+            ):
+                pass
+
+    filtered_ledger = apply_ledger_filters(df_master_ledger)
+    active_anatomy = st.session_state.get("audit_anatomy_filter", "ALL")
+    show_cohort = bool(st.session_state.get("cohort_mode")) and active_anatomy not in (
+        None,
+        "ALL",
+        "",
+    )
+
+    if show_cohort:
+        anatomy_cohort = df_master_ledger[
+            df_master_ledger["Anatomy Target"] == active_anatomy
+        ].copy()
+        render_cohort_analysis_panel(
+            anatomy_cohort,
+            anatomy=str(active_anatomy),
+            can_unmask=can_unmask_identity,
+            role=role,
+        )
         st.markdown("---")
-        ledger_enriched = enrich_ledger_with_metrics(df_master_ledger, int(cap_floor))
-        render_claims_officer_action_task(ledger_enriched, int(cap_floor))
 
+    if statutory_briefing_mode:
+        st.markdown("### STATUTORY BRIEFING MODE — CROWN GOVERNANCE SURFACE")
+        st.markdown(
+            """
+            <div class="metric-box" style="border-left: 4px solid #38bdf8;">
+              <div class="metric-label" style="color:#38bdf8;">MINISTER FOR ACC · HIGH-LEVEL OVERSIGHT</div>
+              <div style="color:#ffffff; font-weight:600; margin-bottom:0.55rem;">
+                Tactical case-worker widgets suppressed. Displaying statutory metrics,
+                long-tail financial liability trajectories, and Cabinet briefing tools.
+              </div>
+              <div style="font-size:0.9rem; color:#8b949e; line-height:1.45;">
+                Crown Entity Act Compliance Mode · Scheme Performance Index 85.9% ·
+                Ministerial Expectations Match 88% · Watchlist 18 subjects
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Long-Tail Liability Watchlist", f"{SCHEME_CRITICAL_SUBJECTS} subjects")
+        m2.metric("Cabinet Threshold Files", f"{int((df_master_ledger['Statutory Risk Rating'] == STATUTORY_CABINET).sum())}")
+        m3.metric("Ministerial Escalations", f"{int((df_master_ledger['Statutory Risk Rating'] == STATUTORY_MINISTERIAL).sum())}")
+
+        st.markdown("#### Long-Tail Financial Liability Trajectory (NZD)")
+        days_series = np.arange(0, 121, 10)
+        standard_macro = np.clip(25000 * 3 * (days_series / 90), 0, 25000 * 3)
+        actual_macro = 25000 * 3 * (days_series / 90) * (1.0 + (0.006 * days_series))
+        ministerial_ceiling = standard_macro * 1.12
+        df_macro_chart = pd.DataFrame(
+            {
+                "Days Elapsed": days_series,
+                "Target Operational Runway": standard_macro,
+                "Actual Scheme Outflow": actual_macro,
+                "Ministerial Liability Ceiling": ministerial_ceiling,
+            }
+        )
+        st.line_chart(
+            df_macro_chart,
+            x="Days Elapsed",
+            y=[
+                "Target Operational Runway",
+                "Actual Scheme Outflow",
+                "Ministerial Liability Ceiling",
+            ],
+        )
+
+        st.markdown("#### Cabinet Briefing Tools")
+        b1, b2 = st.columns(2)
+        with b1:
+            if st.button("Export BIM One-Pager", use_container_width=True):
+                st.info("BIM one-pager staged for Ministerial pouch.")
+        with b2:
+            if st.button("Table for Cabinet Committee", use_container_width=True):
+                st.success("Matter queued for Cabinet committee timetable.")
+
+    elif role == CLAIMS_OFFICER:
+        st.markdown("### CLAIMS OFFICER / ANALYST — ACTION TASK")
+        html_task_co = f"""<div class="metric-box" style="border-left: 4px solid #ef4444; padding: 1.2rem;">
+<div class="metric-label" style="color:#ef4444;">TASK ID: CO-AAT-2026-031</div>
+<div class="metric-subtext" style="color:#ffffff; font-weight:600; margin-bottom:0.4rem;">Clear the CRITICAL DRIFT files before they harden into long-tail PPD exposure.</div>
+<div style="font-size:0.85rem; color:#8b949e;">Active Mandate: {cap_floor}% CapEx Mitigation Control Active</div>
+</div>"""
+        st.markdown(html_task_co, unsafe_allow_html=True)
+
+    elif role == REVIEWING_SPECIALIST:
+        st.markdown("### REVIEWING SPECIALIST — CLINICAL ESCALATION AUDIT DECK")
+        html_task_rs = """<div class="metric-box" style="border-left: 4px solid #a855f7; padding: 1.2rem;">
+<div class="metric-label" style="color:#a855f7;">TASK ID: RS-AAT-2026-042</div>
+<div class="metric-subtext" style="color:#ffffff; font-weight:600; margin-bottom:0.4rem;">Validate physical telemetry variance anomalies and verify Independent Medical Examination (IME) compliance directives.</div>
+</div>"""
+        st.markdown(html_task_rs, unsafe_allow_html=True)
+
+    # Shared interactive Master Claims Accountability Ledger
     st.markdown("### MASTER CLAIMS ACCOUNTABILITY LEDGER")
-    # Sliced down strictly to core vectors to prevent page overflow
-    df_formatted_ledger = df_master_ledger[
-        ["Claim ID", "Anatomy Target", "Status"]
-    ].copy()
-    st.table(df_formatted_ledger)
-
-    st.markdown("---")
-    st.markdown("### AGGREGATE SCHEME CAPEX VELOCITY TRAJECTORY")
-
-    days_series = np.arange(0, 121, 10)
-    standard_macro = 25000 * 3 * (days_series / 90)
-    standard_macro = np.clip(standard_macro, 0, 25000 * 3)
-    actual_macro = 25000 * 3 * (days_series / 90) * (1.0 + (0.006 * days_series))
-
-    df_macro_chart = pd.DataFrame(
-        {
-            "Days Elapsed": days_series,
-            "Target Operational Runway": standard_macro,
-            "Actual Scheme Outflow": actual_macro,
-        }
+    show_only_escalations = st.checkbox(
+        "Show Only Ministerial Escalations",
+        value=statutory_briefing_mode,
+        key="filter_ministerial_escalations_ledger",
     )
-    st.line_chart(
-        df_macro_chart,
-        x="Days Elapsed",
-        y=["Target Operational Runway", "Actual Scheme Outflow"],
-        color=["#10b981", "#ef4444"],
+    ledger_view = filtered_ledger.copy()
+    if show_only_escalations:
+        ledger_view = ledger_view[
+            ledger_view["Statutory Risk Rating"].isin(
+                [STATUTORY_MINISTERIAL, STATUTORY_CABINET]
+            )
+        ]
+
+    st.caption(
+        "Click Status or Anatomy Target to sync Audit View filters and open cohort analysis."
     )
+    header_cols = st.columns([2.0, 1.6, 1.3, 1.5, 0.9])
+    header_cols[0].markdown("**Claim ID**")
+    header_cols[1].markdown("**Anatomy Target**")
+    header_cols[2].markdown("**Status**")
+    header_cols[3].markdown("**Statutory Risk Rating**")
+    header_cols[4].markdown("**Open**")
+
+    for _, row in ledger_view.iterrows():
+        token = str(row["Claim ID"])
+        anatomy = str(row["Anatomy Target"])
+        status = str(row["Status"])
+        rating = str(row["Statutory Risk Rating"])
+        r1, r2, r3, r4, r5 = st.columns([2.0, 1.6, 1.3, 1.5, 0.9])
+        r1.code(token, language=None)
+        r2.button(
+            anatomy,
+            key=f"ledger_anatomy_{token}",
+            use_container_width=True,
+            on_click=jump_to_audit_sector,
+            kwargs={
+                "anatomy": anatomy,
+                "status": "CRITICAL DRIFT",
+                "cohort": True,
+            },
+        )
+        r3.button(
+            status,
+            key=f"ledger_status_{token}",
+            use_container_width=True,
+            on_click=jump_to_audit_sector,
+            kwargs={"status": status, "cohort": True},
+        )
+        r4.caption(rating)
+        r5.button(
+            "Open",
+            key=f"ledger_open_{token}",
+            use_container_width=True,
+            on_click=set_audit_view,
+            args=(token,),
+        )
+
+    if role == SCHEME_DIRECTOR and not statutory_briefing_mode:
+        st.markdown("---")
+        st.markdown("### AGGREGATE SCHEME CAPEX VELOCITY TRAJECTORY")
+        days_series = np.arange(0, 121, 10)
+        standard_macro = np.clip(25000 * 3 * (days_series / 90), 0, 25000 * 3)
+        actual_macro = 25000 * 3 * (days_series / 90) * (1.0 + (0.006 * days_series))
+        df_macro_chart = pd.DataFrame(
+            {
+                "Days Elapsed": days_series,
+                "Target Operational Runway": standard_macro,
+                "Actual Scheme Outflow": actual_macro,
+            }
+        )
+        st.line_chart(
+            df_macro_chart,
+            x="Days Elapsed",
+            y=["Target Operational Runway", "Actual Scheme Outflow"],
+        )
 
 # ==============================================================================
-# INTERFACE LAYER B: INDIVIDUAL / NEW CLAIM (EXECUTIVE CARD CONSOLIDATED)
+# INTERFACE LAYER B: INDIVIDUAL DRILL-DOWN VIEW
 # ==============================================================================
 else:
-    is_new_claim = view_selection == NEW_CLAIM_VIEW
+    selected_row = df_master_ledger[
+        df_master_ledger["Claim ID"] == view_selection
+    ].iloc[0]
 
-    if is_new_claim:
-        st.markdown("### LOG NEW CLAIMANT PROFILE")
-        st.caption("Unlocked triage intake · dossier recalculates live")
-        edit_c1, edit_c2, edit_c3 = st.columns(3)
-        with edit_c1:
-            subject_token = st.text_input(
-                "Participant Identifier Token",
-                value="",
-                placeholder="e.g., AAT-Claimant-Theta-2026",
-            )
-            anatomy = st.selectbox(
-                "Anatomy Target",
-                ANATOMY_OPTIONS,
-                index=0,
-            )
-        with edit_c2:
-            age = st.number_input(
-                "Actuarial Chronological Age",
-                min_value=18,
-                max_value=75,
-                value=25,
-            )
-            duty_tier = st.selectbox(
-                "Occupational Demands Tier",
-                DUTY_OPTIONS,
-                index=DUTY_OPTIONS.index("Sedentary Clerical"),
-            )
-        with edit_c3:
-            dict_txt = st.text_area(
-                "Clinical Summary Ingest Log",
-                value="Type or dictate clinical triage notes here...",
-            )
-        actual_rom, actual_spend = emulate_live_telemetry(int(age), str(duty_tier))
-        display_token = subject_token.strip() or "NEW-CLAIMANT-DRAFT"
-    else:
-        selected_row = df_master_ledger[
-            df_master_ledger["Claim ID"] == view_selection
-        ].iloc[0]
+    subject_token = selected_row["Claim ID"]
+    anatomy = selected_row["Anatomy Target"]
+    age = int(selected_row["Age"])
+    duty_tier = selected_row["Demands"]
+    actual_rom = float(selected_row["ROM_Actual"])
+    actual_spend = float(selected_row["Spend_To_Date"])
+    dict_txt = str(selected_row.get("NLP_Ingest") or "")
 
-        subject_token = str(selected_row["Claim ID"])
-        anatomy = str(selected_row["Anatomy Target"])
-        age = int(selected_row["Age"])
-        duty_tier = str(selected_row["Demands"])
-        actual_rom = float(selected_row["ROM_Actual"])
-        actual_spend = float(selected_row["Spend_To_Date"])
-        display_token = subject_token
-        dict_txt = dictation_for_claim(subject_token)
-
-    metrics = compute_claim_metrics(
-        age=int(age),
-        duty_tier=str(duty_tier),
-        actual_rom=float(actual_rom),
-        actual_spend=float(actual_spend),
-        cap_floor=int(cap_floor),
+    # Core Backend Calculations Matrix
+    job_multiplier = (
+        1.30 if "Heavy" in duty_tier else (1.10 if "Medium" in duty_tier else 0.90)
     )
-    calibrated_base_cost = metrics["calibrated_base_cost"]
-    calibrated_base_days = int(metrics["calibrated_base_days"])
-    functional_drift = metrics["functional_drift"]
-    ivc = metrics["ivc"]
-    projected_final_cost = metrics["projected_final_cost"]
-    mitigated_reserve_target = metrics["mitigated_reserve_target"]
-    permanent_disability_prob = metrics["permanent_disability_prob"]
+    age_factor = (age - 25) * 0.015
+    calibrated_base_cost = 22500.0 * (1.0 + age_factor) * job_multiplier
+    calibrated_base_days = int(90 * (1.0 + age_factor) * job_multiplier)
+
+    functional_drift = 100.0 - actual_rom
+    ivc = (actual_spend - calibrated_base_cost) / calibrated_base_cost
+
+    projected_final_cost = (
+        calibrated_base_cost
+        + (functional_drift * 185.0)
+        + (ivc * calibrated_base_cost)
+    )
+    mitigated_reserve_target = projected_final_cost * (1.0 - (cap_floor / 100.0))
+    permanent_disability_prob = 1.0 / (
+        1.0 + np.exp(-(-2.8 + (age * 0.045) + (functional_drift * 0.055)))
+    )
 
     # Set Color Logic for Display Elements
     if functional_drift > 15.0 or permanent_disability_prob > 0.50:
@@ -592,43 +1368,194 @@ else:
         status_color = "#10b981"
         impact_class = "nominal-impact-value"
 
-    # Escape NLP text for HTML injection
-    dict_html = (
-        str(dict_txt)
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-    )
+    # Prescriptive AI Protocol Engine & Adaptive CV Trajectory Loops
+    if "Zeta" in subject_token or "Knee" in str(anatomy):
+        protocol_html = f"""<div style="background-color:#1b1416; padding:0.8rem; border-radius:4px; border:1px solid #6b21a8; margin-bottom:0.8rem;">
+<div class="metric-label" style="color:#ef4444; font-weight:700;">AUTOMATED MITIGATION PROTOCOL</div>
+<ul style="color:#f8fafc; font-size:0.88rem; margin:0; padding-left:1.2rem; line-height:1.4;">
+<li><strong>Commutation Target:</strong> Initiate immediate Lump-Sum settlement review range (${mitigated_reserve_target:,.0f} - ${projected_final_cost:,.0f} NZD).</li>
+<li><strong>IME Authorization:</strong> Issue urgent Independent Medical Examination directive.</li>
+<li><strong>Demands Override:</strong> Force immediate drop in Occupational Tier from Heavy Manual to Clerical/Supervisory.</li>
+</ul>
+</div>"""
+        adaptive_cv_html = """<div style="background-color:#18141c; padding:0.8rem; border-radius:4px; border:1px solid #a855f7; margin-bottom:0.8rem;">
+<div class="metric-label" style="color:#c084fc; font-weight:700;">ADAPTIVE CAREER TRAJECTORY & CV PIVOT MATRIX</div>
+<div style="font-size:0.84rem; color:#8b949e; margin-bottom:0.4rem;">MSD Certified Adoption Mandatory · Inter-Agency Ingest</div>
+</div>"""
+    elif functional_drift > 15:
+        protocol_html = """<div style="background-color:#141b1f; padding:0.8rem; border-radius:4px; border:1px solid #0369a1; margin-bottom:0.8rem;">
+<div class="metric-label" style="color:#38bdf8; font-weight:700;">AUTOMATED MITIGATION PROTOCOL</div>
+<ul style="color:#f8fafc; font-size:0.88rem; margin:0; padding-left:1.2rem; line-height:1.4;">
+<li><strong>Clinical Triage:</strong> Deploy psychological resilience counseling within 7 days.</li>
+<li><strong>Light-Duty Matching:</strong> Initialize transitional employer-return tracking protocol.</li>
+</ul>
+</div>"""
+        adaptive_cv_html = """<div style="background-color:#141b1f; padding:0.8rem; border-radius:4px; border:1px solid #0284c7; margin-bottom:0.8rem;">
+<div class="metric-label" style="color:#38bdf8; font-weight:700;">ADAPTIVE CAREER TRAJECTORY & CV PIVOT MATRIX</div>
+<div style="font-size:0.84rem; color:#8b949e;">MSD Certified Adoption Mandatory</div>
+</div>"""
+    else:
+        protocol_html = """<div style="background-color:#141f17; padding:0.8rem; border-radius:4px; border:1px solid #15803d; margin-bottom:0.8rem;">
+<div class="metric-label" style="color:#4ade80; font-weight:700;">AUTOMATED MITIGATION PROTOCOL</div>
+<p style="color:#f8fafc; font-size:0.88rem; margin:0;">Path Alignment Secure — maintain standard vocational rehabilitation baseline.</p>
+</div>"""
+        adaptive_cv_html = """<div style="background-color:#141f17; padding:0.8rem; border-radius:4px; border:1px solid #166534; margin-bottom:0.8rem;">
+<div class="metric-label" style="color:#4ade80; font-weight:700;">ADAPTIVE CAREER TRAJECTORY STATUS</div>
+<p style="color:#f8fafc; font-size:0.88rem; margin:0;">Baseline capacity holds. Verified via MSD National Framework.</p>
+</div>"""
+
+    # Quick anatomy cohort jump from dossier
+    if st.button(
+        f"Open Anatomical Cohort: {anatomy}",
+        key=f"dossier_cohort_{subject_token}",
+        use_container_width=True,
+        on_click=jump_to_audit_sector,
+        kwargs={
+            "anatomy": str(anatomy),
+            "status": "CRITICAL DRIFT",
+            "cohort": True,
+        },
+    ):
+        pass
+
+
 
     st.markdown("## PREVENTATIVE DRIFT RADAR DEEP-DIVE")
 
-    # --- STACKED BLOCK 1: MASTER LEDGER DOSSIER (full width for tablet scanning) ---
+    # --- STACKED BLOCK 1: MASTER LEDGER DOSSIER BOX ---
     st.markdown("#### Comprehensive Scheme Ledger Dossier")
 
-    if role == SCHEME_DIRECTOR:
-        fee_line = (
-            f'<div class="metric-label" style="margin-top:0.6rem;">Dynamic Lookback Valuation Basis</div>\n'
-            f'<div class="metric-value-green" style="font-size:1.4rem;">'
-            f"${(5000 + (projected_final_cost * 0.12)):,.2f} NZD</div>"
+    native_acc_id = resolve_native_acc_claim_id(subject_token)
+    resolve_key = f"resolve_native_{subject_token}"
+    if resolve_key not in st.session_state:
+        st.session_state[resolve_key] = False
+
+    # Ministerial statutory mode never retains an unmasked identity surface
+    if statutory_briefing_mode and st.session_state[resolve_key]:
+        st.session_state[resolve_key] = False
+
+    id_col, btn_col = st.columns([2.4, 1.2])
+    with id_col:
+        if st.session_state[resolve_key] and can_unmask_identity:
+            st.markdown(
+                f"""
+                <div class="claim-id-bar">
+                  <span class="id-label">ID</span>
+                  <span class="id-token">{subject_token}</span>
+                  <span class="resolve-chip">RESOLVED</span>
+                  <span class="id-label">Native ACC Claim ID</span>
+                  <span class="id-native">{native_acc_id}</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        elif statutory_briefing_mode:
+            st.markdown(
+                f"""
+                <div class="claim-id-bar">
+                  <span class="id-label">ID</span>
+                  <span class="id-token">{subject_token}</span>
+                  <span class="locked-chip">IDENTITY UNMASKING RESTRICTED</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                f"""
+                <div class="claim-id-bar">
+                  <span class="id-label">ID</span>
+                  <span class="id-token">{subject_token}</span>
+                  <span class="masked-chip">MASKED TOKEN</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+    with btn_col:
+        if statutory_briefing_mode:
+            st.markdown('<div class="locked-resolve-wrap">', unsafe_allow_html=True)
+            if st.button(
+                "🔒 Identity Unmasking Restricted",
+                key=f"resolve_locked_{subject_token}",
+                use_container_width=True,
+            ):
+                st.warning(
+                    "Statutory governance mode restricts access to individual PII."
+                )
+            st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown(
+                '<div class="audit-toast">Minister for ACC · PII gate enforced</div>',
+                unsafe_allow_html=True,
+            )
+        elif can_unmask_identity:
+            st.markdown('<div class="active-resolve-wrap">', unsafe_allow_html=True)
+            if st.session_state[resolve_key]:
+                if st.button(
+                    "Re-mask AAT Token",
+                    key=f"remask_{subject_token}",
+                    use_container_width=True,
+                ):
+                    st.session_state[resolve_key] = False
+                    _append_identity_audit(
+                        role, "REMASK", subject_token, native_acc_id
+                    )
+                    st.rerun()
+            else:
+                if st.button(
+                    "Resolve to Native ACC Claim ID",
+                    key=f"resolve_{subject_token}",
+                    type="primary",
+                    use_container_width=True,
+                ):
+                    st.session_state[resolve_key] = True
+                    _append_identity_audit(
+                        role, "UNMASK", subject_token, native_acc_id
+                    )
+                    st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
+        # No additional fallback — only Minister is locked; GM/CO/RS unmask via can_unmask_identity
+
+    if st.session_state[resolve_key] and can_unmask_identity:
+        id_status_line = (
+            f'<span style="font-size:0.9rem; color:#8b949e;">ID:</span> '
+            f'<span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{subject_token}</span> '
+            f'<span class="resolve-chip">Resolve to Native ACC Claim ID</span><br/>'
+            f'<span style="font-size:0.9rem; color:#8b949e;">Native ACC Claim ID:</span> '
+            f'<span style="font-size:0.9rem; color:#10b981; font-weight:700;">{native_acc_id}</span><br/>'
+        )
+    elif statutory_briefing_mode:
+        id_status_line = (
+            f'<span style="font-size:0.9rem; color:#8b949e;">ID:</span> '
+            f'<span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{subject_token}</span> '
+            f'<span class="locked-chip">Identity Unmasking Restricted</span><br/>'
         )
     else:
-        fee_line = (
-            '<div class="metric-label" style="margin-top:0.6rem;">Dynamic Lookback Valuation Basis</div>\n'
-            '<div style="color:#8b949e; font-style:italic; font-size:0.95rem;">'
-            "🔒 SECURE LEDGER PROXIED TO EXECUTIVE SECTOR</div>"
+        id_status_line = (
+            f'<span style="font-size:0.9rem; color:#8b949e;">ID:</span> '
+            f'<span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{subject_token}</span> '
+            f'<span class="masked-chip">Resolve to Native ACC Claim ID</span><br/>'
         )
 
-    # Left-aligned HTML payload — no indent so Streamlit does not code-fence it
+    if role == SCHEME_DIRECTOR:
+        fee_line = f"""<div class="metric-label" style="margin-top:0.6rem;">Dynamic Lookback Valuation Basis</div>
+<div class="metric-value-green" style="font-size:1.4rem;">${(5000 + (projected_final_cost * 0.12)):,.2f} NZD</div>"""
+    else:
+        fee_line = """<div class="metric-label" style="margin-top:0.6rem;">Dynamic Lookback Valuation Basis</div>
+<div style="color:#8b949e; font-style:italic; font-size:0.95rem;">🔒 SECURE LEDGER PROXIED TO EXECUTIVE SECTOR</div>"""
+
+    # Left-aligned HTML — no indent so Streamlit does not code-fence it
     html_payload = f"""<div class="metric-box" style="border-left: 4px solid {status_color}; padding: 1.5rem; height: auto;">
 <div class="metric-label">Scheme Alignment Status</div>
 <div style="color:{status_color}; font-weight:700; font-size:1.2rem; margin-bottom:0.8rem;">{status_label}</div>
 <div style="background-color:#0c1017; padding:0.8rem; border-radius:4px; border:1px solid #30363d; margin-bottom:0.8rem;">
 <div class="metric-label" style="color:#ffffff;">Claimant File Dossier Matrix</div>
-<span style="font-size:0.9rem; color:#8b949e;">ID:</span> <span style="font-size:0.9rem; color:#ffffff; font-weight:600;">{display_token}</span><br/>
+{id_status_line}
 <span style="font-size:0.9rem; color:#8b949e;">Target Anatomy:</span> <span style="font-size:0.9rem; color:#ffffff;">{anatomy}</span><br/>
-<span style="font-size:0.9rem; color:#8b949e;">Demands / Age:</span> <span style="font-size:0.9rem; color:#ffffff;">{duty_tier} (Age {int(age)})</span><br/>
-<p style="font-size:0.85rem; color:#8b949e; font-style:italic; margin-top:0.4rem; margin-bottom:0;"><strong>NLP Ingest:</strong> {dict_html}</p>
+<span style="font-size:0.9rem; color:#8b949e;">Demands / Age:</span> <span style="font-size:0.9rem; color:#ffffff;">{duty_tier} (Age {age})</span><br/>
+<p style="font-size:0.85rem; color:#8b949e; font-style:italic; margin-top:0.4rem; margin-bottom:0;"><strong>NLP Ingest:</strong> {dict_txt}</p>
 </div>
+{protocol_html}
+{adaptive_cv_html}
 <div class="metric-label">Probability of Permanent Disability (PPD)</div>
 <div class="{impact_class}">{permanent_disability_prob * 100:.1f}%</div>
 <hr style="border:0; border-top:1px solid #30363d; margin: 0.8rem 0;"/>
@@ -638,10 +1565,11 @@ else:
 <div class="metric-value-green" style="font-size:1.5rem; margin-bottom:0.3rem;">${mitigated_reserve_target:,.2f} NZD</div>
 {fee_line}
 </div>"""
+
     st.markdown(html_payload, unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # --- STACKED BLOCK 2: DATA ALIGNMENT MATRIX (full width, unscrunched) ---
+    # --- STACKED BLOCK 2: DATA ALIGNMENT MATRIX ---
     st.markdown("#### Operational Pathway Alignment Vector")
     df_vector = pd.DataFrame(
         {
@@ -664,7 +1592,7 @@ else:
                 "High Drift Flag" if functional_drift > 15 else "Clear",
             ],
             "Point of Drift Variance": [
-                "On Track" if functional_drift <= 15 else "Timeline Breach",
+                "On Track",
                 f"${actual_spend - calibrated_base_cost:+,.0f} NZD",
                 f"-{functional_drift:.0f}% Dev",
                 "Path B Active" if functional_drift > 15 else "Clear",
@@ -674,8 +1602,8 @@ else:
     st.table(df_vector)
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # --- STACKED BLOCK 3: Individual Cost Trajectory Trend Graph ---
-    st.markdown("### INDIVIDUAL PERFORMANCE TIME-COST AXIS")
+    # 4. Individual Cost Trajectory Trend Graph
+    st.markdown("### 📈 INDIVIDUAL PERFORMANCE TIME-COST AXIS")
     days_series = np.arange(0, calibrated_base_days + 31, 10)
     standard_trajectory = np.array(
         [
@@ -707,13 +1635,8 @@ else:
             "Actual Cumulative Spend Velocity": actual_trajectory,
         }
     )
-    st.caption(
-        f"{'Live draft' if is_new_claim else 'Individual'} axis · `{display_token}` · "
-        f"{calibrated_base_days}-day horizon (NZD)"
-    )
     st.line_chart(
         df_chart,
         x="Days Elapsed",
         y=["Standard Expected Runway", "Actual Cumulative Spend Velocity"],
-        color=["#10b981", "#ef4444"],
     )
