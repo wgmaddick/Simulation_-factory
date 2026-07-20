@@ -1,9 +1,14 @@
-"""Cluster operations console — live request-processing simulation page."""
+"""Cluster operations console — live request-processing simulation page.
+
+Alerts surface when (clock + tick), where (region / AZ / rack / node), and why
+(cause codes such as queue_overflow, disk_failure, dependency_timeout).
+"""
 
 from __future__ import annotations
 
 import time
 
+import pandas as pd
 import streamlit as st
 
 from simulation import (
@@ -32,6 +37,12 @@ def init_state() -> None:
 
 def render_node_card(node) -> None:
     color = STATE_COLORS.get(node.state, "#6b7280")
+    cause_line = (
+        f'<div style="font-size: 0.75rem; color: #fbbf24; margin-top: 4px;">'
+        f"Why: {node.last_cause}</div>"
+        if node.last_cause != "—"
+        else ""
+    )
     st.markdown(
         f"""
         <div style="
@@ -46,9 +57,13 @@ def render_node_card(node) -> None:
             <div style="color: {color}; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em;">
                 {node.state.value}
             </div>
+            <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 4px;">
+                Where: {node.region} / {node.az} / {node.rack}
+            </div>
             <div style="font-size: 0.8rem; color: #9ca3af; margin-top: 6px;">
                 Queue: {node.queue}/{node.capacity} &nbsp;|&nbsp; Served: {node.served} &nbsp;|&nbsp; Errors: {node.errors}
             </div>
+            {cause_line}
         </div>
         """,
         unsafe_allow_html=True,
@@ -80,7 +95,10 @@ with st.sidebar:
             st.rerun()
 
 st.title("Cluster Operations Console")
-st.markdown("Live cluster metrics, node status, and request event log.")
+st.markdown(
+    "Live cluster metrics, node status, and alerts that answer "
+    "**when** / **where** / **why**."
+)
 
 k1, k2, k3, k4, k5 = st.columns(5)
 k1.metric("Tick", f"{cluster.tick:,}")
@@ -92,7 +110,8 @@ k5.metric("Throughput", f"{throughput(cluster)}/min")
 status_label = "🟢 RUNNING" if cluster.running else "⏸ PAUSED"
 st.caption(
     f"Status: {status_label}  ·  Speed: {cluster.speed}s/tick  ·  "
-    f"Nodes: {len(cluster.nodes)}  ·  Error rate: {error_rate(cluster)}%"
+    f"Nodes: {len(cluster.nodes)}  ·  Error rate: {error_rate(cluster)}%  ·  "
+    f"Alerts: {len(cluster.alerts)}"
 )
 
 st.divider()
@@ -105,12 +124,33 @@ with left:
         render_node_card(node)
 
 with right:
+    st.subheader("Alerts (When / Where / Why)")
+    if cluster.alerts:
+        alert_rows = [
+            {
+                "When": alert.when,
+                "Tick": alert.tick,
+                "Where": alert.where,
+                "Why": alert.why,
+                "Detail": alert.detail,
+            }
+            for alert in reversed(cluster.alerts[-30:])
+        ]
+        st.dataframe(
+            pd.DataFrame(alert_rows),
+            use_container_width=True,
+            hide_index=True,
+            height=320,
+        )
+    else:
+        st.info("No alerts yet. Start the simulation to emit when/where/why events.")
+
     st.subheader("Request Log")
     log_text = "\n".join(reversed(cluster.log[-30:]))
     st.text_area(
         "Events (newest first)",
         value=log_text,
-        height=520,
+        height=220,
         disabled=True,
         label_visibility="collapsed",
     )
