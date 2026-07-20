@@ -7,9 +7,51 @@ Health NZ Clinical Grid. NZD ledger, MSD certified CV pivot matrices.
 
 from __future__ import annotations
 
+import html
+import re
+from typing import Any
+
 import numpy as np
 import pandas as pd
 import streamlit as st
+
+# Defensive bounds — PR #24 HTML / intake sanitation standard
+MAX_TOKEN_CHARS = 96
+MAX_STATUS_CHARS = 64
+MAX_NOTES_CHARS = 4000
+MAX_MANDATE_CHARS = 280
+MAX_FIELD_CHARS = 120
+_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def sanitize_plain_text(value: Any, *, max_chars: int) -> str:
+    """Strip control chars and truncate free-form text before render/store."""
+    text = _CONTROL_CHARS.sub("", str(value if value is not None else "")).strip()
+    return text[:max_chars]
+
+
+def sanitize_html_text(value: Any, *, max_chars: int | None = None) -> str:
+    """HTML-escape dynamic values injected into custom metric-box markup."""
+    text = sanitize_plain_text(
+        value, max_chars=max_chars if max_chars is not None else MAX_FIELD_CHARS
+    )
+    return html.escape(text, quote=True)
+
+
+def sanitize_claim_token(value: Any) -> str:
+    return sanitize_plain_text(value, max_chars=MAX_TOKEN_CHARS)
+
+
+def sanitize_status_label(value: Any) -> str:
+    return sanitize_plain_text(value, max_chars=MAX_STATUS_CHARS)
+
+
+def sanitize_for_markdown(value: Any, *, max_chars: int = MAX_TOKEN_CHARS) -> str:
+    text = sanitize_plain_text(value, max_chars=max_chars)
+    for ch in ("*", "_", "`", "[", "]", "<", ">", "|"):
+        text = text.replace(ch, "")
+    return text
+
 
 # 1. High-Contrast Sovereign Dark Theme Configuration
 st.set_page_config(
@@ -90,6 +132,107 @@ st.markdown(
         font-size: 0.85rem;
         color: #8b949e;
         margin-top: 0.35rem;
+    }
+    /* Regional Drift Heat Map — iPad landscape-safe cards */
+    .directive-matrix {
+        background-color: #1c1112;
+        border: 1px solid #dc2626;
+        padding: 1.2rem;
+        border-radius: 6px;
+        margin-bottom: 1rem;
+    }
+    .heat-card {
+        background-color: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        padding: 1.15rem 1.1rem;
+        margin-bottom: 0.75rem;
+        min-height: 11.5rem;
+        box-sizing: border-box;
+    }
+    .heat-card.heat-card-active {
+        border-color: #10b981;
+        box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.35);
+    }
+    .heat-region {
+        font-family: "IBM Plex Sans", sans-serif;
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin: 0 0 0.15rem 0;
+        line-height: 1.25;
+    }
+    .heat-scope {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.75rem;
+        color: #8b949e;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.65rem;
+    }
+    .heat-metric-label {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #8b949e;
+        margin-top: 0.45rem;
+    }
+    .heat-metric-value {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #e2e8f0;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+    .drift-tag {
+        display: inline-block;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        padding: 0.28rem 0.5rem;
+        border-radius: 4px;
+        margin-top: 0.55rem;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+    }
+    .drift-tag-accelerating {
+        color: #fecaca;
+        background: rgba(239, 68, 68, 0.18);
+        border: 1px solid #ef4444;
+    }
+    .drift-tag-stable {
+        color: #fef08a;
+        background: rgba(234, 179, 8, 0.16);
+        border: 1px solid #eab308;
+    }
+    .drift-tag-reversing {
+        color: #bbf7d0;
+        background: rgba(16, 185, 129, 0.16);
+        border: 1px solid #10b981;
+    }
+    .heat-policy-banner {
+        background: rgba(16, 185, 129, 0.12);
+        border: 1px solid #10b981;
+        border-radius: 6px;
+        padding: 0.85rem 1rem;
+        margin: 0.35rem 0 1rem 0;
+        color: #ecfdf5;
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+    @media (max-width: 1100px) {
+      .heat-card {
+        min-height: 0;
+        padding: 1rem 0.85rem;
+      }
+      .heat-region {
+        font-size: 1.05rem;
+      }
+      .drift-tag {
+        font-size: 0.68rem;
+      }
     }
     /* Executive Large-Print Callout Focus Elements */
     .critical-impact-value {
@@ -434,6 +577,96 @@ def resolve_native_acc_claim_id(aat_token: str) -> str:
     return NATIVE_ACC_CLAIM_REGISTRY.get(
         str(aat_token),
         f"ACC-NZ-PENDING-{abs(hash(str(aat_token))) % 10_000_000:07d}",
+    )
+
+
+# Regional heat-map baseline (closed-loop with ministerial_override)
+_REGIONAL_DRIFT_BASE: list[dict[str, Any]] = [
+    {
+        "name": "Northern",
+        "scope": "Auckland / Northland",
+        "bottleneck": "Elective Orthopaedics Waitlist",
+        "liability_nzd": 48_200_000,
+        "hot": True,
+    },
+    {
+        "name": "Midland",
+        "scope": "Waikato / Bay of Plenty",
+        "bottleneck": "MSD Light-Duty Placement Lag",
+        "liability_nzd": 31_400_000,
+        "hot": False,
+    },
+    {
+        "name": "Central",
+        "scope": "Capital / Coast",
+        "bottleneck": "IME Authorization Backlog",
+        "liability_nzd": 27_850_000,
+        "hot": False,
+    },
+    {
+        "name": "Southern",
+        "scope": "Canterbury / Otago",
+        "bottleneck": "Long-Tail Indemnity Compounding",
+        "liability_nzd": 39_600_000,
+        "hot": True,
+    },
+]
+
+
+def build_regional_drift_cards(ministerial_override: bool) -> list[dict[str, str]]:
+    """Derive sanitized regional heat-map card payloads from override state."""
+    cards: list[dict[str, str]] = []
+    for region in _REGIONAL_DRIFT_BASE:
+        if ministerial_override:
+            status_key = "reversing"
+            status_label = "🟢 REVERSING (-14.2% Drift Rate)"
+            liability = int(region["liability_nzd"] * 0.86)
+            bottleneck = f"Mitigated · {region['bottleneck']}"
+        elif region["hot"]:
+            status_key = "accelerating"
+            status_label = "🔴 ACCELERATING (+12.4% Drift Rate)"
+            liability = int(region["liability_nzd"])
+            bottleneck = str(region["bottleneck"])
+        else:
+            status_key = "stable"
+            status_label = "🟡 STABLE (+0.8% Drift Rate)"
+            liability = int(region["liability_nzd"])
+            bottleneck = str(region["bottleneck"])
+
+        cards.append(
+            {
+                "name": sanitize_html_text(region["name"], max_chars=48),
+                "scope": sanitize_html_text(region["scope"], max_chars=64),
+                "bottleneck": sanitize_html_text(bottleneck, max_chars=96),
+                "liability": sanitize_html_text(
+                    f"${liability:,.0f} NZD", max_chars=48
+                ),
+                "status_key": status_key,
+                "status_label": sanitize_html_text(status_label, max_chars=96),
+            }
+        )
+    return cards
+
+
+def render_regional_heat_card(card: dict[str, str], *, policy_active: bool) -> str:
+    """Return HTML for one regional heat card (values pre-sanitized)."""
+    active_class = " heat-card-active" if policy_active else ""
+    tag_class = {
+        "accelerating": "drift-tag-accelerating",
+        "stable": "drift-tag-stable",
+        "reversing": "drift-tag-reversing",
+    }.get(card["status_key"], "drift-tag-stable")
+    return (
+        f'<div class="heat-card{active_class}">'
+        f'<div class="heat-region">{card["name"]}</div>'
+        f'<div class="heat-scope">{card["scope"]}</div>'
+        f'<div class="heat-metric-label">Primary Bottleneck</div>'
+        f'<div class="heat-metric-value">{card["bottleneck"]}</div>'
+        f'<div class="heat-metric-label">Total Regional Liability Exposure</div>'
+        f'<div class="heat-metric-value">{card["liability"]}</div>'
+        f'<div class="heat-metric-label">Drift Velocity</div>'
+        f'<div class="drift-tag {tag_class}">{card["status_label"]}</div>'
+        f"</div>"
     )
 
 
@@ -839,6 +1072,8 @@ if "cohort_mode" not in st.session_state:
     st.session_state.cohort_mode = False
 if "audit_focus_token" not in st.session_state:
     st.session_state.audit_focus_token = False
+if "ministerial_override" not in st.session_state:
+    st.session_state.ministerial_override = False
 
 
 def _append_identity_audit(actor: str, action: str, token: str, native_id: str) -> None:
@@ -919,6 +1154,76 @@ if statutory_briefing_mode:
         '<div class="briefing-mode-chip">STATUTORY BRIEFING MODE · MINISTERIAL OVERLAY</div>',
         unsafe_allow_html=True,
     )
+st.markdown("---")
+
+# --- MINISTERIAL EXECUTIVE DIRECTIVE MATRIX ---
+st.markdown(
+    """
+    <div class="directive-matrix">
+      <div style="font-family:'IBM Plex Mono', monospace; font-size:0.75rem;
+                  color:#ef4444; font-weight:700; letter-spacing:0.05em;
+                  text-transform:uppercase;">
+        Statutory Cabinet Authority Portal
+      </div>
+      <h3 style="margin-top:0.25rem; margin-bottom:0.45rem; color:#ffffff;">
+        Ministerial Executive Directive Matrix
+      </h3>
+      <p style="color:#8b949e; font-size:0.88rem; margin:0;">
+        Crown Executive input bypasses inter-departmental friction. Activating
+        systemic overrides forces IRD / MSD / Health NZ reconciliation and
+        re-allocates scheme capital reserves immediately.
+      </p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+dir_col1, dir_col2 = st.columns(2)
+with dir_col1:
+    st.checkbox(
+        "Force Cross-Agency Integration Share Mandate",
+        key="ministerial_override",
+        help="Bypass bureaucratic silos — binds regional drift heat map nationwide.",
+    )
+with dir_col2:
+    st.selectbox(
+        "Macro Statutory Intervention",
+        [
+            "Maintain Standard Operations runway",
+            "Emergency CapEx Liquidity Release (Settle P0 Drift Blocks In Bulk)",
+            "Direct MSD to Open 500 Immediate Training Certs",
+            "Fast-Track Health NZ Clinical Network Triage Mandate",
+        ],
+        key="macro_statutory_intervention",
+    )
+
+# --- DYNAMIC REGIONAL DRIFT HEAT MAP SUMMARY ---
+st.markdown("### Dynamic Regional Drift Heat Map Summary")
+st.markdown(
+    "<p style='color:#8b949e; font-size:0.9rem; margin-top:-0.55rem;'>"
+    "Major healthcare regions · Primary bottleneck · Liability (NZD) · Drift velocity</p>",
+    unsafe_allow_html=True,
+)
+
+ministerial_policy_active = bool(st.session_state.ministerial_override)
+if ministerial_policy_active:
+    banner_msg = sanitize_html_text(
+        "Ministerial Policy Active: Regional Drift Suppressed Nationwide.",
+        max_chars=160,
+    )
+    st.markdown(
+        f'<div class="heat-policy-banner">{banner_msg}</div>',
+        unsafe_allow_html=True,
+    )
+
+heat_cards = build_regional_drift_cards(ministerial_policy_active)
+heat_cols = st.columns(4)
+for col, card in zip(heat_cols, heat_cards):
+    with col:
+        st.markdown(
+            render_regional_heat_card(card, policy_active=ministerial_policy_active),
+            unsafe_allow_html=True,
+        )
+
 st.markdown("---")
 
 # --- WHAT / WHERE / WHEN SEQUENCE (US Risk viewport container layout · Crown metrics) ---
