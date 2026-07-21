@@ -1278,6 +1278,7 @@ def apply_claims_officer_action(
     details: str,
 ) -> None:
     """on_click-safe claims officer case-management binder."""
+    # Bound + strip control chars before session persistence (PR #24).
     st.session_state[f"officer_action_{claim_id}"] = {
         "title": sanitize_plain_text(title, max_chars=160),
         "details": sanitize_plain_text(details, max_chars=320),
@@ -1289,7 +1290,9 @@ def render_claims_officer_view() -> None:
     """Department #3: Claims Officers / Analysts View.
 
     Focuses on day-to-day case management, milestone tracking, and
-    claimant communication.
+    claimant communication. Sidebar role ``Claims Officer / Analyst``
+    routes here exclusively. Dynamic strings are html.escape'd before
+    any custom HTML render (PR #24).
     """
     st.markdown("## Claims Officer Case Management Sector")
     st.caption(
@@ -1328,51 +1331,79 @@ def render_claims_officer_view() -> None:
     if action_key not in st.session_state:
         st.session_state[action_key] = None
 
-    safe_name = sanitize_for_markdown(
-        officer_claim["claimant_name"], max_chars=80
+    # PR #24 — every dynamic field through html.escape before display.
+    safe_name = html.escape(
+        sanitize_plain_text(officer_claim["claimant_name"], max_chars=80),
+        quote=True,
     )
-    safe_officer = sanitize_for_markdown(
-        officer_claim["officer_assigned"], max_chars=64
+    safe_officer = html.escape(
+        sanitize_plain_text(officer_claim["officer_assigned"], max_chars=64),
+        quote=True,
     )
-    safe_milestone = sanitize_for_markdown(
-        officer_claim["next_milestone"], max_chars=120
+    safe_milestone = html.escape(
+        sanitize_plain_text(officer_claim["next_milestone"], max_chars=120),
+        quote=True,
     )
-    safe_sla = sanitize_for_markdown(
-        officer_claim["sla_countdown"], max_chars=80
+    safe_sla = html.escape(
+        sanitize_plain_text(officer_claim["sla_countdown"], max_chars=80),
+        quote=True,
     )
-    safe_contact = sanitize_for_markdown(
-        officer_claim["last_contact"], max_chars=80
+    safe_contact = html.escape(
+        sanitize_plain_text(officer_claim["last_contact"], max_chars=80),
+        quote=True,
     )
-    safe_plan = sanitize_for_markdown(
-        officer_claim["active_plan"], max_chars=120
+    safe_plan = html.escape(
+        sanitize_plain_text(officer_claim["active_plan"], max_chars=120),
+        quote=True,
     )
 
     col1, col2, col3 = st.columns(3)
     with col1:
         st.markdown("### Claimant Profile")
-        st.info(
-            f"**Subject:** {safe_name}\n\n"
-            f"**Assigned Officer:** {safe_officer}"
+        st.markdown(
+            f'<div class="metric-box">'
+            f'<div class="metric-label">Subject</div>'
+            f'<div class="heat-metric-value">{safe_name}</div>'
+            f'<div class="metric-label" style="margin-top:0.55rem;">Assigned Officer</div>'
+            f'<div class="heat-metric-value">{safe_officer}</div>'
+            f"</div>",
+            unsafe_allow_html=True,
         )
     with col2:
         st.markdown("### Milestone & SLA Tracker")
-        st.warning(
-            f"**Target Milestone:** {safe_milestone}\n\n"
-            f"**SLA Window:** {safe_sla}"
+        st.markdown(
+            f'<div class="metric-box" style="border-left:3px solid #eab308;">'
+            f'<div class="metric-label">Target Milestone</div>'
+            f'<div class="heat-metric-value">{safe_milestone}</div>'
+            f'<div class="metric-label" style="margin-top:0.55rem;">SLA Window</div>'
+            f'<div class="heat-metric-value">{safe_sla}</div>'
+            f"</div>",
+            unsafe_allow_html=True,
         )
     with col3:
         st.markdown("### Engagement & Status")
-        st.success(
-            f"**Last Contact:** {safe_contact}\n\n"
-            f"**Active Pathway:** {safe_plan}"
+        st.markdown(
+            f'<div class="metric-box" style="border-left:3px solid #10b981;">'
+            f'<div class="metric-label">Last Contact</div>'
+            f'<div class="heat-metric-value">{safe_contact}</div>'
+            f'<div class="metric-label" style="margin-top:0.55rem;">Active Pathway</div>'
+            f'<div class="heat-metric-value">{safe_plan}</div>'
+            f"</div>",
+            unsafe_allow_html=True,
         )
 
     st.divider()
 
     action_state = st.session_state.get(action_key)
     if action_state:
-        safe_title = sanitize_html_text(action_state["title"], max_chars=160)
-        safe_details = sanitize_html_text(action_state["details"], max_chars=320)
+        safe_title = html.escape(
+            sanitize_plain_text(action_state["title"], max_chars=160),
+            quote=True,
+        )
+        safe_details = html.escape(
+            sanitize_plain_text(action_state["details"], max_chars=320),
+            quote=True,
+        )
         st.markdown(
             f"""
             <div class="heat-policy-banner" style="margin-top:0.25rem;">
@@ -1391,8 +1422,8 @@ def render_claims_officer_view() -> None:
             unsafe_allow_html=True,
         )
         st.success(
-            f"**CASE MANAGEMENT ACTION EXECUTED:** "
-            f"{sanitize_for_markdown(action_state['title'], max_chars=160)}"
+            "**CASE MANAGEMENT ACTION EXECUTED:** "
+            + sanitize_for_markdown(action_state["title"], max_chars=160)
         )
         st.divider()
 
@@ -1751,6 +1782,7 @@ if vocational_msd_mode:
     render_vocational_msd_view()
     st.stop()
 
+# Department #3 — Claims Officer / Analyst → render_claims_officer_view()
 if claims_officer_mode:
     st.title("NZ ACC RISK ORCHESTRATION ENGINE")
     st.markdown(
