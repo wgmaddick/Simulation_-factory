@@ -1,16 +1,13 @@
 [theme]
 base = "dark"
-primaryColor = "#10b981"
-backgroundColor = "#0c1017"
-secondaryBackgroundColor = "#161b22"
-textColor = "#f8fafc"
+primaryColor = "#00E676"
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#161B22"
+textColor = "#E6EDF3"
 font = "sans serif"
 
 [server]
 headless = true
-# Re-enable Streamlit form / websocket CSRF + CORS guards so sidebar role
-# toggles, triage intake, and any future data-matrix uploads cannot be forged
-# cross-origin. Pair with maxUploadSize to bound intake parsing.
 enableCORS = true
 enableXsrfProtection = true
 maxUploadSize = 5
