@@ -908,6 +908,108 @@ def apply_ledger_filters(df: pd.DataFrame) -> pd.DataFrame:
     return out.reset_index(drop=True)
 
 
+def clinical_rom_cleared(claim_id: str) -> bool:
+    """True when Clinical Triage has logged a ROM / capacity clearance."""
+    return bool(st.session_state.get(f"clinical_rom_cleared_{claim_id}", False))
+
+
+# Clinical actions that constitute ROM / capacity clearance for MSD sequencing.
+_ROM_CLEARING_CLINICAL_TITLES = frozenset(
+    {
+        "IME Peer-Review Panel Assigned",
+        "Intensive Rehab Package Activated (EARI)",
+    }
+)
+
+_CLAIMS_ANALYST_USER_ID = "#CLM-408"
+
+
+def _append_operational_friction_note(note: dict[str, Any]) -> None:
+    """Persist a Note #0N operational friction / audit entry (session vault)."""
+    if "operational_friction_log" not in st.session_state:
+        st.session_state.operational_friction_log = []
+    st.session_state.operational_friction_log.append(note)
+    if len(st.session_state.operational_friction_log) > 40:
+        st.session_state.operational_friction_log = (
+            st.session_state.operational_friction_log[-40:]
+        )
+
+
+def build_sequence_policy_block_note(
+    *,
+    claim_id: str,
+    actor_user_id: str,
+    attempted_action: str,
+) -> dict[str, Any]:
+    """Compose Note #02-style Sequence Policy Error audit payload."""
+    from datetime import datetime, timedelta, timezone
+
+    try:
+        from zoneinfo import ZoneInfo
+
+        nzst = datetime.now(ZoneInfo("Pacific/Auckland"))
+    except Exception:
+        nzst = datetime.now(timezone(timedelta(hours=12)))
+    note_num = 2 + len(st.session_state.get("operational_friction_log", []))
+    return {
+        "note_id": f"Note #{note_num:02d}",
+        "title": "Operational Friction & Audit Entry",
+        "timestamp_nzst": nzst.strftime("%Y-%m-%d %H:%M NZST"),
+        "user_id": sanitize_plain_text(actor_user_id, max_chars=32),
+        "event_type": "Sequence Policy Error (Pre-Mature Placement Attempt)",
+        "severity": "MODERATE (Blocked by System Rule)",
+        "claim_id": sanitize_plain_text(claim_id, max_chars=MAX_TOKEN_CHARS),
+        "user_action": sanitize_plain_text(
+            f"Attempted to issue {attempted_action} prior to Clinical ROM clearance.",
+            max_chars=280,
+        ),
+        "intervention": sanitize_plain_text(
+            "Action blocked by RBAC rule. User redirected to Clinical Coordinator queue.",
+            max_chars=280,
+        ),
+        "recommendation": sanitize_plain_text(
+            "Re-route file to Health NZ triage hub. Logged for Manager weekly "
+            "training review.",
+            max_chars=280,
+        ),
+    }
+
+
+def render_operational_friction_note(note: dict[str, Any]) -> None:
+    """Render one operational friction note with PR #24 escaped HTML."""
+    nid = html.escape(str(note.get("note_id", "Note")), quote=True)
+    title = html.escape(str(note.get("title", "")), quote=True)
+    ts = html.escape(str(note.get("timestamp_nzst", "")), quote=True)
+    uid = html.escape(str(note.get("user_id", "")), quote=True)
+    event = html.escape(str(note.get("event_type", "")), quote=True)
+    severity = html.escape(str(note.get("severity", "")), quote=True)
+    claim = html.escape(str(note.get("claim_id", "")), quote=True)
+    action = html.escape(str(note.get("user_action", "")), quote=True)
+    intervention = html.escape(str(note.get("intervention", "")), quote=True)
+    recommendation = html.escape(str(note.get("recommendation", "")), quote=True)
+    st.markdown(
+        f"""
+        <div class="metric-box" style="border-left:4px solid #eab308;">
+          <div class="metric-label" style="color:#fde047;">{nid} · {title}</div>
+          <div class="heat-scope" style="margin-bottom:0.65rem;">
+            Timestamp: {ts} · User ID: {uid}
+          </div>
+          <div class="heat-metric-label">1. Detected Event &amp; Classification</div>
+          <div class="heat-metric-value">Event Type: {event}</div>
+          <div class="heat-metric-value">Severity Level: 🟡 {severity}</div>
+          <div class="heat-metric-value">Target Claim: <code>{claim}</code></div>
+          <div class="heat-metric-label" style="margin-top:0.65rem;">
+            2. Root Cause Analysis
+          </div>
+          <div class="heat-metric-value">User Action: {action}</div>
+          <div class="heat-metric-value">Intervention Executed: {intervention}</div>
+          <div class="heat-metric-value">System Recommendation: {recommendation}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def apply_clinical_triage_action(
     claim_id: str,
     title: str,
@@ -915,12 +1017,60 @@ def apply_clinical_triage_action(
     new_drift: str,
 ) -> None:
     """on_click-safe clinical intervention binder."""
+    clean_title = sanitize_plain_text(title, max_chars=160)
     st.session_state[f"action_taken_{claim_id}"] = {
-        "title": sanitize_plain_text(title, max_chars=160),
+        "title": clean_title,
         "impact": sanitize_plain_text(impact, max_chars=280),
         "new_drift": sanitize_plain_text(new_drift, max_chars=280),
     }
+    # Sequence policy unlock — ROM / capacity clearance for MSD placement.
+    if clean_title in _ROM_CLEARING_CLINICAL_TITLES:
+        st.session_state[f"clinical_rom_cleared_{claim_id}"] = True
+        st.session_state.pop(f"msd_sequence_block_{claim_id}", None)
     st.rerun()
+
+
+def apply_vocational_msd_action(
+    claim_id: str,
+    title: str,
+    details: str,
+) -> None:
+    """on_click-safe vocational / MSD placement binder."""
+    st.session_state[f"msd_action_{claim_id}"] = {
+        "title": sanitize_plain_text(title, max_chars=160),
+        "details": sanitize_plain_text(details, max_chars=320),
+    }
+    st.session_state.pop(f"msd_sequence_block_{claim_id}", None)
+    st.rerun()
+
+
+def apply_msd_light_duty_voucher(claim_id: str) -> None:
+    """Issue Light-Duty voucher only after Clinical ROM clearance (sequence policy)."""
+    voucher_label = "MSD Light-Duty Placement Voucher"
+    if not clinical_rom_cleared(claim_id):
+        actor = _CLAIMS_ANALYST_USER_ID
+        role_now = st.session_state.get("active_user_role_matrix", "")
+        if role_now == CLAIMS_OFFICER:
+            actor = _CLAIMS_ANALYST_USER_ID
+        elif role_now in VOCATIONAL_MSD_ROLES:
+            actor = "#MSD-7710"
+        note = build_sequence_policy_block_note(
+            claim_id=claim_id,
+            actor_user_id=actor,
+            attempted_action=voucher_label,
+        )
+        _append_operational_friction_note(note)
+        st.session_state[f"msd_sequence_block_{claim_id}"] = note
+        st.session_state[f"msd_action_{claim_id}"] = None
+        st.rerun()
+        return
+
+    apply_vocational_msd_action(
+        claim_id,
+        "MSD Light-Duty Partner Voucher Issued",
+        "Allocated candidate to active dispatch coordinator role. "
+        "Reduces weekly indemnity burn by 100% within 14 days.",
+    )
 
 
 def render_clinical_triage_view() -> None:
@@ -1094,19 +1244,6 @@ def render_clinical_triage_view() -> None:
         )
 
 
-def apply_vocational_msd_action(
-    claim_id: str,
-    title: str,
-    details: str,
-) -> None:
-    """on_click-safe vocational / MSD placement binder."""
-    st.session_state[f"msd_action_{claim_id}"] = {
-        "title": sanitize_plain_text(title, max_chars=160),
-        "details": sanitize_plain_text(details, max_chars=320),
-    }
-    st.rerun()
-
-
 def render_vocational_msd_view() -> None:
     """Department #2: Vocational & MSD Placement Team View.
 
@@ -1116,7 +1253,8 @@ def render_vocational_msd_view() -> None:
     st.markdown("## Vocational & MSD Placement Command Sector")
     st.caption(
         "Role-Gated Interface: MSD Case Officers & Vocational Specialists | "
-        "Focus: Workforce Re-Entry & Retraining"
+        "Focus: Workforce Re-Entry & Retraining · Sequence Policy: Clinical ROM "
+        "clearance required before Light-Duty Placement Voucher"
     )
     st.divider()
 
@@ -1185,6 +1323,40 @@ def render_vocational_msd_view() -> None:
 
     st.divider()
 
+    # Sequence policy block banner (Note #02 Operational Friction)
+    block_note = st.session_state.get(f"msd_sequence_block_{selected_msd_id}")
+    if block_note:
+        st.error(
+            "**SEQUENCE POLICY ERROR — Pre-Mature Placement Attempt blocked.** "
+            "Clinical ROM clearance required before MSD Light-Duty Placement "
+            "Voucher. File redirected to Clinical Coordinator queue / "
+            "Health NZ triage hub."
+        )
+        render_operational_friction_note(block_note)
+        if st.button(
+            "Open Clinical & Health Triage Sector (Coordinator Queue)",
+            use_container_width=True,
+            key=f"msd_redirect_clinical_{selected_msd_id}",
+        ):
+            st.session_state["active_user_role_matrix"] = CLINICAL_TRIAGE_ROLE
+            st.session_state["clinical_triage_claim_selector"] = selected_msd_id
+            st.rerun()
+        st.divider()
+
+    rom_ok = clinical_rom_cleared(selected_msd_id)
+    if rom_ok:
+        st.caption(
+            f"Clinical ROM clearance **verified** for "
+            f"`{sanitize_for_markdown(selected_msd_id, max_chars=64)}` — "
+            "Light-Duty Placement Voucher unlocked."
+        )
+    else:
+        st.warning(
+            "Clinical ROM clearance **pending** — Light-Duty Placement Voucher "
+            "is sequence-locked until IME capacity audit or intensive rehab "
+            "clears the file in Clinical Triage."
+        )
+
     action_state = st.session_state.get(action_key)
     if action_state:
         safe_title = sanitize_html_text(action_state["title"], max_chars=160)
@@ -1225,13 +1397,8 @@ def render_vocational_msd_view() -> None:
             use_container_width=True,
             type="primary",
             key=f"msd_voucher_{selected_msd_id}",
-            on_click=apply_vocational_msd_action,
-            args=(
-                selected_msd_id,
-                "MSD Light-Duty Partner Voucher Issued",
-                "Allocated candidate to active dispatch coordinator role. "
-                "Reduces weekly indemnity burn by 100% within 14 days.",
-            ),
+            on_click=apply_msd_light_duty_voucher,
+            args=(selected_msd_id,),
         )
         st.button(
             "2. Authorize Retraining Certificate Grant ($3,500 NZD)",
@@ -1270,6 +1437,16 @@ def render_vocational_msd_view() -> None:
                 "for direct placement matching.",
             ),
         )
+
+    # Recent sequence-policy friction for this claim (Manager training review)
+    claim_notes = [
+        n
+        for n in st.session_state.get("operational_friction_log", [])
+        if n.get("claim_id") == selected_msd_id
+    ]
+    if claim_notes:
+        st.markdown("#### Operational Friction Log (This Claim)")
+        render_operational_friction_note(claim_notes[-1])
 
 
 def apply_claims_officer_action(
@@ -1485,6 +1662,16 @@ def render_claims_officer_view() -> None:
             ),
         )
 
+    friction_log = st.session_state.get("operational_friction_log", [])
+    if friction_log:
+        st.markdown("### Operational Friction & Audit Notes")
+        st.caption(
+            f"Analyst {_CLAIMS_ANALYST_USER_ID} · Sequence policy blocks · "
+            "Manager weekly training review queue"
+        )
+        for note in reversed(friction_log[-5:]):
+            render_operational_friction_note(note)
+
 
 def render_cohort_analysis_panel(
     cohort_df: pd.DataFrame,
@@ -1658,6 +1845,8 @@ if "audit_focus_token" not in st.session_state:
     st.session_state.audit_focus_token = False
 if "ministerial_override" not in st.session_state:
     st.session_state.ministerial_override = False
+if "operational_friction_log" not in st.session_state:
+    st.session_state.operational_friction_log = []
 
 
 def _append_identity_audit(actor: str, action: str, token: str, native_id: str) -> None:
