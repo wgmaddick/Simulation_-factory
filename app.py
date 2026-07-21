@@ -1010,6 +1010,17 @@ def render_operational_friction_note(note: dict[str, Any]) -> None:
     )
 
 
+def redirect_to_clinical_coordinator(claim_id: str) -> None:
+    """on_click-safe handoff into Clinical Triage for sequence-policy blocks.
+
+    Uses pending_* keys so the sidebar role selectbox can adopt the new value
+    before it is instantiated on the next run (avoids StreamlitAPIException).
+    """
+    st.session_state["pending_role_switch"] = CLINICAL_TRIAGE_ROLE
+    st.session_state["pending_clinical_claim"] = claim_id
+    st.rerun()
+
+
 def apply_clinical_triage_action(
     claim_id: str,
     title: str,
@@ -1333,14 +1344,13 @@ def render_vocational_msd_view() -> None:
             "Health NZ triage hub."
         )
         render_operational_friction_note(block_note)
-        if st.button(
+        st.button(
             "Open Clinical & Health Triage Sector (Coordinator Queue)",
             use_container_width=True,
             key=f"msd_redirect_clinical_{selected_msd_id}",
-        ):
-            st.session_state["active_user_role_matrix"] = CLINICAL_TRIAGE_ROLE
-            st.session_state["clinical_triage_claim_selector"] = selected_msd_id
-            st.rerun()
+            on_click=redirect_to_clinical_coordinator,
+            args=(selected_msd_id,),
+        )
         st.divider()
 
     rom_ok = clinical_rom_cleared(selected_msd_id)
@@ -1873,6 +1883,16 @@ with st.sidebar:
     _legacy_msd = "Vocational & MSD Placement Specialist"
     if st.session_state.get("active_user_role_matrix") == _legacy_msd:
         st.session_state["active_user_role_matrix"] = VOCATIONAL_MSD_SPECIALIST
+
+    # Apply deferred department handoffs before the role widget instantiates.
+    if "pending_role_switch" in st.session_state:
+        st.session_state["active_user_role_matrix"] = st.session_state.pop(
+            "pending_role_switch"
+        )
+    if "pending_clinical_claim" in st.session_state:
+        st.session_state["clinical_triage_claim_selector"] = st.session_state.pop(
+            "pending_clinical_claim"
+        )
 
     role = st.selectbox(
         "Active User Role Matrix",
