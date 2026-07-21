@@ -1272,6 +1272,189 @@ def render_vocational_msd_view() -> None:
         )
 
 
+def apply_claims_officer_action(
+    claim_id: str,
+    title: str,
+    details: str,
+) -> None:
+    """on_click-safe claims officer case-management binder."""
+    st.session_state[f"officer_action_{claim_id}"] = {
+        "title": sanitize_plain_text(title, max_chars=160),
+        "details": sanitize_plain_text(details, max_chars=320),
+    }
+    st.rerun()
+
+
+def render_claims_officer_view() -> None:
+    """Department #3: Claims Officers / Analysts View.
+
+    Focuses on day-to-day case management, milestone tracking, and
+    claimant communication.
+    """
+    st.markdown("## Claims Officer Case Management Sector")
+    st.caption(
+        "Role-Gated Interface: Frontline Case Managers & Analysts | "
+        "Focus: Milestone SLAs & Daily File Execution"
+    )
+    st.divider()
+
+    claim_officer_options: dict[str, dict[str, str]] = {
+        "AAT-Claimant-Delta-2026": {
+            "claimant_name": "J. Walker (Claimant-Delta)",
+            "next_milestone": "30-Day Care Plan Re-Assessment",
+            "sla_countdown": "2 Days Remaining (Urgent)",
+            "last_contact": "3 Days Ago via SMS",
+            "active_plan": "Integrated Clinical Triage + MSD Vocational Match",
+            "officer_assigned": "Claims Analyst #408",
+        },
+        "AAT-Claimant-Epsilon-2026": {
+            "claimant_name": "M. Ross (Claimant-Epsilon)",
+            "next_milestone": "Routine Functional Progress Review",
+            "sla_countdown": "14 Days Remaining",
+            "last_contact": "1 Day Ago via Portal",
+            "active_plan": "Standard Outpatient Rehab",
+            "officer_assigned": "Claims Analyst #408",
+        },
+    }
+
+    selected_officer_id = st.selectbox(
+        "Select Active Case File for Officer Review:",
+        list(claim_officer_options.keys()),
+        index=0,
+        key="claims_officer_case_selector",
+    )
+    officer_claim = claim_officer_options[selected_officer_id]
+    action_key = f"officer_action_{selected_officer_id}"
+    if action_key not in st.session_state:
+        st.session_state[action_key] = None
+
+    safe_name = sanitize_for_markdown(
+        officer_claim["claimant_name"], max_chars=80
+    )
+    safe_officer = sanitize_for_markdown(
+        officer_claim["officer_assigned"], max_chars=64
+    )
+    safe_milestone = sanitize_for_markdown(
+        officer_claim["next_milestone"], max_chars=120
+    )
+    safe_sla = sanitize_for_markdown(
+        officer_claim["sla_countdown"], max_chars=80
+    )
+    safe_contact = sanitize_for_markdown(
+        officer_claim["last_contact"], max_chars=80
+    )
+    safe_plan = sanitize_for_markdown(
+        officer_claim["active_plan"], max_chars=120
+    )
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown("### Claimant Profile")
+        st.info(
+            f"**Subject:** {safe_name}\n\n"
+            f"**Assigned Officer:** {safe_officer}"
+        )
+    with col2:
+        st.markdown("### Milestone & SLA Tracker")
+        st.warning(
+            f"**Target Milestone:** {safe_milestone}\n\n"
+            f"**SLA Window:** {safe_sla}"
+        )
+    with col3:
+        st.markdown("### Engagement & Status")
+        st.success(
+            f"**Last Contact:** {safe_contact}\n\n"
+            f"**Active Pathway:** {safe_plan}"
+        )
+
+    st.divider()
+
+    action_state = st.session_state.get(action_key)
+    if action_state:
+        safe_title = sanitize_html_text(action_state["title"], max_chars=160)
+        safe_details = sanitize_html_text(action_state["details"], max_chars=320)
+        st.markdown(
+            f"""
+            <div class="heat-policy-banner" style="margin-top:0.25rem;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:0.72rem;
+                          letter-spacing:0.08em; text-transform:uppercase;
+                          color:#86efac; margin-bottom:0.35rem;">
+                Case Management Action Executed
+              </div>
+              <div style="font-size:1.05rem; font-weight:700; color:#ecfdf5;
+                          margin-bottom:0.35rem;">{safe_title}</div>
+              <div style="color:#d1fae5; font-size:0.92rem; line-height:1.45;">
+                • {safe_details}
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.success(
+            f"**CASE MANAGEMENT ACTION EXECUTED:** "
+            f"{sanitize_for_markdown(action_state['title'], max_chars=160)}"
+        )
+        st.divider()
+
+    st.markdown("### Case Management Execution Deck")
+    st.caption(
+        "Tap a trigger to update session state and confirm the case action "
+        "live on this device."
+    )
+    b1, b2 = st.columns(2)
+    with b1:
+        st.button(
+            "1. Dispatch Automated Progress Check-In (SMS/Portal)",
+            use_container_width=True,
+            type="primary",
+            key=f"officer_checkin_{selected_officer_id}",
+            on_click=apply_claims_officer_action,
+            args=(
+                selected_officer_id,
+                "Automated Claimant Check-In Dispatched",
+                "SMS and Mobile Portal notification sent. Response logged "
+                "automatically upon submission.",
+            ),
+        )
+        st.button(
+            "2. Schedule Multi-Disciplinary Case Conference",
+            use_container_width=True,
+            key=f"officer_conference_{selected_officer_id}",
+            on_click=apply_claims_officer_action,
+            args=(
+                selected_officer_id,
+                "Case Conference Calendar Invite Issued",
+                "Synchronized calendar request sent to Clinical Lead and "
+                "MSD Liaison Officer.",
+            ),
+        )
+    with b2:
+        st.button(
+            "3. Request Updated Functional Capacity Eval (FCE)",
+            use_container_width=True,
+            key=f"officer_fce_{selected_officer_id}",
+            on_click=apply_claims_officer_action,
+            args=(
+                selected_officer_id,
+                "FCE Medical Request Dispatched",
+                "Formal capacity assessment form transmitted to primary "
+                "treating practitioner.",
+            ),
+        )
+        st.button(
+            "4. Escalate Case File to Operations Manager",
+            use_container_width=True,
+            key=f"officer_escalate_{selected_officer_id}",
+            on_click=apply_claims_officer_action,
+            args=(
+                selected_officer_id,
+                "High-Priority Manager Escalation Flagged",
+                "File routed to Operations Manager dashboard for CapEx "
+                "review and unblocking.",
+            ),
+        )
+
+
 def render_cohort_analysis_panel(
     cohort_df: pd.DataFrame,
     *,
@@ -1487,11 +1670,13 @@ with st.sidebar:
     statutory_briefing_mode = role == MINISTER_ROLE
     clinical_triage_mode = role == CLINICAL_TRIAGE_ROLE
     vocational_msd_mode = role in VOCATIONAL_MSD_ROLES
-    department_isolated_mode = clinical_triage_mode or vocational_msd_mode
-    # GM + caseworkers/specialists may unmask; Minister + department roles keep aliases
+    claims_officer_mode = role == CLAIMS_OFFICER
+    department_isolated_mode = (
+        clinical_triage_mode or vocational_msd_mode or claims_officer_mode
+    )
+    # GM + reviewing specialists may unmask; Minister + department roles keep aliases
     can_unmask_identity = role in {
         SCHEME_DIRECTOR,
-        CLAIMS_OFFICER,
         REVIEWING_SPECIALIST,
     }
     st.markdown("---")
@@ -1511,6 +1696,15 @@ with st.sidebar:
         st.caption(
             f"Active role: {role} · MSD Workforce Pipeline · "
             "Light-Duty Match · Retraining Vouchers"
+        )
+    elif claims_officer_mode:
+        st.markdown("### CLAIMS OFFICER MODE")
+        st.info(
+            "Isolated Case Management surface — Cabinet liability matrices and "
+            "scheme-wide CapEx chrome are suppressed."
+        )
+        st.caption(
+            "Milestone SLAs · Claimant Engagement · Daily File Execution"
         )
     else:
         st.markdown("### SCHEME MANDATE INJECTION")
@@ -1555,6 +1749,16 @@ if vocational_msd_mode:
         unsafe_allow_html=True,
     )
     render_vocational_msd_view()
+    st.stop()
+
+if claims_officer_mode:
+    st.title("NZ ACC RISK ORCHESTRATION ENGINE")
+    st.markdown(
+        "<p class='statutory-meta'>"
+        "Claims Officer Surface · Milestone SLA & Daily File Execution</p>",
+        unsafe_allow_html=True,
+    )
+    render_claims_officer_view()
     st.stop()
 
 # --- MAIN PERFORMANCE DASHBOARD TITLE ---
@@ -1952,15 +2156,6 @@ if view_selection == GLOBAL_VIEW:
         with b2:
             if st.button("Table for Cabinet Committee", use_container_width=True):
                 st.success("Matter queued for Cabinet committee timetable.")
-
-    elif role == CLAIMS_OFFICER:
-        st.markdown("### CLAIMS OFFICER / ANALYST — ACTION TASK")
-        html_task_co = f"""<div class="metric-box" style="border-left: 4px solid #ef4444; padding: 1.2rem;">
-<div class="metric-label" style="color:#ef4444;">TASK ID: CO-AAT-2026-031</div>
-<div class="metric-subtext" style="color:#ffffff; font-weight:600; margin-bottom:0.4rem;">Clear the CRITICAL DRIFT files before they harden into long-tail PPD exposure.</div>
-<div style="font-size:0.85rem; color:#8b949e;">Active Mandate: {cap_floor}% CapEx Mitigation Control Active</div>
-</div>"""
-        st.markdown(html_task_co, unsafe_allow_html=True)
 
     elif role == REVIEWING_SPECIALIST:
         st.markdown("### REVIEWING SPECIALIST — CLINICAL ESCALATION AUDIT DECK")
