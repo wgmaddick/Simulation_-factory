@@ -556,7 +556,11 @@ SCHEME_DIRECTOR = "Scheme Director (GM)"
 CLAIMS_OFFICER = "Claims Officer / Analyst"
 REVIEWING_SPECIALIST = "Reviewing Specialist"
 CLINICAL_TRIAGE_ROLE = "Clinical & Health Triage Specialist"
-VOCATIONAL_MSD_ROLE = "Vocational & MSD Placement Specialist"
+VOCATIONAL_MSD_SPECIALIST = "Vocational & MSD Specialist"
+MSD_PLACEMENT_OFFICER = "MSD Placement Officer"
+VOCATIONAL_MSD_ROLES = frozenset(
+    {VOCATIONAL_MSD_SPECIALIST, MSD_PLACEMENT_OFFICER}
+)
 
 STATUTORY_NOMINAL = "Nominal"
 STATUTORY_MINISTERIAL = "Ministerial Escalation Required"
@@ -1183,23 +1187,43 @@ def render_vocational_msd_view() -> None:
 
     action_state = st.session_state.get(action_key)
     if action_state:
-        safe_title = sanitize_for_markdown(action_state["title"], max_chars=160)
-        safe_details = sanitize_for_markdown(action_state["details"], max_chars=320)
+        safe_title = sanitize_html_text(action_state["title"], max_chars=160)
+        safe_details = sanitize_html_text(action_state["details"], max_chars=320)
+        # High-contrast green confirmation for iPad / live session feedback
+        st.markdown(
+            f"""
+            <div class="heat-policy-banner" style="margin-top:0.25rem;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:0.72rem;
+                          letter-spacing:0.08em; text-transform:uppercase;
+                          color:#86efac; margin-bottom:0.35rem;">
+                Vocational Action Executed
+              </div>
+              <div style="font-size:1.05rem; font-weight:700; color:#ecfdf5;
+                          margin-bottom:0.35rem;">{safe_title}</div>
+              <div style="color:#d1fae5; font-size:0.92rem; line-height:1.45;">
+                • {safe_details}
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         st.success(
-            f"**VOCATIONAL ACTION EXECUTED:** {safe_title}\n\n• {safe_details}"
+            f"**VOCATIONAL ACTION EXECUTED:** "
+            f"{sanitize_for_markdown(action_state['title'], max_chars=160)}"
         )
         st.divider()
 
     st.markdown("### Vocational Placement Execution Deck")
     st.caption(
-        "Issue placement vouchers, retraining grants, and workplace adaptations "
-        "to halt indemnity burn and restore workforce capacity."
+        "Tap a trigger to update session state and confirm the placement action "
+        "live on this device."
     )
     b1, b2 = st.columns(2)
     with b1:
         st.button(
             "1. Issue MSD Light-Duty Placement Voucher ($1,500 NZD)",
             use_container_width=True,
+            type="primary",
             key=f"msd_voucher_{selected_msd_id}",
             on_click=apply_vocational_msd_action,
             args=(
@@ -1442,6 +1466,11 @@ def _append_identity_audit(actor: str, action: str, token: str, native_id: str) 
 # --- SIDEBAR: GOVERNANCE LAYER FILTERS ---
 with st.sidebar:
     st.markdown("### NZ ACC SCHEME GOVERNANCE")
+    # Migrate legacy role label from prior sessions onto the new MSD Specialist name.
+    _legacy_msd = "Vocational & MSD Placement Specialist"
+    if st.session_state.get("active_user_role_matrix") == _legacy_msd:
+        st.session_state["active_user_role_matrix"] = VOCATIONAL_MSD_SPECIALIST
+
     role = st.selectbox(
         "Active User Role Matrix",
         [
@@ -1449,14 +1478,15 @@ with st.sidebar:
             CLAIMS_OFFICER,
             REVIEWING_SPECIALIST,
             CLINICAL_TRIAGE_ROLE,
-            VOCATIONAL_MSD_ROLE,
+            VOCATIONAL_MSD_SPECIALIST,
+            MSD_PLACEMENT_OFFICER,
             MINISTER_ROLE,
         ],
         key="active_user_role_matrix",
     )
     statutory_briefing_mode = role == MINISTER_ROLE
     clinical_triage_mode = role == CLINICAL_TRIAGE_ROLE
-    vocational_msd_mode = role == VOCATIONAL_MSD_ROLE
+    vocational_msd_mode = role in VOCATIONAL_MSD_ROLES
     department_isolated_mode = clinical_triage_mode or vocational_msd_mode
     # GM + caseworkers/specialists may unmask; Minister + department roles keep aliases
     can_unmask_identity = role in {
@@ -1478,7 +1508,10 @@ with st.sidebar:
             "Isolated MSD Placement surface — clinical dossiers, Cabinet liability "
             "matrices, and legal dispute chrome are suppressed."
         )
-        st.caption("MSD Workforce Pipeline · Light-Duty Match · Retraining Vouchers")
+        st.caption(
+            f"Active role: {role} · MSD Workforce Pipeline · "
+            "Light-Duty Match · Retraining Vouchers"
+        )
     else:
         st.markdown("### SCHEME MANDATE INJECTION")
         cap_floor = st.slider("Enforce Liability Mitigation Floor (%)", 0, 50, 15)
