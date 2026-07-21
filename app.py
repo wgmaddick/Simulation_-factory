@@ -555,6 +555,7 @@ MINISTER_ROLE = "Minister for ACC / Crown Governance"
 SCHEME_DIRECTOR = "Scheme Director (GM)"
 CLAIMS_OFFICER = "Claims Officer / Analyst"
 REVIEWING_SPECIALIST = "Reviewing Specialist"
+CLINICAL_TRIAGE_ROLE = "Clinical & Health Triage Specialist"
 
 STATUTORY_NOMINAL = "Nominal"
 STATUTORY_MINISTERIAL = "Ministerial Escalation Required"
@@ -902,6 +903,192 @@ def apply_ledger_filters(df: pd.DataFrame) -> pd.DataFrame:
     return out.reset_index(drop=True)
 
 
+def apply_clinical_triage_action(
+    claim_id: str,
+    title: str,
+    impact: str,
+    new_drift: str,
+) -> None:
+    """on_click-safe clinical intervention binder."""
+    st.session_state[f"action_taken_{claim_id}"] = {
+        "title": sanitize_plain_text(title, max_chars=160),
+        "impact": sanitize_plain_text(impact, max_chars=280),
+        "new_drift": sanitize_plain_text(new_drift, max_chars=280),
+    }
+    st.rerun()
+
+
+def render_clinical_triage_view() -> None:
+    """Department #1: Clinical & Health Triage Team View.
+
+    Strictly isolated surface for medical officers, clinical coordinators,
+    and triage specialists. Hides financial payouts, wage ledgers, and legal
+    disputes to ensure data compliance and zero clutter.
+    """
+    st.markdown("## Clinical & Health Triage Command Sector")
+    st.caption(
+        "Role-Gated Interface: Health & Medical Specialists | "
+        "Focus: Diagnostic Triage & Recovery Alignment"
+    )
+    st.divider()
+
+    # Claim profiles are clinical-only — no indemnity / wage / legal fields rendered.
+    claim_options: dict[str, dict[str, Any]] = {
+        "AAT-Claimant-Delta-2026": {
+            "anatomy": "Shoulder (Glenohumeral / Supraspinatus Tear)",
+            "duty_tier": "Heavy Industrial Laborer",
+            "public_waitlist_days": 84,
+            "odg_baseline_days": 45,
+            "actual_days_elapsed": 112,
+            "flexion_rom": "38% Functional ROM (Severe Limitation)",
+            "facility": "Te Whatu Ora - Northern Surgical Hub",
+            "drift_status": "HIGH DRIFT RISK (+52 Days Variance)",
+        },
+        "AAT-Claimant-Epsilon-2026": {
+            "anatomy": "Lumbar Spine Matrix (L4/L5 Disc Bulge)",
+            "duty_tier": "Clerical / Administrative",
+            "public_waitlist_days": 21,
+            "odg_baseline_days": 30,
+            "actual_days_elapsed": 38,
+            "flexion_rom": "72% Functional ROM (Moderate Stiffness)",
+            "facility": "Te Whatu Ora - Midland Regional Care Network",
+            "drift_status": "NOMINAL ALIGNMENT (+8 Days Variance)",
+        },
+        "AAT-Claimant-Zeta-2026": {
+            "anatomy": "Lower Extremity (Knee Joint Narrowing / ACL Strain)",
+            "duty_tier": "Heavy Logistics & Transport",
+            "public_waitlist_days": 65,
+            "odg_baseline_days": 60,
+            "actual_days_elapsed": 98,
+            "flexion_rom": "45% Functional ROM (Flexion Deficit)",
+            "facility": "Te Whatu Ora - Southern Triage Unit",
+            "drift_status": "HIGH DRIFT RISK (+38 Days Variance)",
+        },
+    }
+
+    selected_claim_id = st.selectbox(
+        "Select Active Medical File for Triage Audit:",
+        list(claim_options.keys()),
+        index=0,
+        key="clinical_triage_claim_selector",
+    )
+    claim = claim_options[selected_claim_id]
+    action_key = f"action_taken_{selected_claim_id}"
+    if action_key not in st.session_state:
+        st.session_state[action_key] = None
+
+    safe_anatomy = sanitize_for_markdown(claim["anatomy"], max_chars=120)
+    safe_duty = sanitize_for_markdown(claim["duty_tier"], max_chars=80)
+    safe_rom = sanitize_for_markdown(claim["flexion_rom"], max_chars=120)
+    safe_facility = sanitize_for_markdown(claim["facility"], max_chars=120)
+    safe_drift = sanitize_for_markdown(claim["drift_status"], max_chars=120)
+    wait_days = int(claim["public_waitlist_days"])
+    odg_days = int(claim["odg_baseline_days"])
+    actual_days = int(claim["actual_days_elapsed"])
+
+    # --- 3-COLUMN CLINICAL INGESTION GRID (What / Where / When) ---
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown("### WHAT: Medical Profile")
+        st.info(
+            f"**Anatomical Target:** {safe_anatomy}\n\n"
+            f"**Occupational Duty Tier:** {safe_duty}\n\n"
+            f"**Flexion / ROM Status:** {safe_rom}"
+        )
+    with col2:
+        st.markdown("### WHERE: Care Facility")
+        st.warning(
+            f"**Assigned Node:** {safe_facility}\n\n"
+            f"**Public Diagnostic Queue:** {wait_days} Days Active\n\n"
+            f"**Primary Bottleneck:** Public Surgical / MRI Assessment Backlog"
+        )
+    with col3:
+        st.markdown("### WHEN: Recovery Baseline")
+        st.error(
+            f"**Actual Days Elapsed:** {actual_days} Days\n\n"
+            f"**ODG Optimal Baseline:** {odg_days} Days\n\n"
+            f"**Status:** {safe_drift}"
+        )
+
+    st.divider()
+
+    action_state = st.session_state.get(action_key)
+    if action_state:
+        safe_title = sanitize_for_markdown(action_state["title"], max_chars=160)
+        safe_impact = sanitize_for_markdown(action_state["impact"], max_chars=280)
+        safe_new_drift = sanitize_for_markdown(
+            action_state["new_drift"], max_chars=280
+        )
+        st.success(
+            f"**CLINICAL INTERVENTION ACTIVE:** {safe_title}\n\n"
+            f"• **System Impact:** {safe_impact}\n\n"
+            f"• **Updated Pathway Drift:** {safe_new_drift}"
+        )
+        st.divider()
+
+    st.markdown("### Clinical Intervention Execution Deck")
+    st.caption(
+        "Select a pre-approved clinical override to halt pathway drift "
+        "and accelerate functional recovery:"
+    )
+
+    btn_col1, btn_col2 = st.columns(2)
+    with btn_col1:
+        st.button(
+            "1. Authorize Private Diagnostic Fast-Track ($2,200 NZD)",
+            use_container_width=True,
+            key=f"clinical_fast_track_{selected_claim_id}",
+            on_click=apply_clinical_triage_action,
+            args=(
+                selected_claim_id,
+                "Private MRI/CT Fast-Track Dispatched",
+                "Bypasses public waitlist. Diagnostic completed within 72 hours.",
+                "Drift reduced by 38 Days | Trajectory re-aligned to Baseline.",
+            ),
+        )
+        st.button(
+            "2. Route to Private Surgical Partner ($14,500 NZD)",
+            use_container_width=True,
+            key=f"clinical_surgical_{selected_claim_id}",
+            on_click=apply_clinical_triage_action,
+            args=(
+                selected_claim_id,
+                "Private Surgical Partner Allocation Approved",
+                "Transfers case out of public hospital backlog to private "
+                "orthopaedic center.",
+                "Saves 65 Days of unmitigated weekly indemnity decay.",
+            ),
+        )
+    with btn_col2:
+        st.button(
+            "3. Dispatch IME Independent Capacity Audit",
+            use_container_width=True,
+            key=f"clinical_ime_{selected_claim_id}",
+            on_click=apply_clinical_triage_action,
+            args=(
+                selected_claim_id,
+                "IME Peer-Review Panel Assigned",
+                "Independent medical audit ordered for ROM and functional "
+                "capacity re-rating.",
+                "Audit scheduled within 5 business days.",
+            ),
+        )
+        st.button(
+            "4. Inject Intensive Multidisciplinary Rehab ($3,200 NZD)",
+            use_container_width=True,
+            key=f"clinical_rehab_{selected_claim_id}",
+            on_click=apply_clinical_triage_action,
+            args=(
+                selected_claim_id,
+                "Intensive Rehab Package Activated (EARI)",
+                "Dispatches physio + occupational therapy team directly "
+                "to claimant.",
+                "Flattens Day 60 drift curve prior to permanent workforce "
+                "detachment.",
+            ),
+        )
+
+
 def render_cohort_analysis_panel(
     cohort_df: pd.DataFrame,
     *,
@@ -1102,38 +1289,61 @@ with st.sidebar:
             SCHEME_DIRECTOR,
             CLAIMS_OFFICER,
             REVIEWING_SPECIALIST,
+            CLINICAL_TRIAGE_ROLE,
             MINISTER_ROLE,
         ],
         key="active_user_role_matrix",
     )
     statutory_briefing_mode = role == MINISTER_ROLE
-    # GM + caseworkers/specialists may unmask; Minister retains tokenized aliases only
+    clinical_triage_mode = role == CLINICAL_TRIAGE_ROLE
+    # GM + caseworkers/specialists may unmask; Minister + Clinical Triage keep aliases
     can_unmask_identity = role in {
         SCHEME_DIRECTOR,
         CLAIMS_OFFICER,
         REVIEWING_SPECIALIST,
     }
     st.markdown("---")
-    st.markdown("### SCHEME MANDATE INJECTION")
-    cap_floor = st.slider("Enforce Liability Mitigation Floor (%)", 0, 50, 15)
-    st.text_input(
-        "Disseminate Performance Mandate",
-        placeholder="e.g., Accelerate Pathway Interventions",
-    )
-    if statutory_briefing_mode:
-        st.info("Statutory Briefing Mode active — Crown Entity Act compliance view.")
-        st.caption(
-            "Aggregated cohort & root-cause analysis permitted. "
-            "Individual PII / Native ACC Claim ID unmasking restricted."
+    if clinical_triage_mode:
+        st.markdown("### CLINICAL TRIAGE MODE")
+        st.info(
+            "Isolated Health & Medical surface — financial payouts, wage ledgers, "
+            "and legal dispute matrices are suppressed."
         )
-    st.caption("Localized NZ ACC · IRD · MSD · Health NZ · Ministerial AoG grids")
-    if st.session_state.identity_audit_log:
+        st.caption("Te Whatu Ora · Health NZ Clinical Grid · Diagnostic Triage")
+    else:
+        st.markdown("### SCHEME MANDATE INJECTION")
+        cap_floor = st.slider("Enforce Liability Mitigation Floor (%)", 0, 50, 15)
+        st.text_input(
+            "Disseminate Performance Mandate",
+            placeholder="e.g., Accelerate Pathway Interventions",
+        )
+        if statutory_briefing_mode:
+            st.info(
+                "Statutory Briefing Mode active — Crown Entity Act compliance view."
+            )
+            st.caption(
+                "Aggregated cohort & root-cause analysis permitted. "
+                "Individual PII / Native ACC Claim ID unmasking restricted."
+            )
+        st.caption("Localized NZ ACC · IRD · MSD · Health NZ · Ministerial AoG grids")
+    if st.session_state.identity_audit_log and not clinical_triage_mode:
         with st.expander("Identity Unmask Audit Log", expanded=False):
             for entry in reversed(st.session_state.identity_audit_log[-8:]):
                 st.text(
                     f"{entry['ts']} · {entry['actor']} · {entry['action']} · "
                     f"{entry['token']} → {entry['native_id']}"
                 )
+
+# Clinical Triage is a strictly isolated viewport — no scheme finance / legal chrome.
+if clinical_triage_mode:
+    st.title("NZ ACC RISK ORCHESTRATION ENGINE")
+    st.markdown(
+        "<p class='statutory-meta'>"
+        "Clinical Department Surface · Health NZ / Te Whatu Ora Triage Channel</p>",
+        unsafe_allow_html=True,
+    )
+    render_clinical_triage_view()
+    st.stop()
 
 # --- MAIN PERFORMANCE DASHBOARD TITLE ---
 st.title("NZ ACC RISK ORCHESTRATION ENGINE")
