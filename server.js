@@ -47,6 +47,20 @@ const VERDICTS = {
   ],
 };
 
+/** Direct, on-field coaching language — readable in ~2 seconds on a phone. */
+const COACH_SPEAK = {
+  hamstring_load:
+    'Jackson is slamming on the brakes too hard on his heels because his legs are tired. His left hamstring is actively tightening up to protect itself. Reduce his high-speed cutting repetitions for the next 24 hours.',
+  joint_plane:
+    'His knee is drifting inward on plant. Cue him to stack hip–knee–ankle and finish cuts tall. Pull him from max-intensity change-of-direction until that line holds.',
+  torque_asymmetry:
+    'He’s dumping most of the twist onto his strong side. Even out the braking work — force more plant-side reps on the quieter leg this session.',
+  deceleration_cut:
+    'The last cut looked clean and controlled. Keep him in the plan, but watch the plant foot if speed ramps back up.',
+};
+
+const HAMSTRING_COACH_SPEAK = COACH_SPEAK.hamstring_load;
+
 const SENTINEL_ANOMALIES = {
   hamstring_load: {
     location: 'Distal biceps femoris · plant leg',
@@ -95,6 +109,30 @@ const SENTINEL_TRIGGERS = [
 /** In-memory credit ledger for the demo session. */
 let credits = VAULT_CONFIG.initial_credits;
 
+/** Total Team Resilience Index — systemic network fatigue (0–100%). */
+const TEAM_RESILIENCE_INITIAL = 88;
+let teamResilience = TEAM_RESILIENCE_INITIAL;
+
+const REPLACEMENT_PROFILES = {
+  Davis: { match: 94, fatigueRisk: 12, riskBand: 'Low' },
+  Miller: { match: 78, fatigueRisk: 38, riskBand: 'Medium' },
+  Henderson: { match: 62, fatigueRisk: 5, riskBand: 'Low' },
+};
+
+function clampResilience(value) {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function resiliencePayload(delta = 0, reason = null) {
+  return {
+    teamResilience,
+    teamResiliencePercent: teamResilience,
+    resilienceDelta: delta,
+    resilienceReason: reason,
+    resilienceStatus: teamResilience >= 75 ? 'stable' : 'vulnerable',
+  };
+}
+
 function pickVerdict(nodeId, speech) {
   const options = VERDICTS[nodeId] || VERDICTS.joint_plane;
   const digest = crypto.createHash('sha256').update(`${nodeId}:${speech.toLowerCase()}`).digest('hex');
@@ -104,6 +142,15 @@ function pickVerdict(nodeId, speech) {
     return `${base} Query context noted: “${speech.slice(0, 120)}”.`;
   }
   return base;
+}
+
+function pickCoachSpeak(nodeId, speech) {
+  const lowered = (speech || '').toLowerCase();
+  // Any hamstring-focused query gets the explicit on-field coaching script.
+  if (nodeId === 'hamstring_load' || lowered.includes('hamstring')) {
+    return HAMSTRING_COACH_SPEAK;
+  }
+  return COACH_SPEAK[nodeId] || COACH_SPEAK.joint_plane;
 }
 
 function shouldTriggerSentinel(nodeId, speech) {
@@ -157,12 +204,17 @@ app.get('/api/config', (req, res) => {
   res.json({
     ...VAULT_CONFIG,
     initial_credits: credits,
+    ...resiliencePayload(0, 'baseline'),
   });
 });
 
 app.post('/api/reset-credits', (req, res) => {
   credits = VAULT_CONFIG.initial_credits;
-  res.json({ creditsRemaining: credits });
+  teamResilience = TEAM_RESILIENCE_INITIAL;
+  res.json({
+    creditsRemaining: credits,
+    ...resiliencePayload(0, 'reset'),
+  });
 });
 
 // Route 2: Process the "Video + Talk + Send" execution loop
@@ -190,16 +242,28 @@ app.post('/api/analyze', (req, res) => {
 
   const sentinelOverride = shouldTriggerSentinel(selectedNode.id, speech);
 
+  let resilienceDelta = 0;
+  let resilienceReason = null;
+  if (sentinelOverride) {
+    // Hidden structural fatigue forces overcompensation strain on adjacent assets.
+    resilienceDelta = -15;
+    teamResilience = clampResilience(teamResilience + resilienceDelta);
+    resilienceReason =
+      'Passive Anomaly Sentinel: hidden structural fatigue — adjacent assets absorbing overcompensation strain (−15%).';
+  }
+
   const dynamicResponse = {
     creditsRemaining: credits,
     nodeId: selectedNode.id,
     nodeLabel: selectedNode.label,
     creditCost: selectedNode.credit_cost,
     expertVerdict: pickVerdict(selectedNode.id, speech),
-    laymanSummary:
-      'The engine processed your vocal query successfully. Metrics stabilized within dynamic margins.',
+    biomechanicalMetrics: pickVerdict(selectedNode.id, speech),
+    coachSpeak: pickCoachSpeak(selectedNode.id, speech),
+    laymanSummary: pickCoachSpeak(selectedNode.id, speech),
     sentinelOverride,
     anomalyData: sentinelOverride ? { ...SENTINEL_ANOMALIES[selectedNode.id] } : null,
+    ...resiliencePayload(resilienceDelta, resilienceReason),
   };
 
   res.json(dynamicResponse);
@@ -221,6 +285,23 @@ app.post('/api/confirm-rotation', (req, res) => {
   }
 
   const name = String(candidateName).trim();
+  const profile = REPLACEMENT_PROFILES[name] || {
+    match: 50,
+    fatigueRisk: 50,
+    riskBand: 'Unknown',
+  };
+
+  let resilienceDelta = 0;
+  let resilienceReason = null;
+  // Low-risk backups (e.g. Davis at 12% fatigue) restore network stability via self-heal.
+  if (profile.fatigueRisk <= 15 || profile.riskBand === 'Low') {
+    resilienceDelta = 20;
+    teamResilience = clampResilience(teamResilience + resilienceDelta);
+    resilienceReason = `Self-heal cascade: ${name} activated (fatigue risk ${profile.fatigueRisk}%) — organizational network stabilized (+20%).`;
+  } else {
+    resilienceReason = `Rotation of ${name} dispatched; fatigue risk ${profile.fatigueRisk}% is above low-risk band — resilience held steady.`;
+  }
+
   const loadPathId = buildLoadPathSignature(name);
   const weather = saturdayWeatherGrid();
   const dispatchedAt = new Date().toISOString();
@@ -261,6 +342,7 @@ app.post('/api/confirm-rotation', (req, res) => {
     success: true,
     message: `Rotation confirmed for ${name}. Entire sub-organization automatically re-aligned and self-healed.`,
     candidateName: name,
+    candidateProfile: profile,
     dispatchedAt,
     cascadeComplete: true,
     selfHealed: true,
@@ -285,6 +367,7 @@ app.post('/api/confirm-rotation', (req, res) => {
         detail: downstream.athletePortableVault.detail,
       },
     ],
+    ...resiliencePayload(resilienceDelta, resilienceReason),
   });
 });
 

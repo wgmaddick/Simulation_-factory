@@ -6,6 +6,9 @@
     <title>Kinetic Asset Management Vault</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* Critical fallback if Tailwind CDN is blocked over the tunnel */
+        html, body { background: #020617; color: #f1f5f9; margin: 0; min-height: 100%; }
+        body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; }
         @keyframes healFlash {
             0% { opacity: 0; transform: translateY(8px) scale(0.98); }
             20% { opacity: 1; transform: translateY(0) scale(1); }
@@ -25,17 +28,60 @@
             animation: pulseRing 1s ease-out infinite;
             border-radius: 9999px;
         }
+        @keyframes resilienceAlert {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55), 0 0 12px rgba(239, 68, 68, 0.35);
+                filter: brightness(1);
+            }
+            50% {
+                box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.25), 0 0 22px rgba(245, 158, 11, 0.55);
+                filter: brightness(1.15);
+            }
+        }
+        @keyframes resilienceGlow {
+            0%, 100% { box-shadow: 0 0 10px rgba(16, 185, 129, 0.45), 0 0 22px rgba(52, 211, 153, 0.2); }
+            50% { box-shadow: 0 0 16px rgba(16, 185, 129, 0.7), 0 0 28px rgba(52, 211, 153, 0.35); }
+        }
+        #resilience-fill {
+            transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1), background 0.45s ease;
+        }
+        #resilience-fill.is-stable {
+            background: linear-gradient(90deg, #059669, #34d399, #6ee7b7);
+            animation: resilienceGlow 2.4s ease-in-out infinite;
+        }
+        #resilience-fill.is-alert {
+            background: linear-gradient(90deg, #b91c1c, #f59e0b, #ef4444);
+            animation: resilienceAlert 0.85s ease-in-out infinite;
+        }
+        #resilience-shell.is-alert {
+            border-color: rgba(245, 158, 11, 0.55);
+        }
+        #resilience-shell.is-stable {
+            border-color: rgba(16, 185, 129, 0.35);
+        }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen flex flex-col">
 
-    <header class="border-b border-slate-800 bg-slate-900/50 p-4 flex justify-between items-center backdrop-blur-md">
+    <header class="border-b border-slate-800 bg-slate-900/50 p-4 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center backdrop-blur-md">
         <div>
             <h1 id="domain-header" class="text-xs font-bold tracking-widest text-emerald-500 uppercase">LOADING DOMAIN...</h1>
             <p id="tenant-subheader" class="text-sm text-slate-400 font-semibold"></p>
         </div>
-        <div class="bg-slate-950 border border-slate-800 px-4 py-2 rounded-lg text-sm">
-            Available Allocation: <span id="credit-display" class="font-mono text-emerald-400 font-bold">---</span> Credits
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+            <div id="resilience-shell" class="is-stable bg-slate-950 border border-emerald-500/30 px-4 py-2.5 rounded-lg min-w-[220px] sm:min-w-[280px] shadow-inner shadow-black/40">
+                <div class="flex items-center justify-between gap-3 mb-1.5">
+                    <span class="text-[10px] font-extrabold tracking-widest text-slate-300 uppercase">Total Team Resilience Index</span>
+                    <span id="resilience-value" class="text-sm font-mono font-bold text-emerald-400 tabular-nums">88%</span>
+                </div>
+                <div class="h-2.5 w-full rounded-full bg-slate-900 border border-slate-800 overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="88" id="resilience-track" aria-label="Total Team Resilience Index">
+                    <div id="resilience-fill" class="is-stable h-full rounded-full w-[88%]"></div>
+                </div>
+                <p id="resilience-status" class="mt-1.5 text-[10px] font-medium tracking-wide text-emerald-500/80 uppercase">Network stable</p>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 px-4 py-2 rounded-lg text-sm flex items-center">
+                Available Allocation: <span id="credit-display" class="font-mono text-emerald-400 font-bold ml-1">---</span>&nbsp;Credits
+            </div>
         </div>
     </header>
 
@@ -73,9 +119,33 @@
         <section class="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col space-y-4 overflow-y-auto">
             <h2 class="text-sm font-semibold tracking-wider text-slate-400 uppercase">Column 3: Advisory &amp; Sentinel</h2>
 
-            <div class="bg-slate-950 border border-slate-800 rounded-lg p-4">
-                <h3 class="text-xs font-bold tracking-wider text-slate-400 uppercase mb-2">Track 1: Expert Verdict</h3>
-                <p id="verdict-display" class="text-sm text-slate-300 italic">Awaiting structural intake visualization...</p>
+            <div class="space-y-3">
+                <h3 class="text-xs font-bold tracking-wider text-slate-400 uppercase">Track 1 · Twin Readout</h3>
+
+                <!-- Coach Speak first: phone-readable in ~2 seconds -->
+                <article id="coach-speak-card" class="relative overflow-hidden rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/15 via-slate-950 to-slate-950 p-4 shadow-lg shadow-amber-500/5">
+                    <div class="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-amber-400 via-amber-300 to-transparent" aria-hidden="true"></div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-base leading-none" aria-hidden="true">📋</span>
+                        <h4 class="text-[11px] sm:text-xs font-extrabold tracking-widest text-amber-300 uppercase">Actionable Coach Speak</h4>
+                    </div>
+                    <p id="coach-speak-display" class="text-base sm:text-lg font-semibold text-slate-50 leading-snug tracking-tight">
+                        Tap Execute — coach-ready call appears here.
+                    </p>
+                    <p class="mt-2 text-[10px] font-mono uppercase tracking-wider text-amber-500/70">Field-ready · 2-second read</p>
+                </article>
+
+                <!-- Biomechanical metrics for medical staff -->
+                <article class="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-sm leading-none" aria-hidden="true">🔬</span>
+                        <h4 class="text-[10px] font-bold tracking-widest text-slate-400 uppercase">Biomechanical Metrics</h4>
+                    </div>
+                    <p id="verdict-display" class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Awaiting structural intake visualization…
+                    </p>
+                    <p class="mt-2 text-[10px] font-mono uppercase tracking-wider text-slate-600">Medical staff layer</p>
+                </article>
             </div>
 
             <div id="sentinel-card" class="bg-red-950/20 border border-red-900/50 rounded-lg p-4 hidden transition-all duration-300">
@@ -164,6 +234,41 @@
     <script>
         let currentConfig = null;
         let audioCtx = null;
+        let currentResilience = 88;
+
+        function updateResilienceBar(score, meta = {}) {
+            if (typeof score !== 'number' || Number.isNaN(score)) return;
+            currentResilience = Math.max(0, Math.min(100, Math.round(score)));
+
+            const fill = document.getElementById('resilience-fill');
+            const shell = document.getElementById('resilience-shell');
+            const valueEl = document.getElementById('resilience-value');
+            const statusEl = document.getElementById('resilience-status');
+            const track = document.getElementById('resilience-track');
+
+            valueEl.textContent = `${currentResilience}%`;
+            fill.style.width = `${currentResilience}%`;
+            track.setAttribute('aria-valuenow', String(currentResilience));
+
+            const vulnerable = currentResilience < 75;
+            fill.classList.toggle('is-stable', !vulnerable);
+            fill.classList.toggle('is-alert', vulnerable);
+            shell.classList.toggle('is-stable', !vulnerable);
+            shell.classList.toggle('is-alert', vulnerable);
+
+            valueEl.classList.toggle('text-emerald-400', !vulnerable);
+            valueEl.classList.toggle('text-amber-400', vulnerable);
+
+            if (meta.resilienceReason) {
+                statusEl.textContent = meta.resilienceReason;
+            } else if (vulnerable) {
+                statusEl.textContent = 'Systemic network vulnerability';
+            } else {
+                statusEl.textContent = 'Network stable';
+            }
+            statusEl.classList.toggle('text-emerald-500/80', !vulnerable);
+            statusEl.classList.toggle('text-amber-400/90', vulnerable);
+        }
 
         function ensureAudioContext() {
             if (!audioCtx) {
@@ -237,6 +342,12 @@
             document.getElementById('domain-header').innerText = currentConfig.target_domain;
             document.getElementById('tenant-subheader').innerText = currentConfig.tenant_identity;
             document.getElementById('credit-display').innerText = currentConfig.initial_credits;
+            updateResilienceBar(
+                typeof currentConfig.teamResilience === 'number'
+                    ? currentConfig.teamResilience
+                    : 88,
+                { resilienceReason: 'Baseline network scan' }
+            );
 
             const container = document.getElementById('nodes-container');
             container.innerHTML = '';
@@ -346,6 +457,9 @@
                     return;
                 }
                 showHealConfirmation(data);
+                if (typeof data.teamResilience === 'number') {
+                    updateResilienceBar(data.teamResilience, data);
+                }
             } catch (err) {
                 alert('Unable to reach self-heal cascade.');
             } finally {
@@ -389,7 +503,17 @@
                 }
 
                 document.getElementById('credit-display').innerText = data.creditsRemaining;
-                document.getElementById('verdict-display').innerText = data.expertVerdict;
+                document.getElementById('verdict-display').innerText =
+                    data.biomechanicalMetrics || data.expertVerdict;
+                document.getElementById('coach-speak-display').innerText =
+                    data.coachSpeak || data.laymanSummary || 'No coach speak returned.';
+                document.getElementById('coach-speak-card').classList.add('ring-1', 'ring-amber-400/50');
+                setTimeout(() => {
+                    document.getElementById('coach-speak-card').classList.remove('ring-1', 'ring-amber-400/50');
+                }, 1200);
+                if (typeof data.teamResilience === 'number') {
+                    updateResilienceBar(data.teamResilience, data);
+                }
 
                 const sentinelCard = document.getElementById('sentinel-card');
                 if (data.sentinelOverride && data.anomalyData) {
