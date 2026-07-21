@@ -47,6 +47,20 @@ const VERDICTS = {
   ],
 };
 
+/** Direct, on-field coaching language — readable in ~2 seconds on a phone. */
+const COACH_SPEAK = {
+  hamstring_load:
+    'Jackson is slamming on the brakes too hard on his heels because his legs are tired. His left hamstring is actively tightening up to protect itself. Reduce his high-speed cutting repetitions for the next 24 hours.',
+  joint_plane:
+    'His knee is drifting inward on plant. Cue him to stack hip–knee–ankle and finish cuts tall. Pull him from max-intensity change-of-direction until that line holds.',
+  torque_asymmetry:
+    'He’s dumping most of the twist onto his strong side. Even out the braking work — force more plant-side reps on the quieter leg this session.',
+  deceleration_cut:
+    'The last cut looked clean and controlled. Keep him in the plan, but watch the plant foot if speed ramps back up.',
+};
+
+const HAMSTRING_COACH_SPEAK = COACH_SPEAK.hamstring_load;
+
 const SENTINEL_ANOMALIES = {
   hamstring_load: {
     location: 'Distal biceps femoris · plant leg',
@@ -104,6 +118,15 @@ function pickVerdict(nodeId, speech) {
     return `${base} Query context noted: “${speech.slice(0, 120)}”.`;
   }
   return base;
+}
+
+function pickCoachSpeak(nodeId, speech) {
+  const lowered = (speech || '').toLowerCase();
+  // Any hamstring-focused query gets the explicit on-field coaching script.
+  if (nodeId === 'hamstring_load' || lowered.includes('hamstring')) {
+    return HAMSTRING_COACH_SPEAK;
+  }
+  return COACH_SPEAK[nodeId] || COACH_SPEAK.joint_plane;
 }
 
 function shouldTriggerSentinel(nodeId, speech) {
@@ -196,8 +219,9 @@ app.post('/api/analyze', (req, res) => {
     nodeLabel: selectedNode.label,
     creditCost: selectedNode.credit_cost,
     expertVerdict: pickVerdict(selectedNode.id, speech),
-    laymanSummary:
-      'The engine processed your vocal query successfully. Metrics stabilized within dynamic margins.',
+    biomechanicalMetrics: pickVerdict(selectedNode.id, speech),
+    coachSpeak: pickCoachSpeak(selectedNode.id, speech),
+    laymanSummary: pickCoachSpeak(selectedNode.id, speech),
     sentinelOverride,
     anomalyData: sentinelOverride ? { ...SENTINEL_ANOMALIES[selectedNode.id] } : null,
   };

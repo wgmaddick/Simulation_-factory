@@ -6,6 +6,9 @@
     <title>Kinetic Asset Management Vault</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* Critical fallback if Tailwind CDN is blocked over the tunnel */
+        html, body { background: #020617; color: #f1f5f9; margin: 0; min-height: 100%; }
+        body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; }
         @keyframes healFlash {
             0% { opacity: 0; transform: translateY(8px) scale(0.98); }
             20% { opacity: 1; transform: translateY(0) scale(1); }
@@ -73,9 +76,33 @@
         <section class="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col space-y-4 overflow-y-auto">
             <h2 class="text-sm font-semibold tracking-wider text-slate-400 uppercase">Column 3: Advisory &amp; Sentinel</h2>
 
-            <div class="bg-slate-950 border border-slate-800 rounded-lg p-4">
-                <h3 class="text-xs font-bold tracking-wider text-slate-400 uppercase mb-2">Track 1: Expert Verdict</h3>
-                <p id="verdict-display" class="text-sm text-slate-300 italic">Awaiting structural intake visualization...</p>
+            <div class="space-y-3">
+                <h3 class="text-xs font-bold tracking-wider text-slate-400 uppercase">Track 1 · Twin Readout</h3>
+
+                <!-- Coach Speak first: phone-readable in ~2 seconds -->
+                <article id="coach-speak-card" class="relative overflow-hidden rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/15 via-slate-950 to-slate-950 p-4 shadow-lg shadow-amber-500/5">
+                    <div class="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-amber-400 via-amber-300 to-transparent" aria-hidden="true"></div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-base leading-none" aria-hidden="true">📋</span>
+                        <h4 class="text-[11px] sm:text-xs font-extrabold tracking-widest text-amber-300 uppercase">Actionable Coach Speak</h4>
+                    </div>
+                    <p id="coach-speak-display" class="text-base sm:text-lg font-semibold text-slate-50 leading-snug tracking-tight">
+                        Tap Execute — coach-ready call appears here.
+                    </p>
+                    <p class="mt-2 text-[10px] font-mono uppercase tracking-wider text-amber-500/70">Field-ready · 2-second read</p>
+                </article>
+
+                <!-- Biomechanical metrics for medical staff -->
+                <article class="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-sm leading-none" aria-hidden="true">🔬</span>
+                        <h4 class="text-[10px] font-bold tracking-widest text-slate-400 uppercase">Biomechanical Metrics</h4>
+                    </div>
+                    <p id="verdict-display" class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Awaiting structural intake visualization…
+                    </p>
+                    <p class="mt-2 text-[10px] font-mono uppercase tracking-wider text-slate-600">Medical staff layer</p>
+                </article>
             </div>
 
             <div id="sentinel-card" class="bg-red-950/20 border border-red-900/50 rounded-lg p-4 hidden transition-all duration-300">
@@ -389,7 +416,14 @@
                 }
 
                 document.getElementById('credit-display').innerText = data.creditsRemaining;
-                document.getElementById('verdict-display').innerText = data.expertVerdict;
+                document.getElementById('verdict-display').innerText =
+                    data.biomechanicalMetrics || data.expertVerdict;
+                document.getElementById('coach-speak-display').innerText =
+                    data.coachSpeak || data.laymanSummary || 'No coach speak returned.';
+                document.getElementById('coach-speak-card').classList.add('ring-1', 'ring-amber-400/50');
+                setTimeout(() => {
+                    document.getElementById('coach-speak-card').classList.remove('ring-1', 'ring-amber-400/50');
+                }, 1200);
 
                 const sentinelCard = document.getElementById('sentinel-card');
                 if (data.sentinelOverride && data.anomalyData) {
