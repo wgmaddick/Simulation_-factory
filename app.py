@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import html
 import re
+from datetime import datetime, timezone
 from typing import Any
 
 import numpy as np
@@ -467,6 +468,20 @@ MINISTER_ROLE = "Cabinet Minister (Executive Authority)"
 SCHEME_DIRECTOR = "Scheme Director (GM)"
 CLAIMS_OFFICER = "Claims Officer / Analyst"
 REVIEWING_SPECIALIST = "Reviewing Specialist"
+FINANCE_LEGAL_SPECIALIST = "Finance, Actuarial & Legal Specialist"
+ACTUARY_COUNSEL = "Actuary / Counsel"
+FINANCE_LEGAL_ROLES = frozenset({FINANCE_LEGAL_SPECIALIST, ACTUARY_COUNSEL})
+
+# Proprietary mitigation bands — numeric weights stay server-side (IP lockdown).
+IP_MITIGATION_BANDS: dict[str, int] = {
+    "Nominal Guardrail": 0,
+    "Measured Stewardship": 10,
+    "Standard Crown Floor": 15,
+    "Elevated Containment": 25,
+    "Maximum Statutory Ceiling": 50,
+}
+IP_BAND_LABELS: tuple[str, ...] = tuple(IP_MITIGATION_BANDS.keys())
+DEFAULT_IP_BAND = "Standard Crown Floor"
 
 STATUTORY_NOMINAL = "Nominal"
 STATUTORY_MINISTERIAL = "Ministerial Escalation Required"
@@ -490,6 +505,283 @@ def resolve_native_acc_claim_id(aat_token: str) -> str:
         str(aat_token),
         f"ACC-NZ-PENDING-{abs(hash(str(aat_token))) % 10_000_000:07d}",
     )
+
+
+def render_abstracted_sidebar_ip() -> tuple[str, int]:
+    """IP lockdown: select_slider with abstracted bands — no raw % on glass."""
+    st.markdown("### SCHEME MANDATE INJECTION")
+    st.caption(
+        "Proprietary stewardship band control · explicit arithmetic withheld from glass"
+    )
+    band = st.select_slider(
+        "Enforce Liability Mitigation Floor (Abstracted Stewardship Band)",
+        options=list(IP_BAND_LABELS),
+        value=DEFAULT_IP_BAND,
+        key="ip_mitigation_band_slider",
+    )
+    internal_floor = int(IP_MITIGATION_BANDS[band])
+    st.session_state["ip_mitigation_band"] = band
+    st.session_state["ip_mitigation_floor_internal"] = internal_floor
+    safe_band = html.escape(sanitize_plain_text(band, max_chars=64), quote=True)
+    st.markdown(
+        f'<div style="font-family:\'IBM Plex Mono\',monospace;font-size:0.78rem;'
+        f'color:#8b949e;">Active stewardship band: '
+        f'<span style="color:#c084fc;font-weight:700;">{safe_band}</span>'
+        f" · proprietary weight sealed</div>",
+        unsafe_allow_html=True,
+    )
+    return band, internal_floor
+
+
+def apply_finance_legal_action(claim_id: str, title: str, details: str) -> None:
+    """Persist Department #4 execution deck confirmation into session state."""
+    st.session_state[f"finance_legal_action_{claim_id}"] = {
+        "title": sanitize_plain_text(title, max_chars=160),
+        "details": sanitize_plain_text(details, max_chars=320),
+        "ts": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%SZ"),
+    }
+
+
+def render_finance_legal_view() -> None:
+    """Department #4: Finance, Actuarial & Legal Specialist View.
+
+    Isolates commutation, reserve, counsel briefing, and actuarial vault
+    workflows. Dynamic strings pass through html.escape (PR #24).
+    """
+    st.markdown("## Finance, Actuarial & Legal Command Sector")
+    st.caption(
+        "Role-Gated Interface: Actuaries & Counsel | "
+        "Focus: Commutation · Reserve · Dispute · Vault Seal"
+    )
+    st.divider()
+
+    finance_case_options: dict[str, dict[str, str]] = {
+        "AAT-Claimant-Zeta-2026": {
+            "subject": "Claimant-Zeta · Knee construct",
+            "reserve_posture": "Cabinet Threshold Exceeded · Long-tail watch",
+            "commutation_band": "Abstracted Crown Settlement Envelope",
+            "counsel_status": "Dispute matrix primed · PII tokenized",
+            "actuary_owner": "Actuarial Pod #AL-04",
+        },
+        "AAT-Claimant-Delta-2026": {
+            "subject": "Claimant-Delta · Shoulder pathway",
+            "reserve_posture": "Ministerial Escalation Required",
+            "commutation_band": "Measured Stewardship Settlement Window",
+            "counsel_status": "Counsel brief draft pending seal",
+            "actuary_owner": "Actuarial Pod #AL-04",
+        },
+    }
+
+    selected_id = st.selectbox(
+        "Select Finance / Legal Case File:",
+        list(finance_case_options.keys()),
+        index=0,
+        key="finance_legal_case_selector",
+    )
+    case = finance_case_options[selected_id]
+    action_key = f"finance_legal_action_{selected_id}"
+    if action_key not in st.session_state:
+        st.session_state[action_key] = None
+
+    safe_subject = html.escape(
+        sanitize_plain_text(case["subject"], max_chars=80), quote=True
+    )
+    safe_reserve = html.escape(
+        sanitize_plain_text(case["reserve_posture"], max_chars=120), quote=True
+    )
+    safe_commutation = html.escape(
+        sanitize_plain_text(case["commutation_band"], max_chars=120), quote=True
+    )
+    safe_counsel = html.escape(
+        sanitize_plain_text(case["counsel_status"], max_chars=120), quote=True
+    )
+    safe_owner = html.escape(
+        sanitize_plain_text(case["actuary_owner"], max_chars=64), quote=True
+    )
+    safe_token = html.escape(
+        sanitize_claim_token(selected_id), quote=True
+    )
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown("### Subject & Ownership")
+        st.markdown(
+            f'<div class="metric-box">'
+            f'<div class="metric-label">Claim Token</div>'
+            f'<div style="color:#ffffff;font-weight:700;">{safe_token}</div>'
+            f'<div class="metric-label" style="margin-top:0.55rem;">Subject</div>'
+            f'<div style="color:#e2e8f0;">{safe_subject}</div>'
+            f'<div class="metric-label" style="margin-top:0.55rem;">Actuarial Owner</div>'
+            f'<div style="color:#c084fc;">{safe_owner}</div>'
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+    with c2:
+        st.markdown("### Reserve Posture")
+        st.markdown(
+            f'<div class="metric-box" style="border-left:3px solid #eab308;">'
+            f'<div class="metric-label">Statutory Reserve Posture</div>'
+            f'<div style="color:#fde68a;font-weight:700;">{safe_reserve}</div>'
+            f'<div class="metric-label" style="margin-top:0.55rem;">Commutation Envelope</div>'
+            f'<div style="color:#e2e8f0;">{safe_commutation}</div>'
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+    with c3:
+        st.markdown("### Counsel Status")
+        st.markdown(
+            f'<div class="metric-box" style="border-left:3px solid #a855f7;">'
+            f'<div class="metric-label">Legal Channel</div>'
+            f'<div style="color:#e9d5ff;">{safe_counsel}</div>'
+            f'<div class="metric-label" style="margin-top:0.55rem;">IP Posture</div>'
+            f'<div style="color:#8b949e;">Proprietary floor weights sealed · glass-safe</div>'
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+    st.divider()
+
+    action_state = st.session_state.get(action_key)
+    if action_state:
+        safe_title = html.escape(
+            sanitize_plain_text(action_state["title"], max_chars=160), quote=True
+        )
+        safe_details = html.escape(
+            sanitize_plain_text(action_state["details"], max_chars=320), quote=True
+        )
+        safe_ts = html.escape(
+            sanitize_plain_text(action_state.get("ts", ""), max_chars=40), quote=True
+        )
+        st.markdown(
+            f"""
+            <div style="margin:0.25rem 0 0.85rem; padding:1rem 1.15rem;
+                        background:linear-gradient(135deg,#10241a 0%,#14532d 55%,#0f1f17 100%);
+                        border:1px solid #16a34a; border-radius:6px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:0.72rem;
+                          letter-spacing:0.08em; text-transform:uppercase;
+                          color:#86efac; margin-bottom:0.35rem;">
+                Finance / Legal Action Executed · {safe_ts}
+              </div>
+              <div style="font-size:1.05rem; font-weight:700; color:#ecfdf5;
+                          margin-bottom:0.35rem;">{safe_title}</div>
+              <div style="color:#d1fae5; font-size:0.92rem; line-height:1.45;">
+                • {safe_details}
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.success(
+            "**FINANCE / LEGAL ACTION EXECUTED:** "
+            + sanitize_for_markdown(action_state["title"], max_chars=160)
+        )
+        st.divider()
+
+    st.markdown("### Finance & Legal Execution Deck")
+    st.caption(
+        "Tap a trigger to update session state and confirm the statutory action "
+        "live on this device."
+    )
+    b1, b2 = st.columns(2)
+    with b1:
+        st.button(
+            "1. Authorize Crown Commutation Settlement Review",
+            use_container_width=True,
+            type="primary",
+            key=f"fl_commutation_{selected_id}",
+            on_click=apply_finance_legal_action,
+            args=(
+                selected_id,
+                "Crown Commutation Settlement Review Authorized",
+                "Abstracted settlement envelope staged for actuarial seal. "
+                "Explicit arithmetic withheld from glass (IP lockdown).",
+            ),
+        )
+        st.button(
+            "2. Issue Statutory Liability Reserve Adjustment",
+            use_container_width=True,
+            key=f"fl_reserve_{selected_id}",
+            on_click=apply_finance_legal_action,
+            args=(
+                selected_id,
+                "Statutory Liability Reserve Adjustment Issued",
+                "Reserve posture recalibrated under abstracted stewardship band. "
+                "Ledger delta sealed to Crown vault.",
+            ),
+        )
+    with b2:
+        st.button(
+            "3. Flag File for Legal Dispute / Counsel Brief",
+            use_container_width=True,
+            key=f"fl_counsel_{selected_id}",
+            on_click=apply_finance_legal_action,
+            args=(
+                selected_id,
+                "Legal Dispute / Counsel Brief Flagged",
+                "Tokenized counsel brief packet queued. Individual PII remains "
+                "masked pending statutory unmask authority.",
+            ),
+        )
+        st.button(
+            "4. Seal Actuarial Projection to Crown Vault",
+            use_container_width=True,
+            key=f"fl_vault_{selected_id}",
+            on_click=apply_finance_legal_action,
+            args=(
+                selected_id,
+                "Actuarial Projection Sealed to Crown Vault",
+                "36-month liability projection hash committed. Provenance receipt "
+                "written to session vault for Cabinet pouch.",
+            ),
+        )
+
+
+def render_gemini_notebook_sidebar(*, role: str, claim_token: str) -> None:
+    """Gemini Notebook Manifest — Note #01 generated from active role + claim."""
+    safe_role = html.escape(sanitize_plain_text(role, max_chars=80), quote=True)
+    safe_token = html.escape(sanitize_claim_token(claim_token), quote=True)
+    ts = html.escape(
+        datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"), quote=True
+    )
+    role_focus = {
+        MINISTER_ROLE: "Cabinet statutory oversight & BIM escalation posture",
+        SCHEME_DIRECTOR: "Scheme CapEx stewardship & pathway governance",
+        CLAIMS_OFFICER: "Milestone SLA execution & claimant engagement",
+        REVIEWING_SPECIALIST: "Clinical telemetry variance & IME compliance",
+        FINANCE_LEGAL_SPECIALIST: "Commutation, reserve, and counsel brief matrix",
+        ACTUARY_COUNSEL: "Actuarial projection seal & dispute channel readiness",
+    }
+    focus = html.escape(
+        sanitize_plain_text(
+            role_focus.get(role, "General scheme operational brief"),
+            max_chars=160,
+        ),
+        quote=True,
+    )
+    st.markdown("---")
+    st.markdown("### Gemini Notebook Manifest")
+    st.markdown(
+        f"""
+        <div style="background:#12161e; border:1px solid #30363d; border-left:3px solid #a855f7;
+                    border-radius:6px; padding:0.85rem 0.95rem; margin-bottom:0.5rem;">
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:0.72rem;
+                      letter-spacing:0.08em; text-transform:uppercase; color:#c084fc;
+                      font-weight:700; margin-bottom:0.4rem;">
+            Note #01 · Role-Dynamic Operational Brief
+          </div>
+          <div style="font-size:0.82rem; color:#8b949e; margin-bottom:0.35rem;">
+            Timestamp: <span style="color:#e2e8f0;">{ts}</span>
+          </div>
+          <div style="font-size:0.88rem; color:#f8fafc; line-height:1.45;">
+            <strong>Active Role:</strong> {safe_role}<br/>
+            <strong>Claim Token:</strong> {safe_token}<br/>
+            <strong>Focus Vector:</strong> {focus}
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.caption("Note #01 auto-generated · strings html.escape'd (PR #24)")
 
 
 def compute_actuarial_inaction_threat_matrix(
@@ -1198,8 +1490,6 @@ if "audit_focus_token" not in st.session_state:
 
 
 def _append_identity_audit(actor: str, action: str, token: str, native_id: str) -> None:
-    from datetime import datetime, timezone
-
     st.session_state.identity_audit_log.append(
         {
             "ts": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%SZ"),
@@ -1224,38 +1514,73 @@ with st.sidebar:
             SCHEME_DIRECTOR,
             CLAIMS_OFFICER,
             REVIEWING_SPECIALIST,
+            FINANCE_LEGAL_SPECIALIST,
+            ACTUARY_COUNSEL,
         ],
         key="active_user_role_matrix",
     )
     statutory_briefing_mode = role == MINISTER_ROLE
-    # GM + caseworkers/specialists may unmask; Cabinet Minister retains tokenized aliases only
+    finance_legal_mode = role in FINANCE_LEGAL_ROLES
+    # GM + caseworkers/specialists may unmask; Cabinet Minister + Dept #4 retain aliases
     can_unmask_identity = role in {
         SCHEME_DIRECTOR,
         CLAIMS_OFFICER,
         REVIEWING_SPECIALIST,
     }
     st.markdown("---")
-    st.markdown("### SCHEME MANDATE INJECTION")
-    cap_floor = st.slider("Enforce Liability Mitigation Floor (%)", 0, 50, 15)
-    performance_mandate = st.text_input(
-        "Disseminate Performance Mandate",
-        placeholder="e.g., Accelerate Pathway Interventions",
-        max_chars=MAX_MANDATE_CHARS,
-    )
-    if statutory_briefing_mode:
-        st.info("Statutory Briefing Mode active — Crown Entity Act compliance view.")
-        st.caption(
-            "Aggregated cohort & root-cause analysis permitted. "
-            "Individual PII / Native ACC Claim ID unmasking restricted."
+    if finance_legal_mode:
+        st.markdown("### FINANCE / ACTUARIAL / LEGAL MODE")
+        st.info(
+            "Isolated Department #4 surface — Cabinet chrome suppressed. "
+            "Proprietary mitigation arithmetic sealed behind IP lockdown."
         )
-    st.caption("Localized NZ ACC · IRD · MSD · Health NZ · Cabinet Minister AoG grids")
-    if st.session_state.identity_audit_log:
+        ip_band, cap_floor = render_abstracted_sidebar_ip()
+        st.caption(
+            f"Active role: {sanitize_for_markdown(role, max_chars=80)} · "
+            "Commutation · Reserve · Counsel · Vault"
+        )
+    else:
+        ip_band, cap_floor = render_abstracted_sidebar_ip()
+        performance_mandate = st.text_input(
+            "Disseminate Performance Mandate",
+            placeholder="e.g., Accelerate Pathway Interventions",
+            max_chars=MAX_MANDATE_CHARS,
+        )
+        if statutory_briefing_mode:
+            st.info(
+                "Statutory Briefing Mode active — Crown Entity Act compliance view."
+            )
+            st.caption(
+                "Aggregated cohort & root-cause analysis permitted. "
+                "Individual PII / Native ACC Claim ID unmasking restricted."
+            )
+        st.caption(
+            "Localized NZ ACC · IRD · MSD · Health NZ · Cabinet Minister AoG grids"
+        )
+    claim_token_for_note = sanitize_claim_token(
+        st.session_state.get("audit_view_selection", GLOBAL_VIEW)
+    )
+    if claim_token_for_note == GLOBAL_VIEW:
+        claim_token_for_note = "AAT-Claimant-Delta-2026"
+    render_gemini_notebook_sidebar(role=role, claim_token=claim_token_for_note)
+    if st.session_state.identity_audit_log and not finance_legal_mode:
         with st.expander("Identity Unmask Audit Log", expanded=False):
             for entry in reversed(st.session_state.identity_audit_log[-8:]):
                 st.text(
                     f"{entry['ts']} · {entry['actor']} · {entry['action']} · "
                     f"{entry['token']} → {entry['native_id']}"
                 )
+
+# Department #4 — Finance / Actuarial / Legal isolated surface
+if finance_legal_mode:
+    st.title("NZ AAT SOVEREIGN ORCHESTRATION ENGINE")
+    st.markdown(
+        "<p class='statutory-meta'>"
+        "Department #4 Surface · Finance, Actuarial &amp; Legal Channel</p>",
+        unsafe_allow_html=True,
+    )
+    render_finance_legal_view()
+    st.stop()
 
 # --- MAIN PERFORMANCE DASHBOARD TITLE ---
 st.title("NZ AAT SOVEREIGN ORCHESTRATION ENGINE")
@@ -1675,7 +2000,7 @@ if view_selection == GLOBAL_VIEW:
         html_task_co = f"""<div class="metric-box" style="border-left: 4px solid #ef4444; padding: 1.2rem;">
 <div class="metric-label" style="color:#ef4444;">TASK ID: CO-AAT-2026-031</div>
 <div class="metric-subtext" style="color:#ffffff; font-weight:600; margin-bottom:0.4rem;">Clear the CRITICAL DRIFT files before they harden into long-tail PPD exposure.</div>
-<div style="font-size:0.85rem; color:#8b949e;">Active Mandate: {sanitize_html_text(int(cap_floor), max_chars=8)}% CapEx Mitigation Control Active</div>
+<div style="font-size:0.85rem; color:#8b949e;">Active Mandate: {sanitize_html_text(ip_band, max_chars=64)} CapEx Mitigation Control Active</div>
 </div>"""
         st.markdown(html_task_co, unsafe_allow_html=True)
 
@@ -2009,7 +2334,9 @@ else:
     safe_ppd = sanitize_html_text(f"{permanent_disability_prob * 100:.1f}", max_chars=16)
     safe_tase = sanitize_html_text(f"{projected_final_cost:,.2f}", max_chars=32)
     safe_reserve = sanitize_html_text(f"{mitigated_reserve_target:,.2f}", max_chars=32)
-    safe_cap_floor = sanitize_html_text(int(cap_floor), max_chars=8)
+    safe_band_label = sanitize_html_text(
+        st.session_state.get("ip_mitigation_band", ip_band), max_chars=64
+    )
     safe_lookback = sanitize_html_text(
         f"{(5000 + (projected_final_cost * 0.12)):,.2f}", max_chars=32
     )
@@ -2039,7 +2366,7 @@ else:
 <hr style="border:0; border-top:1px solid #30363d; margin: 0.8rem 0;"/>
 <div class="metric-label">Total Absolute System Exposure (TASE)</div>
 <div class="metric-value-silver" style="font-size:1.5rem; margin-bottom:0.3rem;">${safe_tase} NZD</div>
-<div class="metric-label">Mitigated Capital Reserve Target ({safe_cap_floor}% Floor Applied)</div>
+<div class="metric-label">Mitigated Capital Reserve Target ({safe_band_label} Applied)</div>
 <div class="metric-value-green" style="font-size:1.5rem; margin-bottom:0.3rem;">${safe_reserve} NZD</div>
 {fee_line}
 </div>"""
