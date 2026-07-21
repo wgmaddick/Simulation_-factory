@@ -556,6 +556,7 @@ SCHEME_DIRECTOR = "Scheme Director (GM)"
 CLAIMS_OFFICER = "Claims Officer / Analyst"
 REVIEWING_SPECIALIST = "Reviewing Specialist"
 CLINICAL_TRIAGE_ROLE = "Clinical & Health Triage Specialist"
+VOCATIONAL_MSD_ROLE = "Vocational & MSD Placement Specialist"
 
 STATUTORY_NOMINAL = "Nominal"
 STATUTORY_MINISTERIAL = "Ministerial Escalation Required"
@@ -1089,6 +1090,164 @@ def render_clinical_triage_view() -> None:
         )
 
 
+def apply_vocational_msd_action(
+    claim_id: str,
+    title: str,
+    details: str,
+) -> None:
+    """on_click-safe vocational / MSD placement binder."""
+    st.session_state[f"msd_action_{claim_id}"] = {
+        "title": sanitize_plain_text(title, max_chars=160),
+        "details": sanitize_plain_text(details, max_chars=320),
+    }
+    st.rerun()
+
+
+def render_vocational_msd_view() -> None:
+    """Department #2: Vocational & MSD Placement Team View.
+
+    Focused strictly on functional capacity limits, job re-allocation,
+    and retraining vouchers.
+    """
+    st.markdown("## Vocational & MSD Placement Command Sector")
+    st.caption(
+        "Role-Gated Interface: MSD Case Officers & Vocational Specialists | "
+        "Focus: Workforce Re-Entry & Retraining"
+    )
+    st.divider()
+
+    claim_msd_options: dict[str, dict[str, str]] = {
+        "AAT-Claimant-Delta-2026": {
+            "current_role": "Heavy Industrial Laborer",
+            "modified_capacity": "Modified Light Duty (Max 5kg Overhead Lifting)",
+            "msd_match_code": "MSD-AX-7710 (Safety & Logistics Coordinator)",
+            "retraining_eligible": "High Priority (100% Match)",
+            "weekly_indemnity_rate": "$1,420 NZD / week",
+            "status": "Awaiting Vocational Re-Allocation",
+        },
+        "AAT-Claimant-Zeta-2026": {
+            "current_role": "Heavy Logistics Driver",
+            "modified_capacity": "Sedentary / Light Driving Only (Knee Flexion Cap)",
+            "msd_match_code": "MSD-LOG-3302 (Fleet Dispatch Controller)",
+            "retraining_eligible": "Approved",
+            "weekly_indemnity_rate": "$1,280 NZD / week",
+            "status": "Placement Match Identified",
+        },
+    }
+
+    selected_msd_id = st.selectbox(
+        "Select Active Claimant for Vocational Placement:",
+        list(claim_msd_options.keys()),
+        index=0,
+        key="vocational_msd_claim_selector",
+    )
+    msd_claim = claim_msd_options[selected_msd_id]
+    action_key = f"msd_action_{selected_msd_id}"
+    if action_key not in st.session_state:
+        st.session_state[action_key] = None
+
+    safe_role = sanitize_for_markdown(msd_claim["current_role"], max_chars=80)
+    safe_capacity = sanitize_for_markdown(
+        msd_claim["modified_capacity"], max_chars=120
+    )
+    safe_match = sanitize_for_markdown(msd_claim["msd_match_code"], max_chars=120)
+    safe_retrain = sanitize_for_markdown(
+        msd_claim["retraining_eligible"], max_chars=80
+    )
+    safe_rate = sanitize_for_markdown(
+        msd_claim["weekly_indemnity_rate"], max_chars=64
+    )
+    safe_status = sanitize_for_markdown(msd_claim["status"], max_chars=80)
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown("### Functional Limits")
+        st.info(
+            f"**Baseline Role:** {safe_role}\n\n"
+            f"**Medical Restriction:** {safe_capacity}"
+        )
+    with col2:
+        st.markdown("### MSD Job Match Grid")
+        st.success(
+            f"**Target Role:** {safe_match}\n\n"
+            f"**Skill Status:** {safe_retrain}"
+        )
+    with col3:
+        st.markdown("### Indemnity Burn Rate")
+        st.warning(
+            f"**Weekly Compensation:** {safe_rate}\n\n"
+            f"**Current Status:** {safe_status}"
+        )
+
+    st.divider()
+
+    action_state = st.session_state.get(action_key)
+    if action_state:
+        safe_title = sanitize_for_markdown(action_state["title"], max_chars=160)
+        safe_details = sanitize_for_markdown(action_state["details"], max_chars=320)
+        st.success(
+            f"**VOCATIONAL ACTION EXECUTED:** {safe_title}\n\n• {safe_details}"
+        )
+        st.divider()
+
+    st.markdown("### Vocational Placement Execution Deck")
+    st.caption(
+        "Issue placement vouchers, retraining grants, and workplace adaptations "
+        "to halt indemnity burn and restore workforce capacity."
+    )
+    b1, b2 = st.columns(2)
+    with b1:
+        st.button(
+            "1. Issue MSD Light-Duty Placement Voucher ($1,500 NZD)",
+            use_container_width=True,
+            key=f"msd_voucher_{selected_msd_id}",
+            on_click=apply_vocational_msd_action,
+            args=(
+                selected_msd_id,
+                "MSD Light-Duty Partner Voucher Issued",
+                "Allocated candidate to active dispatch coordinator role. "
+                "Reduces weekly indemnity burn by 100% within 14 days.",
+            ),
+        )
+        st.button(
+            "2. Authorize Retraining Certificate Grant ($3,500 NZD)",
+            use_container_width=True,
+            key=f"msd_retrain_{selected_msd_id}",
+            on_click=apply_vocational_msd_action,
+            args=(
+                selected_msd_id,
+                "Health & Safety Certification Enrolled",
+                "Enrolled in 4-week fast-track compliance course. "
+                "Re-allocates worker out of heavy labor tier.",
+            ),
+        )
+    with b2:
+        st.button(
+            "3. Workplace Ergonomic Adaptation ($1,200 NZD)",
+            use_container_width=True,
+            key=f"msd_ergo_{selected_msd_id}",
+            on_click=apply_vocational_msd_action,
+            args=(
+                selected_msd_id,
+                "Ergonomic Modification Approved",
+                "Funds workstation adjustments with existing employer to enable "
+                "immediate part-time return to work.",
+            ),
+        )
+        st.button(
+            "4. Transition to Active MSD Search Pipeline",
+            use_container_width=True,
+            key=f"msd_pipeline_{selected_msd_id}",
+            on_click=apply_vocational_msd_action,
+            args=(
+                selected_msd_id,
+                "Active Placement Pipeline Transitioned",
+                "File transferred to regional MSD employment liaison officer "
+                "for direct placement matching.",
+            ),
+        )
+
+
 def render_cohort_analysis_panel(
     cohort_df: pd.DataFrame,
     *,
@@ -1290,13 +1449,16 @@ with st.sidebar:
             CLAIMS_OFFICER,
             REVIEWING_SPECIALIST,
             CLINICAL_TRIAGE_ROLE,
+            VOCATIONAL_MSD_ROLE,
             MINISTER_ROLE,
         ],
         key="active_user_role_matrix",
     )
     statutory_briefing_mode = role == MINISTER_ROLE
     clinical_triage_mode = role == CLINICAL_TRIAGE_ROLE
-    # GM + caseworkers/specialists may unmask; Minister + Clinical Triage keep aliases
+    vocational_msd_mode = role == VOCATIONAL_MSD_ROLE
+    department_isolated_mode = clinical_triage_mode or vocational_msd_mode
+    # GM + caseworkers/specialists may unmask; Minister + department roles keep aliases
     can_unmask_identity = role in {
         SCHEME_DIRECTOR,
         CLAIMS_OFFICER,
@@ -1310,6 +1472,13 @@ with st.sidebar:
             "and legal dispute matrices are suppressed."
         )
         st.caption("Te Whatu Ora · Health NZ Clinical Grid · Diagnostic Triage")
+    elif vocational_msd_mode:
+        st.markdown("### VOCATIONAL & MSD MODE")
+        st.info(
+            "Isolated MSD Placement surface — clinical dossiers, Cabinet liability "
+            "matrices, and legal dispute chrome are suppressed."
+        )
+        st.caption("MSD Workforce Pipeline · Light-Duty Match · Retraining Vouchers")
     else:
         st.markdown("### SCHEME MANDATE INJECTION")
         cap_floor = st.slider("Enforce Liability Mitigation Floor (%)", 0, 50, 15)
@@ -1326,7 +1495,7 @@ with st.sidebar:
                 "Individual PII / Native ACC Claim ID unmasking restricted."
             )
         st.caption("Localized NZ ACC · IRD · MSD · Health NZ · Ministerial AoG grids")
-    if st.session_state.identity_audit_log and not clinical_triage_mode:
+    if st.session_state.identity_audit_log and not department_isolated_mode:
         with st.expander("Identity Unmask Audit Log", expanded=False):
             for entry in reversed(st.session_state.identity_audit_log[-8:]):
                 st.text(
@@ -1334,7 +1503,7 @@ with st.sidebar:
                     f"{entry['token']} → {entry['native_id']}"
                 )
 
-# Clinical Triage is a strictly isolated viewport — no scheme finance / legal chrome.
+# Department surfaces are strictly isolated — no scheme finance / Cabinet chrome.
 if clinical_triage_mode:
     st.title("NZ ACC RISK ORCHESTRATION ENGINE")
     st.markdown(
@@ -1343,6 +1512,16 @@ if clinical_triage_mode:
         unsafe_allow_html=True,
     )
     render_clinical_triage_view()
+    st.stop()
+
+if vocational_msd_mode:
+    st.title("NZ ACC RISK ORCHESTRATION ENGINE")
+    st.markdown(
+        "<p class='statutory-meta'>"
+        "Vocational Department Surface · MSD Workforce Pipeline Channel</p>",
+        unsafe_allow_html=True,
+    )
+    render_vocational_msd_view()
     st.stop()
 
 # --- MAIN PERFORMANCE DASHBOARD TITLE ---
