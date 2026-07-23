@@ -86,6 +86,51 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ==========================================
+# 🔒 EXECUTIVE SECURITY GATE
+# ==========================================
+def check_password():
+    """Returns `True` if the user has entered the correct executive passcode."""
+
+    def password_entered():
+        # Default passcode is set to NZ-ACC-2026
+        if st.session_state["password_input"] == "NZ-ACC-2026":
+            st.session_state["password_correct"] = True
+            del st.session_state["password_input"]  # Don't keep passcode in memory
+        else:
+            st.session_state["password_correct"] = False
+
+    if "password_correct" not in st.session_state:
+        st.title("🏛️ NZ ACC Sovereign Orchestration Engine")
+        st.subheader("🔒 Executive Security Gate")
+        st.text_input(
+            "Enter Access Key to unlock command surface:",
+            type="password",
+            on_change=password_entered,
+            key="password_input",
+        )
+        return False
+
+    elif not st.session_state["password_correct"]:
+        st.title("🏛️ NZ ACC Sovereign Orchestration Engine")
+        st.subheader("🔒 Executive Security Gate")
+        st.text_input(
+            "Enter Access Key to unlock command surface:",
+            type="password",
+            on_change=password_entered,
+            key="password_input",
+        )
+        st.error("⛔ Invalid Access Key. Access Denied.")
+        return False
+
+    return True
+
+
+# Block execution of the rest of the app until password is correct
+if not check_password():
+    st.stop()
+# ==========================================
+
 st.markdown(
     """
     <style>
