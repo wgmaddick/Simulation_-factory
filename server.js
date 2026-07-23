@@ -17,11 +17,180 @@ const RESEARCH_NODES = [
 
 const NODE_BY_ID = Object.fromEntries(RESEARCH_NODES.map((n) => [n.id, n]));
 
+/**
+ * Polymorphic gateway data matrix — Phase 1 universal architecture.
+ * Each sector streams sponsor allocation + avatar persona directly to the UI loop.
+ */
+const GATEWAY_SECTORS = {
+  football: {
+    id: 'football',
+    displayName: 'Football',
+    sectorKey: 'FOOTBALL',
+    sponsorName: 'Nike Elite Performance Lab',
+    sponsorBudgetAllocation: '76 Compute Credits',
+    avatarPersona: {
+      title: 'Kinetic Performance Avatar',
+      tone: 'Elite Sports Scientist',
+      troubleshootingGreeting:
+        'Sideline intake online. Walk me through the load path, plant-leg telemetry, and any late-swing hamstring flags before we lock the next high-speed exposure.',
+    },
+  },
+  rugby: {
+    id: 'rugby',
+    displayName: 'Rugby',
+    sectorKey: 'RUGBY',
+    sponsorName: 'Gilbert Global Tech Guild',
+    sponsorBudgetAllocation: '120 Compute Credits',
+    avatarPersona: {
+      title: 'Contact-Chain Performance Avatar',
+      tone: 'Elite Collision Biomechanist',
+      troubleshootingGreeting:
+        'Scrum and breakdown channel open. Report tackle completion, post-contact metres, and any torque asymmetry through the set-piece axis so we can clear the next collision block.',
+    },
+  },
+  clinical_dental: {
+    id: 'clinical_dental',
+    displayName: 'Clinical Dental',
+    sectorKey: 'CLINICAL DENTAL',
+    sponsorName: 'Straumann Bio-Materials Corp',
+    sponsorBudgetAllocation: '94 Direct Procurement Credits',
+    avatarPersona: {
+      title: 'Oral Systems Avatar',
+      tone: 'Chief Oral Surgeon',
+      troubleshootingGreeting:
+        'Operatory console ready. Describe the osseointegration window, prosthetic margin fit, and any peri-implant soft-tissue concern before we authorize the next procurement cycle.',
+    },
+  },
+  healthcare_medicine: {
+    id: 'healthcare_medicine',
+    displayName: 'Healthcare & Medicine',
+    sectorKey: 'HEALTHCARE & MEDICINE',
+    sponsorName: 'Municipal Emergency Health Fund',
+    sponsorBudgetAllocation: '$1,250,000 Active Departmental Run-Rate',
+    avatarPersona: {
+      title: 'Clinical Operations Avatar',
+      tone: 'Hospital Financial Auditor',
+      troubleshootingGreeting:
+        'Departmental ledger linked. Cite the DRG pathway, bed-day burn rate, and any variance against the active municipal run-rate so we can reconcile the emergency health allocation.',
+    },
+  },
+  asset_infrastructure: {
+    id: 'asset_infrastructure',
+    displayName: 'Asset Infrastructure',
+    sectorKey: 'ASSET INFRASTRUCTURE',
+    sponsorName: 'Zurich Global Risk & Infrastructure Insure',
+    sponsorBudgetAllocation: 'Systemic Safeguard Tier Active',
+    avatarPersona: {
+      title: 'Systemic Risk Avatar',
+      tone: 'Infrastructure Risk Underwriter',
+      troubleshootingGreeting:
+        'Safeguard tier engaged. Surface the asset criticality rating, exposure corridor, and any breach of systemic continuity so we can keep the infrastructure insure envelope intact.',
+    },
+  },
+};
+
+/** Loose tokens stripped during case-insensitive gateway normalization. */
+const GATEWAY_NOISE_TOKENS = new Set([
+  'division',
+  'sector',
+  'gateway',
+  'unit',
+  'dept',
+  'department',
+  'profile',
+  'the',
+  'and',
+]);
+
+/**
+ * Normalize an incoming gateway selection into a compact lookup token.
+ * Handles casing, punctuation, ampersands, and common suffix noise
+ * (e.g. "Football Division", "healthcare & medicine").
+ */
+function normalizeGatewayKey(raw) {
+  return String(raw || '')
+    .normalize('NFKD')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter((token) => token && !GATEWAY_NOISE_TOKENS.has(token))
+    .join(' ');
+}
+
+/** Alias surface → canonical sector id for dynamic, case-insensitive lookup. */
+const GATEWAY_LOOKUP = (() => {
+  const index = Object.create(null);
+
+  function register(alias, sectorId) {
+    const key = normalizeGatewayKey(alias);
+    if (key) {
+      index[key] = sectorId;
+    }
+  }
+
+  for (const sector of Object.values(GATEWAY_SECTORS)) {
+    register(sector.id, sector.id);
+    register(sector.displayName, sector.id);
+    register(sector.sectorKey, sector.id);
+    register(sector.sectorKey.replace(/&/g, 'and'), sector.id);
+    register(`${sector.displayName} Division`, sector.id);
+    register(`${sector.displayName} Sector`, sector.id);
+    register(`${sector.displayName} Gateway`, sector.id);
+  }
+
+  // Explicit free-form aliases requested for Phase 1 selection routing
+  register('Football Division', 'football');
+  register('Asset Infrastructure', 'asset_infrastructure');
+  register('healthcare & medicine', 'healthcare_medicine');
+  register('Healthcare and Medicine', 'healthcare_medicine');
+  register('Clinical Dental', 'clinical_dental');
+  register('Dental', 'clinical_dental');
+  register('Medicine', 'healthcare_medicine');
+  register('Healthcare', 'healthcare_medicine');
+  register('Infrastructure', 'asset_infrastructure');
+  register('Assets', 'asset_infrastructure');
+
+  return index;
+})();
+
+/**
+ * Resolve a gateway selection without throwing on casing / phrasing variance.
+ * Returns the sector profile or null when no match exists.
+ */
+function resolveGatewaySector(selection) {
+  if (selection == null || String(selection).trim() === '') {
+    return null;
+  }
+
+  const direct = GATEWAY_SECTORS[String(selection).trim().toLowerCase()];
+  if (direct) {
+    return direct;
+  }
+
+  const normalized = normalizeGatewayKey(selection);
+  const sectorId = GATEWAY_LOOKUP[normalized];
+  return sectorId ? GATEWAY_SECTORS[sectorId] : null;
+}
+
+function listGatewaySectors() {
+  return Object.values(GATEWAY_SECTORS).map((sector) => ({
+    id: sector.id,
+    displayName: sector.displayName,
+    sectorKey: sector.sectorKey,
+    sponsorName: sector.sponsorName,
+    sponsorBudgetAllocation: sector.sponsorBudgetAllocation,
+    avatarPersona: { ...sector.avatarPersona },
+  }));
+}
+
 const VAULT_CONFIG = {
   target_domain: 'Kinetic Biomechanics · Performance Vault',
   tenant_identity: 'AAT Phoenix · Elite Movement Unit',
   initial_credits: 100,
   research_nodes: RESEARCH_NODES,
+  gatewaySectors: listGatewaySectors(),
 };
 
 const VERDICTS = {
@@ -152,11 +321,75 @@ function saturdayWeatherGrid() {
   };
 }
 
-// Route 1: Serve configuration to frontend
+// Route 1: Serve configuration to frontend (includes polymorphic gateway matrix)
 app.get('/api/config', (req, res) => {
   res.json({
     ...VAULT_CONFIG,
     initial_credits: credits,
+    gatewaySectors: listGatewaySectors(),
+  });
+});
+
+/** Stream the full gateway sector catalogue for the front-end UI loop. */
+app.get('/api/gateways', (req, res) => {
+  res.json({
+    sectors: listGatewaySectors(),
+    count: Object.keys(GATEWAY_SECTORS).length,
+  });
+});
+
+/**
+ * Dynamic gateway lookup — case-insensitive string comparison so selections
+ * like "Asset Infrastructure", "healthcare & medicine", or "Football Division"
+ * map to their data profiles without throwing a lookup exception.
+ */
+app.get('/api/gateway/:selection', (req, res) => {
+  const sector = resolveGatewaySector(req.params.selection);
+  if (!sector) {
+    return res.status(404).json({
+      error: 'Unknown gateway sector',
+      selection: req.params.selection,
+      available: Object.values(GATEWAY_SECTORS).map((s) => s.displayName),
+    });
+  }
+
+  res.json({
+    id: sector.id,
+    displayName: sector.displayName,
+    sectorKey: sector.sectorKey,
+    sponsorName: sector.sponsorName,
+    sponsorBudgetAllocation: sector.sponsorBudgetAllocation,
+    avatarPersona: { ...sector.avatarPersona },
+  });
+});
+
+app.post('/api/gateway/select', (req, res) => {
+  const selection =
+    (req.body &&
+      (req.body.selection ||
+        req.body.sector ||
+        req.body.gateway ||
+        req.body.name ||
+        req.body.id)) ||
+    '';
+
+  const sector = resolveGatewaySector(selection);
+  if (!sector) {
+    return res.status(404).json({
+      error: 'Unknown gateway sector',
+      selection,
+      available: Object.values(GATEWAY_SECTORS).map((s) => s.displayName),
+    });
+  }
+
+  res.json({
+    success: true,
+    id: sector.id,
+    displayName: sector.displayName,
+    sectorKey: sector.sectorKey,
+    sponsorName: sector.sponsorName,
+    sponsorBudgetAllocation: sector.sponsorBudgetAllocation,
+    avatarPersona: { ...sector.avatarPersona },
   });
 });
 
