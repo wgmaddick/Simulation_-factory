@@ -11,11 +11,16 @@ from __future__ import annotations
 import html
 import re
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
+
+# Live Gemini / Colab notebook surface (replace with project notebook URL when ready).
+GEMINI_NOTEBOOK_URL = "https://colab.research.google.com/"
 
 # Defensive bounds for intake / dossier surfaces (PR #24 compliance).
 MAX_TOKEN_CHARS = 96
@@ -25,6 +30,12 @@ MAX_MANDATE_CHARS = 280
 MAX_INTAKE_ROWS = 500
 MAX_FIELD_CHARS = 120
 _CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+# Executive Command Profile media (repo public/ assets).
+PUBLIC_DIR = Path(__file__).resolve().parent / "public"
+AVATAR_PATH = PUBLIC_DIR / "avatar.png"
+BRIEFING_AUDIO_PATH = PUBLIC_DIR / "briefing.mp3"
+COMMAND_VIDEO_PATH = PUBLIC_DIR / "command_overview.mp4"
 
 
 def sanitize_plain_text(value: Any, *, max_chars: int) -> str:
@@ -736,6 +747,29 @@ def render_finance_legal_view() -> None:
         )
 
 
+def render_executive_command_profile() -> None:
+    """Avatar / profile strip plus audio briefing and command overview video."""
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        if AVATAR_PATH.is_file():
+            st.image(str(AVATAR_PATH), width=100)
+        else:
+            st.caption("Avatar asset missing (`public/avatar.png`).")
+    with col2:
+        st.markdown("### Executive Command Profile")
+        st.caption("Active Duty · NZ AAT Sovereign Orchestration Hub")
+
+    st.subheader("Audio Briefing & Command Video")
+    if BRIEFING_AUDIO_PATH.is_file():
+        st.audio(str(BRIEFING_AUDIO_PATH), format="audio/mp3")
+    else:
+        st.caption("Audio briefing missing (`public/briefing.mp3`).")
+    if COMMAND_VIDEO_PATH.is_file():
+        st.video(str(COMMAND_VIDEO_PATH))
+    else:
+        st.caption("Command video missing (`public/command_overview.mp4`).")
+
+
 def render_gemini_notebook_sidebar(*, role: str, claim_token: str) -> None:
     """Gemini Notebook Manifest — Note #01 generated from active role + claim."""
     safe_role = html.escape(sanitize_plain_text(role, max_chars=80), quote=True)
@@ -781,7 +815,24 @@ def render_gemini_notebook_sidebar(*, role: str, claim_token: str) -> None:
         """,
         unsafe_allow_html=True,
     )
+    st.link_button(
+        "Open Live Gemini Notebook Manifest",
+        GEMINI_NOTEBOOK_URL,
+        use_container_width=True,
+    )
     st.caption("Note #01 auto-generated · strings html.escape'd (PR #24)")
+
+
+def render_gemini_intelligence_notebook() -> None:
+    """Main-dashboard Gemini Intelligence Notebook & Manifest (link + embed)."""
+    st.markdown("---")
+    st.subheader("Gemini Intelligence Notebook & Manifest")
+    st.link_button(
+        "Open Live Gemini Notebook Manifest",
+        GEMINI_NOTEBOOK_URL,
+        use_container_width=True,
+    )
+    components.iframe(GEMINI_NOTEBOOK_URL, height=500, scrolling=True)
 
 
 def compute_actuarial_inaction_threat_matrix(
@@ -1601,6 +1652,9 @@ if statutory_briefing_mode:
         '<div class="briefing-mode-chip">STATUTORY BRIEFING MODE · CABINET EXECUTIVE OVERLAY</div>',
         unsafe_allow_html=True,
     )
+
+# --- AVATAR / PROFILE DISPLAY + AUDIO BRIEFING & VIDEO DEMO ---
+render_executive_command_profile()
 st.markdown("---")
 
 # --- CABINET MINISTER DIRECTIVE PANEL (top-down statutory override controls) ---
@@ -2445,3 +2499,6 @@ else:
         x="Days Elapsed",
         y=["Standard Expected Runway", "Actual Cumulative Spend Velocity"],
     )
+
+# --- GEMINI NOTEBOOK MANIFEST (main surface: link + embedded notebook) ---
+render_gemini_intelligence_notebook()
