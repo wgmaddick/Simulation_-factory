@@ -11,6 +11,7 @@ from __future__ import annotations
 import html
 import re
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -25,6 +26,12 @@ MAX_MANDATE_CHARS = 280
 MAX_INTAKE_ROWS = 500
 MAX_FIELD_CHARS = 120
 _CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+# Executive Command Profile media (repo public/ assets).
+PUBLIC_DIR = Path(__file__).resolve().parent / "public"
+AVATAR_PATH = PUBLIC_DIR / "avatar.png"
+BRIEFING_AUDIO_PATH = PUBLIC_DIR / "briefing.mp3"
+COMMAND_VIDEO_PATH = PUBLIC_DIR / "command_overview.mp4"
 
 
 def sanitize_plain_text(value: Any, *, max_chars: int) -> str:
@@ -734,6 +741,29 @@ def render_finance_legal_view() -> None:
                 "written to session vault for Cabinet pouch.",
             ),
         )
+
+
+def render_executive_command_profile() -> None:
+    """Avatar / profile strip plus audio briefing and command overview video."""
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        if AVATAR_PATH.is_file():
+            st.image(str(AVATAR_PATH), width=100)
+        else:
+            st.caption("Avatar asset missing (`public/avatar.png`).")
+    with col2:
+        st.markdown("### Executive Command Profile")
+        st.caption("Active Duty · NZ AAT Sovereign Orchestration Hub")
+
+    st.subheader("Audio Briefing & Command Video")
+    if BRIEFING_AUDIO_PATH.is_file():
+        st.audio(str(BRIEFING_AUDIO_PATH), format="audio/mp3")
+    else:
+        st.caption("Audio briefing missing (`public/briefing.mp3`).")
+    if COMMAND_VIDEO_PATH.is_file():
+        st.video(str(COMMAND_VIDEO_PATH))
+    else:
+        st.caption("Command video missing (`public/command_overview.mp4`).")
 
 
 def render_gemini_notebook_sidebar(*, role: str, claim_token: str) -> None:
@@ -1601,6 +1631,9 @@ if statutory_briefing_mode:
         '<div class="briefing-mode-chip">STATUTORY BRIEFING MODE · CABINET EXECUTIVE OVERLAY</div>',
         unsafe_allow_html=True,
     )
+
+# --- AVATAR / PROFILE DISPLAY + AUDIO BRIEFING & VIDEO DEMO ---
+render_executive_command_profile()
 st.markdown("---")
 
 # --- CABINET MINISTER DIRECTIVE PANEL (top-down statutory override controls) ---
