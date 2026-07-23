@@ -16,6 +16,10 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
+
+# Live Gemini / Colab notebook surface (replace with project notebook URL when ready).
+GEMINI_NOTEBOOK_URL = "https://colab.research.google.com/"
 
 # Defensive bounds for intake / dossier surfaces (PR #24 compliance).
 MAX_TOKEN_CHARS = 96
@@ -781,7 +785,24 @@ def render_gemini_notebook_sidebar(*, role: str, claim_token: str) -> None:
         """,
         unsafe_allow_html=True,
     )
+    st.link_button(
+        "Open Live Gemini Notebook Manifest",
+        GEMINI_NOTEBOOK_URL,
+        use_container_width=True,
+    )
     st.caption("Note #01 auto-generated · strings html.escape'd (PR #24)")
+
+
+def render_gemini_intelligence_notebook() -> None:
+    """Main-dashboard Gemini Intelligence Notebook & Manifest (link + embed)."""
+    st.markdown("---")
+    st.subheader("Gemini Intelligence Notebook & Manifest")
+    st.link_button(
+        "Open Live Gemini Notebook Manifest",
+        GEMINI_NOTEBOOK_URL,
+        use_container_width=True,
+    )
+    components.iframe(GEMINI_NOTEBOOK_URL, height=500, scrolling=True)
 
 
 def compute_actuarial_inaction_threat_matrix(
@@ -2445,3 +2466,6 @@ else:
         x="Days Elapsed",
         y=["Standard Expected Runway", "Actual Cumulative Spend Velocity"],
     )
+
+# --- GEMINI NOTEBOOK MANIFEST (main surface: link + embedded notebook) ---
+render_gemini_intelligence_notebook()
