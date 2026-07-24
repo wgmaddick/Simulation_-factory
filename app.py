@@ -19,6 +19,12 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
+from adaptive_drift_learner import (
+    BASE_DRIFT_THRESHOLD,
+    effective_drift_threshold,
+    learner,
+)
+
 # Live Gemini / Colab notebook surface (replace with project notebook URL when ready).
 GEMINI_NOTEBOOK_URL = "https://colab.research.google.com/"
 
@@ -1571,6 +1577,16 @@ critical_drift_count = int(
 # Portfolio-level watchlist count for Ministerial banner (scheme-wide)
 SCHEME_CRITICAL_SUBJECTS = 18
 
+# Seed continual drift learner once per session from portfolio ROM telemetry.
+if "drift_learner_seeded" not in st.session_state:
+    seeded_tokens: set[str] = set()
+    for _, row in df_master_ledger.iterrows():
+        token = sanitize_claim_token(row["Claim ID"])
+        learner.recalibrate(100.0 - float(row["ROM_Actual"]), BASE_DRIFT_THRESHOLD)
+        seeded_tokens.add(token)
+    st.session_state.drift_learner_seeded = True
+    st.session_state.drift_recalibrated_tokens = seeded_tokens
+
 if "identity_audit_log" not in st.session_state:
     st.session_state.identity_audit_log = []
 if "audit_view_selection" not in st.session_state:
@@ -2218,6 +2234,15 @@ else:
     functional_drift = 100.0 - actual_rom
     ivc = (actual_spend - calibrated_base_cost) / calibrated_base_cost
 
+    # Continual learning: recalibrate baseline sensitivity once per claim token.
+    recalibrated_tokens = st.session_state.setdefault("drift_recalibrated_tokens", set())
+    if subject_token not in recalibrated_tokens:
+        learner.recalibrate(functional_drift, BASE_DRIFT_THRESHOLD)
+        recalibrated_tokens.add(subject_token)
+    drift_sensitivity = round(float(learner.sensitivity), 4)
+    drift_threshold = effective_drift_threshold()
+    high_drift = functional_drift > drift_threshold
+
     projected_final_cost = (
         calibrated_base_cost
         + (functional_drift * 185.0)
@@ -2229,7 +2254,7 @@ else:
     )
 
     # Set Color Logic for Display Elements
-    if functional_drift > 15.0 or permanent_disability_prob > 0.50:
+    if high_drift or permanent_disability_prob > 0.50:
         status_label = "CRITICAL PATHWAY DRIFT DETECTED"
         status_color = "#ef4444"
         impact_class = "critical-impact-value"
@@ -2252,7 +2277,7 @@ else:
     )
     safe_bypass_status = sanitize_html_text(bypass_status, max_chars=160)
 
-    if "Zeta" in subject_token or "Knee" in str(anatomy) or functional_drift > 15.0:
+    if "Zeta" in subject_token or "Knee" in str(anatomy) or high_drift:
         protocol_html = f"""<div style="background:linear-gradient(135deg,#1b1024 0%,#2a1540 55%,#1b1416 100%); padding:1rem; border-radius:6px; border:2px solid #a855f7; box-shadow:0 0 0 1px #6b21a8 inset; margin-bottom:0.8rem;">
 <div class="metric-label" style="color:#e9d5ff; font-weight:700; letter-spacing:0.04em;">UPGRADED RECOMMENDATIONS · CROWN PRESCRIPTIVE ENGINE</div>
 <ul style="color:#f8fafc; font-size:0.9rem; margin:0.55rem 0 0; padding-left:1.2rem; line-height:1.5;">
@@ -2493,17 +2518,38 @@ else:
                 "Day 42",
                 f"${actual_spend:,.0f} NZD",
                 f"{actual_rom:.0f}% Flexion",
-                "High Drift Flag" if functional_drift > 15 else "Clear",
+                "High Drift Flag" if high_drift else "Clear",
             ],
             "Point of Drift Variance": [
                 "On Track",
                 f"${actual_spend - calibrated_base_cost:+,.0f} NZD",
                 f"-{functional_drift:.0f}% Dev",
-                "Path B Active" if functional_drift > 15 else "Clear",
+                "Path B Active" if high_drift else "Clear",
             ],
         }
     )
     st.table(df_vector)
+    safe_sensitivity = sanitize_html_text(f"{drift_sensitivity:.4f}", max_chars=16)
+    safe_threshold = sanitize_html_text(f"{drift_threshold:.2f}", max_chars=16)
+    safe_base_threshold = sanitize_html_text(f"{BASE_DRIFT_THRESHOLD:.1f}", max_chars=16)
+    st.markdown(
+        f"""
+        <div class="metric-box" style="margin-top:0.4rem;">
+          <div class="metric-label">Adaptive Drift Learner · Continual Sensitivity θ(t)</div>
+          <div style="display:flex; gap:1.5rem; flex-wrap:wrap; font-size:0.9rem; color:#e2e8f0;">
+            <div><span style="color:#8b949e;">Sensitivity</span><br/>
+              <strong style="font-family:IBM Plex Mono,monospace;">{safe_sensitivity}</strong></div>
+            <div><span style="color:#8b949e;">Live Threshold</span><br/>
+              <strong style="font-family:IBM Plex Mono,monospace;">{safe_threshold}%</strong>
+              <span style="color:#8b949e;"> (base {safe_base_threshold}%)</span></div>
+            <div><span style="color:#8b949e;">Observed Drift</span><br/>
+              <strong style="font-family:IBM Plex Mono,monospace;">{sanitize_html_text(f"{functional_drift:.1f}", max_chars=16)}%</strong></div>
+          </div>
+          <div class="metric-subtext">10-step rolling error feedback · η=0.03 · clamped [0.1, 2.5]</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     st.markdown("<br>", unsafe_allow_html=True)
 
     # 4. Individual Cost Trajectory Trend Graph
@@ -2516,7 +2562,7 @@ else:
         ]
     )
 
-    if functional_drift > 15:
+    if high_drift:
         actual_trajectory = np.array(
             [
                 (calibrated_base_cost / calibrated_base_days)
