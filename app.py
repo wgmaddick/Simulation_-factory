@@ -1579,13 +1579,10 @@ SCHEME_CRITICAL_SUBJECTS = 18
 
 # Seed continual drift learner once per session from portfolio ROM telemetry.
 if "drift_learner_seeded" not in st.session_state:
-    seeded_tokens: set[str] = set()
-    for _, row in df_master_ledger.iterrows():
-        token = sanitize_claim_token(row["Claim ID"])
-        learner.recalibrate(100.0 - float(row["ROM_Actual"]), BASE_DRIFT_THRESHOLD)
-        seeded_tokens.add(token)
+    for rom in df_master_ledger["ROM_Actual"].tolist():
+        learner.recalibrate(100.0 - float(rom), BASE_DRIFT_THRESHOLD)
     st.session_state.drift_learner_seeded = True
-    st.session_state.drift_recalibrated_tokens = seeded_tokens
+    st.session_state.drift_recalibrated_tokens = set()
 
 if "identity_audit_log" not in st.session_state:
     st.session_state.identity_audit_log = []
