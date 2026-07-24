@@ -1577,13 +1577,6 @@ critical_drift_count = int(
 # Portfolio-level watchlist count for Ministerial banner (scheme-wide)
 SCHEME_CRITICAL_SUBJECTS = 18
 
-# Seed continual drift learner once per session from portfolio ROM telemetry.
-if "drift_learner_seeded" not in st.session_state:
-    for rom in df_master_ledger["ROM_Actual"].tolist():
-        learner.recalibrate(100.0 - float(rom), BASE_DRIFT_THRESHOLD)
-    st.session_state.drift_learner_seeded = True
-    st.session_state.drift_recalibrated_tokens = set()
-
 if "identity_audit_log" not in st.session_state:
     st.session_state.identity_audit_log = []
 if "audit_view_selection" not in st.session_state:
@@ -2231,11 +2224,7 @@ else:
     functional_drift = 100.0 - actual_rom
     ivc = (actual_spend - calibrated_base_cost) / calibrated_base_cost
 
-    # Continual learning: recalibrate baseline sensitivity once per claim token.
-    recalibrated_tokens = st.session_state.setdefault("drift_recalibrated_tokens", set())
-    if subject_token not in recalibrated_tokens:
-        learner.recalibrate(functional_drift, BASE_DRIFT_THRESHOLD)
-        recalibrated_tokens.add(subject_token)
+    # Consume Kinetic Lab continual-learning sensitivity (θ) for live drift band.
     drift_sensitivity = round(float(learner.sensitivity), 4)
     drift_threshold = effective_drift_threshold()
     high_drift = functional_drift > drift_threshold
@@ -2542,7 +2531,7 @@ else:
             <div><span style="color:#8b949e;">Observed Drift</span><br/>
               <strong style="font-family:IBM Plex Mono,monospace;">{sanitize_html_text(f"{functional_drift:.1f}", max_chars=16)}%</strong></div>
           </div>
-          <div class="metric-subtext">10-step rolling error feedback · η=0.03 · clamped [0.1, 2.5]</div>
+          <div class="metric-subtext">θ sourced from Kinetic Lab drift feedback loop · base band {safe_base_threshold}%</div>
         </div>
         """,
         unsafe_allow_html=True,
