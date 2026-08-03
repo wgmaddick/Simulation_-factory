@@ -37,6 +37,8 @@ class KineticLabState:
     recovery_clears: int = 0
     uptime_ticks: int = 0
     unlocked_nodes: set[str] = field(default_factory=set)
+    # Rolling kinetic load index (normalized ~1.0 nominal, 1.2 alert band).
+    load_history: list[float] = field(default_factory=list)
 
     def reset(self, athlete_count: int = 5) -> None:
         roster = [
@@ -55,6 +57,7 @@ class KineticLabState:
         self.asymmetry_alerts = 0
         self.recovery_clears = 0
         self.uptime_ticks = 0
+        self.load_history = []
         self.log = ["[INIT] Kinetic lab reset. Awaiting acquisition start."]
         self.athletes = [
             AthleteChannel(name=roster[i % len(roster)])
@@ -179,3 +182,30 @@ def mean_asymmetry(state: KineticLabState) -> float:
     if not values:
         return 0.0
     return round(sum(values) / len(values), 1)
+
+
+# Nominal shear (N) that maps to kinetic load index 1.0.
+KINETIC_LOAD_SHEAR_BASELINE_N = 360.0
+# Alert band for AdaptiveDriftLearner target_threshold.
+KINETIC_LOAD_TARGET = 1.2
+
+
+def kinetic_load_index(state: KineticLabState) -> float:
+    """Normalize live shear into a kinetic load index centered near 1.0."""
+    shear = mean_shear(state)
+    if shear <= 0.0:
+        # Fall back to asymmetry-derived load when shear channel is dark.
+        asym = mean_asymmetry(state)
+        if asym <= 0.0:
+            return 0.0
+        return round(asym / 10.0, 4)
+    return round(shear / KINETIC_LOAD_SHEAR_BASELINE_N, 4)
+
+
+def record_kinetic_load(state: KineticLabState, *, max_points: int = 120) -> float:
+    """Append current kinetic load sample to the rolling chart series."""
+    load = kinetic_load_index(state)
+    state.load_history.append(load)
+    if len(state.load_history) > max_points:
+        state.load_history = state.load_history[-max_points:]
+    return load

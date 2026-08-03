@@ -4,15 +4,20 @@ from __future__ import annotations
 
 import time
 
+import numpy as np
+import pandas as pd
 import streamlit as st
 
+from adaptive_drift_learner import learner
 from config import TENANT_CONFIG, THEME, research_nodes
 from kinetic_simulation import (
     AthleteState,
     KineticLabState,
+    KINETIC_LOAD_TARGET,
     mean_asymmetry,
     mean_shear,
     readiness,
+    record_kinetic_load,
     step_simulation,
 )
 
@@ -150,7 +155,33 @@ if not unlocked:
         "and spend credits to unlock Node 1.1–1.3."
     )
 
-k1, k2, k3, k4, k5 = st.columns(5)
+# Keep chart series warm even while paused so the HUD has a sample.
+if not lab.load_history:
+    record_kinetic_load(lab)
+
+history = list(lab.load_history)
+start_tick = max(0, int(lab.tick) - len(history) + 1)
+chart_data = pd.DataFrame(
+    {
+        "Tick": list(range(start_tick, start_tick + len(history))),
+        "Kinetic Load": history,
+    }
+)
+
+# 1. Calculate live operational drift
+current_drift = float(np.mean(chart_data["Kinetic Load"]))
+
+# 2. Fire continuous learning feedback step (once per new load sample / tick)
+_recal_sig = (int(lab.tick), len(history))
+if st.session_state.get("kinetic_recal_sig") != _recal_sig:
+    adjusted_sensitivity = learner.recalibrate(
+        observed_drift=current_drift, target_threshold=KINETIC_LOAD_TARGET
+    )
+    st.session_state.kinetic_recal_sig = _recal_sig
+else:
+    adjusted_sensitivity = round(float(learner.sensitivity), 4)
+
+k1, k2, k3, k4, k5, k6 = st.columns(6)
 k1.metric("Tick", f"{lab.tick:,}")
 k2.metric("Squad readiness", f"{readiness(lab)}%")
 k3.metric("Mean shear", f"{mean_shear(lab)} N")
@@ -159,15 +190,25 @@ k5.metric(
     "Alerts",
     f"{lab.shear_alerts + lab.asymmetry_alerts}",
 )
+# 3. Display continuous learning metric on HUD
+k6.metric(
+    "Auto-Learned Sensitivity",
+    f"{adjusted_sensitivity}x",
+    help="Dynamically updated via drift feedback loop",
+)
 
 status = "RUNNING" if lab.running else "PAUSED"
 st.caption(
     f"Status: {status} · Speed: {lab.speed}s/tick · "
     f"Channels: {len(unlocked)}/{len(nodes)} · "
-    f"Recovery clears: {lab.recovery_clears}"
+    f"Recovery clears: {lab.recovery_clears} · "
+    f"Live drift: {current_drift:.3f} (target {KINETIC_LOAD_TARGET})"
 )
 
 st.divider()
+st.subheader("Kinetic Load · continuous learning feed")
+st.line_chart(chart_data, x="Tick", y="Kinetic Load")
+
 left, right = st.columns([1, 1.15])
 
 with left:
@@ -188,5 +229,6 @@ with right:
 
 if lab.running:
     step_simulation(lab)
+    record_kinetic_load(lab)
     time.sleep(lab.speed)
     st.rerun()
