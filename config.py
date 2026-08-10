@@ -94,6 +94,85 @@ PRIVATE_CHROME: dict[str, Any] = {
     "presentation_mode": "ipad_board_chair",
 }
 
+# Shared CSS: hide Streamlit Community Cloud toolbar / GitHub public watermark.
+# Scoped to host chrome (header/toolbar/footer/viewer badge) — not in-app content links.
+PRIVATE_CHROME_CSS: str = """
+<style>
+/* ============================================================
+   PRIVATE CHROME REMOVAL
+   Hide Streamlit host UI: header, Share/Star/Edit, GitHub repo
+   watermark, hamburger/menu, Deploy, footer, viewer badge.
+   ============================================================ */
+#MainMenu,
+#MainMenu > button,
+#GithubIcon,
+header,
+header[data-testid="stHeader"],
+header.stAppHeader,
+[data-testid="stHeader"],
+[data-testid="stToolbar"],
+[data-testid="stDecoration"],
+[data-testid="stStatusWidget"],
+[data-testid="stAppDeployButton"],
+[data-testid="stDeployButton"],
+[data-testid="baseButton-header"],
+[data-testid="baseButton-headerNoPadding"],
+[data-testid="stBaseButton-header"],
+[data-testid="stBaseButton-headerNoPadding"],
+[data-testid="stHeaderActionElements"],
+[data-testid="stToolbarActions"],
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapseButton"],
+[data-testid="stExpandSidebarButton"],
+[data-testid="manage-app-button"],
+.stDeployButton,
+.stAppDeployButton,
+.stAppToolbar,
+.stDecoration,
+footer,
+footer[data-testid="stFooter"],
+.stApp > footer,
+/* Community Cloud GitHub public watermark + viewer badge variants */
+[class*="viewerBadge"],
+[class*="ViewerBadge"],
+[class*="styles_viewerBadge"],
+a[data-testid="viewerBadge"],
+/* Repo / Streamlit host links only inside chrome surfaces */
+header a[href*="github.com"],
+[data-testid="stHeader"] a[href*="github.com"],
+[data-testid="stToolbar"] a[href*="github.com"],
+[data-testid="stToolbarActions"] a[href*="github.com"],
+a[href*="github.com/streamlit"],
+a[href*="share.streamlit.io"],
+a[href^="https://streamlit.io"],
+a[href^="https://www.streamlit.io"],
+div[data-testid="stToolbar"] button,
+section[data-testid="stSidebar"] [data-testid="stLogoSpacer"] {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+  position: absolute !important;
+  clip: rect(0 0 0 0) !important;
+}
+
+/* Reclaim the top chrome strip for a full-bleed executive canvas */
+.stApp,
+[data-testid="stAppViewContainer"],
+.main .block-container {
+  padding-top: max(12px, env(safe-area-inset-top, 0px)) !important;
+}
+</style>
+"""
+
 
 ACC_BASELINE: SectorBook = {
     "code": "ACC_BASELINE",

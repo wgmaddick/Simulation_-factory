@@ -16,6 +16,7 @@ import streamlit as st
 from config import (
     EXECUTIVE_THEME,
     PRIVATE_CHROME,
+    PRIVATE_CHROME_CSS,
     get_sector_book,
     sector_book_options,
     structural_mirror_cards,
@@ -39,27 +40,17 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Private Chrome Removal (match main app iPad Board presentation mode)
+try:
+    st.set_option("client.toolbarMode", "minimal")
+except Exception:
+    pass
+
+# Private Chrome Removal (hide Cloud GitHub watermark + host toolbar)
 if PRIVATE_CHROME.get("enabled", True):
+    st.markdown(PRIVATE_CHROME_CSS, unsafe_allow_html=True)
     st.markdown(
         """
         <style>
-        #MainMenu,
-        header[data-testid="stHeader"],
-        [data-testid="stToolbar"],
-        [data-testid="stDecoration"],
-        [data-testid="stAppDeployButton"],
-        [data-testid="stDeployButton"],
-        [data-testid="stSidebarCollapsedControl"],
-        [data-testid="collapsedControl"],
-        footer,
-        .stDeployButton {
-          display: none !important;
-          visibility: hidden !important;
-          height: 0 !important;
-          opacity: 0 !important;
-          pointer-events: none !important;
-        }
         .stApp {
           background-color: #0b0f17;
           color: #f8fafc;

@@ -28,6 +28,7 @@ from config import (
     DEFAULT_SECTOR_KEY,
     EXECUTIVE_THEME,
     PRIVATE_CHROME,
+    PRIVATE_CHROME_CSS,
     get_sector_book,
     layer2_operations,
     sector_book_options,
@@ -326,68 +327,14 @@ st.set_page_config(
 )
 
 # Private Chrome Removal — hide native Streamlit chrome for iPad Board presentations
-if PRIVATE_CHROME.get("enabled", True):
-    st.markdown(
-        """
-        <style>
-        /* ============================================================
-           PRIVATE CHROME REMOVAL (CSS Injection)
-           Hide default Streamlit UI so the surface reads 100% custom
-           on iPad (header, Share, hamburger, GitHub link, footer).
-           ============================================================ */
-        #MainMenu,
-        #MainMenu > button,
-        header[data-testid="stHeader"],
-        header.stAppHeader,
-        [data-testid="stHeader"],
-        [data-testid="stToolbar"],
-        [data-testid="stDecoration"],
-        [data-testid="stStatusWidget"],
-        [data-testid="stAppDeployButton"],
-        [data-testid="stDeployButton"],
-        [data-testid="baseButton-header"],
-        [data-testid="baseButton-headerNoPadding"],
-        [data-testid="stBaseButton-header"],
-        [data-testid="stBaseButton-headerNoPadding"],
-        [data-testid="stSidebarCollapsedControl"],
-        [data-testid="collapsedControl"],
-        [data-testid="stSidebarCollapseButton"],
-        [data-testid="stExpandSidebarButton"],
-        [data-testid="stToolbarActions"],
-        [data-testid="manage-app-button"],
-        .stDeployButton,
-        .stAppToolbar,
-        .stDecoration,
-        footer,
-        footer[data-testid="stFooter"],
-        .stApp > footer,
-        a[href*="github.com/streamlit"],
-        a[href*="streamlit.io"],
-        a[href*="share.streamlit.io"],
-        div[data-testid="stToolbar"] button,
-        section[data-testid="stSidebar"] [data-testid="stLogoSpacer"] {
-          display: none !important;
-          visibility: hidden !important;
-          height: 0 !important;
-          min-height: 0 !important;
-          max-height: 0 !important;
-          margin: 0 !important;
-          padding: 0 !important;
-          opacity: 0 !important;
-          pointer-events: none !important;
-          overflow: hidden !important;
-        }
+# (includes Community Cloud GitHub public watermark / Share / Star / menu).
+try:
+    st.set_option("client.toolbarMode", "minimal")
+except Exception:
+    pass
 
-        /* Reclaim the top chrome strip for a full-bleed executive canvas */
-        .stApp,
-        [data-testid="stAppViewContainer"],
-        .main .block-container {
-          padding-top: max(12px, env(safe-area-inset-top, 0px)) !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+if PRIVATE_CHROME.get("enabled", True):
+    st.markdown(PRIVATE_CHROME_CSS, unsafe_allow_html=True)
 
 # ==========================================
 # 🔒 EXECUTIVE SECURITY GATE
@@ -536,51 +483,6 @@ st.markdown(
     th, td {
         color: #ffffff !important;
         font-size: 0.95rem !important;
-    }
-
-    /* ============================================================
-       PRIVATE CHROME REMOVAL (reinforced after auth unlock)
-       Header bar · Share · hamburger · GitHub link · footer
-       ============================================================ */
-    #MainMenu,
-    #MainMenu > button,
-    header[data-testid="stHeader"],
-    header.stAppHeader,
-    [data-testid="stHeader"],
-    [data-testid="stToolbar"],
-    [data-testid="stDecoration"],
-    [data-testid="stStatusWidget"],
-    [data-testid="stAppDeployButton"],
-    [data-testid="stDeployButton"],
-    [data-testid="baseButton-header"],
-    [data-testid="baseButton-headerNoPadding"],
-    [data-testid="stBaseButton-header"],
-    [data-testid="stBaseButton-headerNoPadding"],
-    [data-testid="stSidebarCollapsedControl"],
-    [data-testid="collapsedControl"],
-    [data-testid="stSidebarCollapseButton"],
-    [data-testid="stExpandSidebarButton"],
-    [data-testid="stToolbarActions"],
-    [data-testid="manage-app-button"],
-    .stDeployButton,
-    .stAppToolbar,
-    .stDecoration,
-    footer,
-    footer[data-testid="stFooter"],
-    .stApp > footer,
-    a[href*="github.com/streamlit"],
-    a[href*="streamlit.io"],
-    a[href*="share.streamlit.io"] {
-      display: none !important;
-      visibility: hidden !important;
-      height: 0 !important;
-      min-height: 0 !important;
-      max-height: 0 !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      opacity: 0 !important;
-      pointer-events: none !important;
-      overflow: hidden !important;
     }
 
     /* ============================================================
@@ -792,9 +694,13 @@ st.markdown(
       }
     }
     </style>
-""",
+    """,
     unsafe_allow_html=True,
 )
+
+# Re-assert Private Chrome after auth unlock (Cloud can re-inject GitHub watermark).
+if PRIVATE_CHROME.get("enabled", True):
+    st.markdown(PRIVATE_CHROME_CSS, unsafe_allow_html=True)
 
 # Dedicated top navigation bar — custom chrome only (Streamlit chrome removed)
 st.markdown(
