@@ -1,0 +1,7 @@
+# .cursorrules - AATPHOENIX Engineering Standards
+
+- Maintain strict Dark Theme executive styling (#0b0f17 background, #131d2a cards, #2f81f7 accents).
+- Keep UI components scannable for Board Chair presentation on an iPad.
+- Never hardcode sector metrics inside app.py; always drive configuration dynamically via config.py.
+- Standardize metric card structures to include Label, Big Value, and Ground-Truth Basis.
+- Keep code plain-English, modular, and performance-optimized for Streamlit Cloud deployment.
