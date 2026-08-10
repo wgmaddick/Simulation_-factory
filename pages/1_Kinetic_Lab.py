@@ -9,7 +9,7 @@ import pandas as pd
 import streamlit as st
 
 from adaptive_drift_learner import learner
-from config import TENANT_CONFIG, THEME, research_nodes
+from config import PRIVATE_CHROME, PRIVATE_CHROME_CSS, TENANT_CONFIG, THEME, research_nodes
 from kinetic_simulation import (
     AthleteState,
     KineticLabState,
@@ -35,6 +35,12 @@ def _inject_theme() -> None:
     theme_text = THEME["text"]
     theme_card = THEME["card"]
     theme_border = THEME["border"]
+    try:
+        st.set_option("client.toolbarMode", "minimal")
+    except Exception:
+        pass
+    if PRIVATE_CHROME.get("enabled", True):
+        st.markdown(PRIVATE_CHROME_CSS, unsafe_allow_html=True)
     st.markdown(
         f"""
         <style>
