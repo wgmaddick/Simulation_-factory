@@ -175,7 +175,10 @@ with tab_synth:
         GEMINI_NOTEBOOK_URL,
         use_container_width=True,
     )
-    st.iframe(GEMINI_NOTEBOOK_URL, height=420)
+    st.caption(
+        "Notebook hosts typically block iframe embeds — use the button above "
+        "to open the live Gemini Notebook Manifest in a new tab."
+    )
 
 with tab_query:
     st.markdown(
