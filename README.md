@@ -29,12 +29,18 @@ npm start
 | Surface | Purpose |
 | --- | --- |
 | **Executive Security Gate** | Passcode lock before command surface unlocks |
+| **Executive Command (home)** | Scheme metrics, Structural Mirror Layers 1–3, Interface A/B |
+| **Kinetic Lab** (`pages/1_Kinetic_Lab.py`) | Live acquisition console; recalibrates Auto-Learned Sensitivity |
+| **AI Assistant** (`pages/02_AI_Assistant.py`) | Audio briefing + NotebookLM / Layer 2–3 synthesis |
 | **Global Scheme Portfolio** | Scheme metrics, slim ledger, CapEx velocity |
 | **Log New Claimant Profile** | Triage intake → live Comprehensive Scheme Ledger Dossier |
 | **Individual claim drill-down** | Dossier (PPD/TASE/reserve) + alignment vector + time-cost axis + Adaptive Drift θ |
-| **Kinetic Lab** | Live acquisition console; recalibrates Auto-Learned Sensitivity from Kinetic Load |
-| **Department #4** | Finance / Actuarial / Legal isolated channel |
+| **Department #4** | Finance / Actuarial / Legal isolated channel (role-gated) |
 | **Gemini Notebook Manifest** | Embedded intelligence notebook link |
+
+Use the **SURFACES** strip or sidebar **APP SURFACES** links to move between pages.
+**COMMAND LEVELS** on Executive Command jumps Layer 1/2/3 and Interface A/B.
+Host Streamlit page chrome stays hidden (`showSidebarNavigation = false`) for iPad Board mode.
 
 ## Adaptive Drift Learner
 

@@ -20,6 +20,7 @@ from kinetic_simulation import (
     record_kinetic_load,
     step_simulation,
 )
+from surface_nav import render_sidebar_surface_links, render_surface_page_links
 
 STATE_COLORS = {
     AthleteState.IDLE: "#64748b",
@@ -110,6 +111,8 @@ lab.unlocked_nodes = set(st.session_state.unlocked_nodes)
 nodes = research_nodes()
 unlocked = st.session_state.unlocked_nodes
 
+render_surface_page_links(active="kinetic_lab", compact=True)
+
 st.title("Kinetic Lab")
 st.caption(
     f"{TENANT_CONFIG['tenant_identity']} · {TENANT_CONFIG['active_sector_code']} · "
@@ -117,6 +120,8 @@ st.caption(
 )
 
 with st.sidebar:
+    render_sidebar_surface_links(active="kinetic_lab")
+    st.markdown("---")
     st.markdown("**Lab controls**")
     st.caption(f"Credits on vault: {st.session_state.credits:,}")
     athlete_count = st.slider(

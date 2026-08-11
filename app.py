@@ -33,6 +33,11 @@ from config import (
     sector_book_options,
     structural_mirror_cards,
 )
+from surface_nav import (
+    render_command_level_controls,
+    render_sidebar_surface_links,
+    render_surface_page_links,
+)
 
 # Live Gemini / Colab notebook surface (replace with project notebook URL when ready).
 GEMINI_NOTEBOOK_URL = "https://colab.research.google.com/"
@@ -796,16 +801,9 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Dedicated top navigation bar — custom chrome only (Streamlit chrome removed)
-st.markdown(
-    """
-    <div class="ipad-top-nav" role="navigation" aria-label="Primary scheme navigation">
-      <span class="nav-mark" aria-hidden="true">NAV</span>
-      <span class="nav-hint">Executive command surface · private chrome · iPad Board presentation mode</span>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+# Dedicated top navigation — real page links (host multipage nav is disabled
+# for private iPad chrome, so without these links pages look "missing").
+render_surface_page_links(active="home")
 
 # viewport-fit=cover so env(safe-area-inset-*) resolves on iPadOS Safari
 st.markdown(
@@ -1901,6 +1899,8 @@ def _sector_label(key: str) -> str:
 
 # --- SIDEBAR: GOVERNANCE LAYER FILTERS ---
 with st.sidebar:
+    render_sidebar_surface_links(active="home")
+    st.markdown("---")
     st.markdown("### SECTOR BOOK")
     if "active_sector_book" not in st.session_state:
         st.session_state.active_sector_book = DEFAULT_SECTOR_KEY
@@ -2121,6 +2121,17 @@ if init_scaling_matrix:
 
 st.markdown("---")
 
+# --- COMMAND LEVELS (Layer 1/2/3 + Interface A/B) ---
+# These are in-app levels on Executive Command — not separate Streamlit pages.
+# Expose them explicitly so they are discoverable after private-chrome nav removal.
+_sector_code_for_levels = str(active_sector.get("code", "SECTOR"))
+render_command_level_controls(
+    sector_code=_sector_code_for_levels,
+    global_view_label=GLOBAL_VIEW,
+)
+
+st.markdown("---")
+
 # --- CENTRAL ROUTING SELECTOR (cross-sector jump target) ---
 st.markdown('<div id="audit-view-command-sector"></div>', unsafe_allow_html=True)
 if st.session_state.get("audit_focus_token"):
@@ -2170,6 +2181,8 @@ st.markdown("<br>", unsafe_allow_html=True)
 # INTERFACE LAYER A: GLOBAL SCHEME PORTFOLIO VIEW
 # ==============================================================================
 if view_selection == GLOBAL_VIEW:
+    st.markdown("#### Interface Layer A · Global Scheme Portfolio")
+    st.caption("Layer 1 Structural Mirror KPIs · toggle Layer 2 site/queue drift below Card 3")
 
     render_structural_mirror_kpis(active_sector)
 
@@ -2372,6 +2385,9 @@ if view_selection == GLOBAL_VIEW:
 # INTERFACE LAYER B: INDIVIDUAL DRILL-DOWN VIEW
 # ==============================================================================
 else:
+    st.markdown("#### Interface Layer B · Individual Claim Drill-down")
+    st.caption("Dossier · alignment vector · Adaptive Drift threshold · Native ACC unlock")
+
     selected_row = df_master_ledger[
         df_master_ledger["Claim ID"] == view_selection
     ].iloc[0]

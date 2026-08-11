@@ -20,6 +20,7 @@ from config import (
     sector_book_options,
     structural_mirror_cards,
 )
+from surface_nav import render_sidebar_surface_links, render_surface_page_links
 
 # ---------------------------------------------------------------------------
 # NameError shield: bind before any widget / sector logic can run.
@@ -95,6 +96,8 @@ def _ensure_default_query(sector_code: str) -> str:
 
 
 with st.sidebar:
+    render_sidebar_surface_links(active="ai_assistant")
+    st.markdown("---")
     st.markdown("### AI ASSISTANT")
     sector_key = st.selectbox(
         "Active Sector Book",
@@ -113,6 +116,8 @@ accent = EXECUTIVE_THEME["accent"]
 muted = EXECUTIVE_THEME["muted"]
 card = EXECUTIVE_THEME["card"]
 header = dict(sector.get("header", {}))
+
+render_surface_page_links(active="ai_assistant", compact=True)
 
 st.title(str(header.get("title", "Statutory Baseline Knowledge Base")))
 st.caption(
