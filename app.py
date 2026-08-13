@@ -373,7 +373,10 @@ with st.expander("🔍 TIER 2 & 3: Manager Operational View — Inspect Site Dri
 # Formerly pages/02_AI_Assistant.py — kept in-app after multipage removal.
 # -----------------------------------------------------------------------------
 def _ensure_notebook_default_query(sector_code: str) -> str:
-    """Return a safe string default query; always defined, never None."""
+    """Return a safe string default query; always defined, never None.
+
+    Mutates QUERY_INPUT_KEY only *before* the text_area widget is created.
+    """
     if DEFAULT_QUERY_KEY not in st.session_state:
         st.session_state[DEFAULT_QUERY_KEY] = ""
     if LAST_SECTOR_KEY not in st.session_state:
@@ -381,9 +384,12 @@ def _ensure_notebook_default_query(sector_code: str) -> str:
 
     if st.session_state[LAST_SECTOR_KEY] != sector_code:
         st.session_state[LAST_SECTOR_KEY] = sector_code
-        st.session_state[DEFAULT_QUERY_KEY] = (
+        seeded = (
             f"Summarize Structural Mirror KPIs and Layer 2 drift for {sector_code}."
         )
+        st.session_state[DEFAULT_QUERY_KEY] = seeded
+        # Seed the widget key before instantiation (Streamlit forbids post-create writes).
+        st.session_state[QUERY_INPUT_KEY] = seeded
 
     raw = st.session_state.get(DEFAULT_QUERY_KEY, "")
     if raw is None:
@@ -399,9 +405,18 @@ st.caption(
     f"Executive synthesis console · grounded on `{sector_co_short(selected_key)}` / `{selected_key}`"
 )
 
+# Apply pending reset *before* any notebook-lane widgets are instantiated.
+if st.session_state.pop("_notebook_lane_do_reset", False):
+    st.session_state[DEFAULT_QUERY_KEY] = ""
+    st.session_state[QUERY_INPUT_KEY] = ""
+
 default_query = _ensure_notebook_default_query(selected_key)
 metrics = list(data.get("metrics", []))
 layer2_ops = list(data.get("layer2_operations", []))
+
+# Initialize widget key before text_area (never assign to it after create).
+if QUERY_INPUT_KEY not in st.session_state:
+    st.session_state[QUERY_INPUT_KEY] = default_query or ""
 
 lane_col, prompt_col = st.columns(2)
 
@@ -446,10 +461,6 @@ with prompt_col:
         unsafe_allow_html=True,
     )
 
-    # Session-state owns the widget value — do NOT pass value=default_query.
-    if QUERY_INPUT_KEY not in st.session_state:
-        st.session_state[QUERY_INPUT_KEY] = default_query or ""
-
     user_query = st.text_area(
         "Executive query",
         height=120,
@@ -468,13 +479,14 @@ with prompt_col:
         )
     with reset_col:
         if st.button("Reset Query", use_container_width=True, key="notebook_lane_reset"):
-            st.session_state[DEFAULT_QUERY_KEY] = ""
-            st.session_state[QUERY_INPUT_KEY] = ""
+            # Defer clearing the widget key until the next run (pre-widget).
+            st.session_state["_notebook_lane_do_reset"] = True
             st.rerun()
 
-    if user_query is not None:
-        st.session_state[DEFAULT_QUERY_KEY] = str(user_query)
-        default_query = str(user_query)
+# Mirror typed text into the default-query store (different key — safe after widget).
+if user_query is not None:
+    st.session_state[DEFAULT_QUERY_KEY] = str(user_query)
+    default_query = str(user_query)
 
 if run_query:
     prompt = str(user_query or default_query or "").strip()
