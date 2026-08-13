@@ -17,16 +17,26 @@ _SECTOR_OPTIONS = sector_book_options()
 _SECTOR_KEYS = list(_SECTOR_OPTIONS.keys())
 
 
+def _qp_scalar(value):
+    """Normalize a st.query_params value to a plain string."""
+    if isinstance(value, (list, tuple)):
+        value = value[0] if value else ""
+    return str(value or "").strip()
+
+
+def _query_params_snapshot():
+    """Copy current query params without mutating the live proxy."""
+    snap = {}
+    for key in list(st.query_params.keys()):
+        snap[str(key)] = _qp_scalar(st.query_params.get(key))
+    return snap
+
+
 def _read_co_query_param():
     """Read ?co= or ?cl= from the URL (case-insensitive value)."""
-    qp = st.query_params
+    qp = _query_params_snapshot()
     for name in ("co", "cl"):
-        if name not in qp:
-            continue
-        raw = qp.get(name)
-        if isinstance(raw, (list, tuple)):
-            raw = raw[0] if raw else ""
-        raw = str(raw or "").strip()
+        raw = qp.get(name, "")
         if raw:
             return raw, name
     return "", "co"
@@ -45,6 +55,13 @@ if _matched_sector and _matched_sector in _SECTOR_KEYS:
     }
 elif "sector_book_key" not in st.session_state or st.session_state.get("sector_book_key") not in _SECTOR_KEYS:
     st.session_state["sector_book_key"] = "ACC_BASELINE"
+
+# Boot guard: the first script run only READS query params into session state.
+# Writing st.query_params on that pass races Streamlit URL hydration and can
+# strip Safari / Cloud deep links (?co=PJM, embed=, utm=, …) from the address bar.
+_IS_QUERY_BOOT = not st.session_state.get("_co_query_boot_done")
+if _IS_QUERY_BOOT:
+    st.session_state["_co_query_boot_done"] = True
 
 # -----------------------------------------------------------------------------
 # 1. TOTAL STEALTH CSS OVERRIDE (Eradicates Manage App, Header, Footer & Badges)
@@ -181,16 +198,25 @@ if st.session_state.get("sector_book_key") not in sector_keys:
 
 
 def _sync_co_query_param():
-    """Mirror the active sector shortcode into ?co= after a sidebar change."""
+    """Mirror the active sector shortcode into ?co= after a sidebar change.
+
+    Uses an atomic from_dict rewrite that preserves unrelated keys (embed, utm,
+    etc.). Never call this on the initial boot pass — see _IS_QUERY_BOOT.
+    """
     short = sector_co_short(st.session_state["sector_book_key"])
-    current = st.query_params.get("co")
-    if isinstance(current, (list, tuple)):
-        current = current[0] if current else ""
-    if str(current or "") != short:
-        st.query_params["co"] = short
-    # Drop legacy ?cl= once ?co= is canonical, so Safari deep links stay stable
-    if "cl" in st.query_params:
-        del st.query_params["cl"]
+    snap = _query_params_snapshot()
+    current = snap.get("co", "")
+    has_cl = "cl" in snap
+
+    # Already canonical — leave the address bar alone.
+    if current == short and not has_cl:
+        return
+
+    # Preserve every existing param; only adjust co / drop legacy cl.
+    # Individual set+del can strip sibling keys on Streamlit Cloud / Safari.
+    snap["co"] = short
+    snap.pop("cl", None)
+    st.query_params.from_dict(snap)
 
 
 # No index= here: session_state["sector_book_key"] (set from ?co=/?cl= above)
@@ -204,8 +230,10 @@ selected_key = st.sidebar.selectbox(
     label_visibility="collapsed",
 )
 
-# Keep address bar on the active shortcode (PJM, NHS, …) without snapping to ACC
-_sync_co_query_param()
+# Keep address bar aligned after boot / user interaction — never on first paint.
+# Writing query params during boot races URL hydration and strips deep links.
+if not _IS_QUERY_BOOT:
+    _sync_co_query_param()
 
 st.sidebar.caption(f"Deep link: `?co={sector_co_short(selected_key)}`")
 if _matched_sector and _matched_sector == selected_key and _co_raw:
