@@ -8,7 +8,6 @@ from config import get_sector_book, resolve_sector_co, sector_book_options, sect
 # Notebook Lane targets — swap GEMINI_NOTEBOOK_URL for the live project notebook when ready.
 GEMINI_NOTEBOOK_URL = "https://colab.research.google.com/"
 BRIEFING_AUDIO_PATH = Path(__file__).resolve().parent / "public" / "briefing.mp3"
-QUERY_INPUT_KEY = "notebook_lane_query_input"
 DEFAULT_QUERY_KEY = "notebook_lane_default_query"
 LAST_SECTOR_KEY = "notebook_lane_last_sector"
 
@@ -373,10 +372,7 @@ with st.expander("🔍 TIER 2 & 3: Manager Operational View — Inspect Site Dri
 # Formerly pages/02_AI_Assistant.py — kept in-app after multipage removal.
 # -----------------------------------------------------------------------------
 def _ensure_notebook_default_query(sector_code: str) -> str:
-    """Return a safe string default query; always defined, never None.
-
-    Mutates QUERY_INPUT_KEY only *before* the text_area widget is created.
-    """
+    """Return a safe string default query; always defined, never None."""
     if DEFAULT_QUERY_KEY not in st.session_state:
         st.session_state[DEFAULT_QUERY_KEY] = ""
     if LAST_SECTOR_KEY not in st.session_state:
@@ -384,12 +380,9 @@ def _ensure_notebook_default_query(sector_code: str) -> str:
 
     if st.session_state[LAST_SECTOR_KEY] != sector_code:
         st.session_state[LAST_SECTOR_KEY] = sector_code
-        seeded = (
+        st.session_state[DEFAULT_QUERY_KEY] = (
             f"Summarize Structural Mirror KPIs and Layer 2 drift for {sector_code}."
         )
-        st.session_state[DEFAULT_QUERY_KEY] = seeded
-        # Seed the widget key before instantiation (Streamlit forbids post-create writes).
-        st.session_state[QUERY_INPUT_KEY] = seeded
 
     raw = st.session_state.get(DEFAULT_QUERY_KEY, "")
     if raw is None:
@@ -405,18 +398,9 @@ st.caption(
     f"Executive synthesis console · grounded on `{sector_co_short(selected_key)}` / `{selected_key}`"
 )
 
-# Apply pending reset *before* any notebook-lane widgets are instantiated.
-if st.session_state.pop("_notebook_lane_do_reset", False):
-    st.session_state[DEFAULT_QUERY_KEY] = ""
-    st.session_state[QUERY_INPUT_KEY] = ""
-
 default_query = _ensure_notebook_default_query(selected_key)
 metrics = list(data.get("metrics", []))
 layer2_ops = list(data.get("layer2_operations", []))
-
-# Initialize widget key before text_area (never assign to it after create).
-if QUERY_INPUT_KEY not in st.session_state:
-    st.session_state[QUERY_INPUT_KEY] = default_query or ""
 
 lane_col, prompt_col = st.columns(2)
 
@@ -461,30 +445,34 @@ with prompt_col:
         unsafe_allow_html=True,
     )
 
-    user_query = st.text_area(
-        "Executive query",
-        height=120,
-        key=QUERY_INPUT_KEY,
-        placeholder="e.g., Where is actionable controllable loss concentrated?",
-        label_visibility="collapsed",
-    )
-
-    run_col, reset_col = st.columns(2)
-    with run_col:
-        run_query = st.button(
-            "Run Assistant Brief",
-            type="primary",
-            use_container_width=True,
-            key="notebook_lane_run_brief",
+    # Form avoids post-instantiate writes to a text_area widget key
+    # (StreamlitAPIException on notebook_lane_query_input).
+    with st.form("notebook_lane_prompt_form", clear_on_submit=False):
+        user_query = st.text_area(
+            "Executive query",
+            value=default_query or "",
+            height=120,
+            placeholder="e.g., Where is actionable controllable loss concentrated?",
+            label_visibility="collapsed",
         )
-    with reset_col:
-        if st.button("Reset Query", use_container_width=True, key="notebook_lane_reset"):
-            # Defer clearing the widget key until the next run (pre-widget).
-            st.session_state["_notebook_lane_do_reset"] = True
-            st.rerun()
+        run_col, reset_col = st.columns(2)
+        with run_col:
+            run_query = st.form_submit_button(
+                "Run Assistant Brief",
+                type="primary",
+                use_container_width=True,
+            )
+        with reset_col:
+            reset_query = st.form_submit_button(
+                "Reset Query",
+                use_container_width=True,
+            )
 
-# Mirror typed text into the default-query store (different key — safe after widget).
-if user_query is not None:
+if reset_query:
+    st.session_state[DEFAULT_QUERY_KEY] = ""
+    st.rerun()
+
+if user_query is not None and (run_query or str(user_query) != str(default_query or "")):
     st.session_state[DEFAULT_QUERY_KEY] = str(user_query)
     default_query = str(user_query)
 
@@ -493,6 +481,7 @@ if run_query:
     if not prompt:
         st.warning("Enter a query before running the assistant brief.")
     else:
+        st.session_state[DEFAULT_QUERY_KEY] = prompt
         ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%SZ")
         st.markdown("### Assistant Brief")
         st.caption(f"Generated {ts} · sector {selected_key}")
