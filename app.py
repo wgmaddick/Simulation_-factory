@@ -1,5 +1,18 @@
+from datetime import datetime, timezone
+from pathlib import Path
+
 import streamlit as st
+
 from config import get_sector_book, resolve_sector_co, sector_book_options, sector_co_short
+
+# Notebook Lane targets — swap GEMINI_NOTEBOOK_URL for the live project notebook when ready.
+GEMINI_NOTEBOOK_URL = "https://colab.research.google.com/"
+BRIEFING_AUDIO_PATH = Path(__file__).resolve().parent / "public" / "briefing.mp3"
+DEFAULT_QUERY_KEY = "notebook_lane_default_query"
+LAST_SECTOR_KEY = "notebook_lane_last_sector"
+
+# NameError shield: bound before any widget / sector logic can run.
+default_query = ""
 
 st.set_page_config(
     page_title="Executive Board Glass Command Surface",
@@ -181,6 +194,31 @@ st.markdown("""
     .stage-status-bottleneck { color: #f87171; font-weight: 700; }
     .stage-status-watch { color: #fbbf24; font-weight: 700; }
     .stage-status-active { color: #38bdf8; font-weight: 700; }
+
+    /* Notebook Lane & Prompting Interface */
+    .notebook-lane-panel {
+        background-color: #131d2a;
+        border: 1px solid #213043;
+        border-left: 3px solid #2f81f7;
+        border-radius: 8px;
+        padding: 1rem 1.15rem;
+        height: 100%;
+        margin-bottom: 0.8rem;
+    }
+    .notebook-lane-eyebrow {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #2f81f7;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.35rem;
+    }
+    .notebook-lane-copy {
+        font-size: 0.9rem;
+        color: #a5d6ff;
+        line-height: 1.45;
+        margin-bottom: 0.2rem;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -358,6 +396,160 @@ with st.expander("🔍 TIER 2 & 3: Manager Operational View — Inspect Site Dri
         st.success(f"Clearance Directive Logged for {selected_key}. Ground-Truth Telemetry updated.")
 
 # -----------------------------------------------------------------------------
-# 9. FOOTER GROUND-TRUTH CITATION
+# 9. NOTEBOOK LANE & PROMPTING INTERFACE (main-page surface)
+# Formerly pages/02_AI_Assistant.py — kept in-app after multipage removal.
+# -----------------------------------------------------------------------------
+def _ensure_notebook_default_query(sector_code: str) -> str:
+    """Return a safe string default query; always defined, never None."""
+    if DEFAULT_QUERY_KEY not in st.session_state:
+        st.session_state[DEFAULT_QUERY_KEY] = ""
+    if LAST_SECTOR_KEY not in st.session_state:
+        st.session_state[LAST_SECTOR_KEY] = sector_code
+
+    if st.session_state[LAST_SECTOR_KEY] != sector_code:
+        st.session_state[LAST_SECTOR_KEY] = sector_code
+        st.session_state[DEFAULT_QUERY_KEY] = (
+            f"Summarize Structural Mirror KPIs and Layer 2 drift for {sector_code}."
+        )
+
+    raw = st.session_state.get(DEFAULT_QUERY_KEY, "")
+    if raw is None:
+        raw = ""
+    return str(raw)
+
+
+st.markdown(
+    '<div class="section-heading">📓 Notebook Lane &amp; Prompting Interface</div>',
+    unsafe_allow_html=True,
+)
+st.caption(
+    f"Executive synthesis console · grounded on `{sector_co_short(selected_key)}` / `{selected_key}`"
+)
+
+default_query = _ensure_notebook_default_query(selected_key)
+metrics = list(data.get("metrics", []))
+layer2_ops = list(data.get("layer2_operations", []))
+
+lane_col, prompt_col = st.columns(2)
+
+with lane_col:
+    st.markdown(
+        """
+        <div class="notebook-lane-panel">
+            <div class="notebook-lane-eyebrow">Notebook Lane</div>
+            <div class="notebook-lane-copy">
+                Ground the briefing against Structural Mirror KPIs, then open the live
+                Gemini Notebook Manifest for role-dynamic synthesis.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    if BRIEFING_AUDIO_PATH.is_file():
+        st.audio(str(BRIEFING_AUDIO_PATH), format="audio/mp3")
+    else:
+        st.caption("Audio briefing missing (`public/briefing.mp3`).")
+    st.link_button(
+        "Open Live Gemini Notebook Manifest",
+        GEMINI_NOTEBOOK_URL,
+        use_container_width=True,
+    )
+    st.caption(
+        "Notebook hosts typically block iframe embeds — use the button above "
+        "to open the live Gemini Notebook Manifest in a new tab."
+    )
+
+with prompt_col:
+    st.markdown(
+        """
+        <div class="notebook-lane-panel">
+            <div class="notebook-lane-eyebrow">Prompting Interface</div>
+            <div class="notebook-lane-copy">
+                Ask for Macro Valuation, Velocity Friction, Actionable Controllable Loss,
+                or Layer 2 site/queue drift clearances.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Form avoids post-instantiate writes to a text_area widget key
+    # (StreamlitAPIException on notebook_lane_query_input).
+    with st.form("notebook_lane_prompt_form", clear_on_submit=False):
+        user_query = st.text_area(
+            "Executive query",
+            value=default_query or "",
+            height=120,
+            placeholder="e.g., Where is actionable controllable loss concentrated?",
+            label_visibility="collapsed",
+        )
+        run_col, reset_col = st.columns(2)
+        with run_col:
+            run_query = st.form_submit_button(
+                "Run Assistant Brief",
+                type="primary",
+                use_container_width=True,
+            )
+        with reset_col:
+            reset_query = st.form_submit_button(
+                "Reset Query",
+                use_container_width=True,
+            )
+
+if reset_query:
+    st.session_state[DEFAULT_QUERY_KEY] = ""
+    st.rerun()
+
+if user_query is not None and (run_query or str(user_query) != str(default_query or "")):
+    st.session_state[DEFAULT_QUERY_KEY] = str(user_query)
+    default_query = str(user_query)
+
+if run_query:
+    prompt = str(user_query or default_query or "").strip()
+    if not prompt:
+        st.warning("Enter a query before running the assistant brief.")
+    else:
+        st.session_state[DEFAULT_QUERY_KEY] = prompt
+        ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%SZ")
+        st.markdown("### Assistant Brief")
+        st.caption(f"Generated {ts} · sector {selected_key}")
+
+        if metrics:
+            mcols = st.columns(min(len(metrics), 3))
+            for col, card_cfg in zip(mcols, metrics):
+                with col:
+                    st.metric(
+                        str(card_cfg.get("label", "KPI")),
+                        str(card_cfg.get("value", "-")),
+                        help=str(card_cfg.get("basis", "")),
+                    )
+
+        st.markdown("#### Response")
+        st.write(
+            f"Interpreted query against **{options.get(selected_key, selected_key)}**. "
+            f"Prompt: _{prompt}_"
+        )
+        if layer2_ops:
+            top = layer2_ops[0]
+            st.info(
+                f"Layer 2 hotspot: {top.get('site', 'Site')} · "
+                f"drift {top.get('drift', '-')} · burn {top.get('burn', '-')} · "
+                f"{top.get('bottleneck', '')}"
+            )
+            if st.button(
+                "Trigger Layer 3 Actionable Clearance",
+                key="notebook_lane_layer3",
+                use_container_width=True,
+            ):
+                st.success(
+                    f"Layer 3 Actionable Clearance staged for {selected_key}."
+                )
+        else:
+            st.write(
+                "No Layer 2 site/queue metrics are configured for this sector book."
+            )
+
+# -----------------------------------------------------------------------------
+# 10. FOOTER GROUND-TRUTH CITATION
 # -----------------------------------------------------------------------------
 st.markdown(f'<div class="footer-source">{data["footer"]}</div>', unsafe_allow_html=True)
